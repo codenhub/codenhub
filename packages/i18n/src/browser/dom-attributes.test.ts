@@ -143,6 +143,20 @@ describe("initializeBrowserI18n attribute translation", () => {
     binding.disconnect();
   });
 
+  it("translates a customized built-in created from script, which has no is attribute, as 0.4.0 does", async () => {
+    class ScriptButton extends HTMLButtonElement {}
+    customElements.define("script-button", ScriptButton, { extends: "button" });
+    const created = document.createElement("button", { is: "script-button" });
+    created.setAttribute("data-i18n", "greeting");
+    created.textContent = "Own";
+    document.body.append(created);
+
+    const binding = await initializeBrowserI18n({ i18n: createManager(), locale: "fr", root: document.body });
+
+    expect(created.textContent).toBe("Bonjour");
+    binding.disconnect();
+  });
+
   it("translates observed additions and attribute key changes", async () => {
     const i18n = createManager();
     const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
@@ -255,5 +269,386 @@ describe("initializeBrowserI18n attribute translation", () => {
 
     expect(warn).toHaveBeenCalledTimes(1);
     binding.disconnect();
+  });
+});
+
+describe("initializeBrowserI18n keys that become invalid", () => {
+  interface KeyChange {
+    readonly element: Element;
+    readonly i18n: ReturnType<typeof createManager>;
+    readonly invalidKey: string;
+  }
+
+  const INVALID_KEYS = [
+    ["empty", ""],
+    ["blank once trimmed", "   "],
+    ["over 1,000 characters once trimmed", "k".repeat(1_001)],
+    ["over 10,000 characters before trimming", `${" ".repeat(10_000)}greeting`],
+    ["holding an ASCII control", "greeting\n"],
+  ] as const;
+
+  const setKeys = ({ element, invalidKey }: KeyChange): void => {
+    element.setAttribute("data-i18n", invalidKey);
+    element.setAttribute("data-i18n-title", invalidKey);
+  };
+
+  // Each way the binding reads the key again after it showed a translation for the valid key.
+  const REREADS: readonly (readonly [string, (change: KeyChange) => Promise<{ disconnect(): void }>])[] = [
+    [
+      "a later binding's first pass",
+      async (change) => {
+        const first = await initializeBrowserI18n({ i18n: change.i18n, locale: "fr", root: document.body });
+        first.disconnect();
+        setKeys(change);
+        return initializeBrowserI18n({ i18n: change.i18n, locale: "fr", root: document.body });
+      },
+    ],
+    [
+      "an observed key change",
+      async (change) => {
+        const binding = await initializeBrowserI18n({
+          i18n: change.i18n,
+          locale: "fr",
+          root: document.body,
+          observe: true,
+        });
+        setKeys(change);
+        await flushMutations();
+        return binding;
+      },
+    ],
+    [
+      "a locale change",
+      async (change) => {
+        const binding = await initializeBrowserI18n({ i18n: change.i18n, locale: "fr", root: document.body });
+        setKeys(change);
+        await change.i18n.setLocale("pt-BR");
+        return binding;
+      },
+    ],
+    [
+      "moving the element back in",
+      async (change) => {
+        const binding = await initializeBrowserI18n({
+          i18n: change.i18n,
+          locale: "fr",
+          root: document.body,
+          observe: true,
+        });
+        change.element.remove();
+        setKeys(change);
+        document.body.append(change.element);
+        await flushMutations();
+        return binding;
+      },
+    ],
+  ];
+
+  it.each(REREADS.flatMap(([path, reread]) => INVALID_KEYS.map(([kind, key]) => [path, kind, key, reread] as const)))(
+    "shows the HTML text and title after %s reads a key that is %s",
+    async (_path, _kind, invalidKey, reread) => {
+      document.body.innerHTML =
+        '<p data-i18n="greeting" data-i18n-title="greeting" title="Original title">Original</p>';
+      const element = document.querySelector("p")!;
+      const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+
+      const binding = await reread({ element, i18n: createManager(), invalidKey });
+      try {
+        expect(element.textContent).toBe("Original");
+        expect(element.getAttribute("title")).toBe("Original title");
+        for (const keyAttribute of ["data-i18n", "data-i18n-title"]) {
+          expect(warn).toHaveBeenCalledWith(
+            "%s",
+            expect.stringMatching(
+              new RegExp(`^\\[I18n\\] Skipping translation because ${keyAttribute} contains an invalid key, "`, "u"),
+            ),
+            element,
+          );
+        }
+      } finally {
+        binding.disconnect();
+      }
+    },
+  );
+});
+
+describe("initializeBrowserI18n messages that need values", () => {
+  const createMessageManager = () =>
+    createManager({
+      loadLocale: (locale) =>
+        locale === "en"
+          ? { items: "{count, plural, one {# item} other {# items}}", hello: "Hello {name}", quoted: "Type '{name}'" }
+          : {},
+    });
+
+  it("keeps the fallback and warns once per key for a message that needs values", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    document.body.innerHTML = [
+      '<p id="first" data-i18n="items">Your items</p>',
+      '<p id="second" data-i18n="items">Your items</p>',
+      '<input id="field" data-i18n-placeholder="hello" placeholder="Name">',
+    ].join("");
+
+    const binding = await initializeBrowserI18n({ i18n: createMessageManager(), locale: "en", root: document.body });
+
+    expect(document.querySelector("#first")?.textContent).toBe("Your items");
+    expect(document.querySelector("#second")?.textContent).toBe("Your items");
+    expect(document.querySelector("#field")?.getAttribute("placeholder")).toBe("Name");
+    const messages = warn.mock.calls.map((call) => String(call[1]));
+    expect(messages.filter((message) => message.includes('needs values, "items"'))).toHaveLength(1);
+    expect(messages.filter((message) => message.includes('needs values, "hello"'))).toHaveLength(1);
+    binding.disconnect();
+  });
+
+  it("shows a message whose braces are quoted, which needs no values", async () => {
+    document.body.innerHTML = '<p data-i18n="quoted">Fallback</p>';
+
+    const binding = await initializeBrowserI18n({ i18n: createMessageManager(), locale: "en", root: document.body });
+
+    expect(document.querySelector("p")?.textContent).toBe("Type {name}");
+    binding.disconnect();
+  });
+});
+
+describe("initializeBrowserI18n fallback language", () => {
+  it("marks text from a fallback locale with its lang, and removes it once the text is in the page's locale", async () => {
+    document.body.innerHTML =
+      '<p id="fallback" data-i18n="fallbackOnly">Text</p><p id="own" data-i18n="greeting">Text</p>';
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, persistLocale: false });
+
+    expect(document.querySelector("#fallback")?.getAttribute("lang")).toBe("en");
+    expect(document.querySelector("#own")?.hasAttribute("lang")).toBe(false);
+
+    await i18n.setLocale("en");
+
+    expect(document.querySelector("#fallback")?.hasAttribute("lang")).toBe(false);
+    binding.disconnect();
+  });
+
+  it("restores the element's own lang, and keeps one the application set since", async () => {
+    document.body.innerHTML = [
+      '<p id="own" lang="fr" data-i18n="greeting">Texte</p>',
+      '<p id="changed" data-i18n="fallbackOnly">Text</p>',
+    ].join("");
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "en", root: document.body, persistLocale: false });
+    expect(document.querySelector("#own")?.getAttribute("lang")).toBe("en");
+    await i18n.setLocale("fr");
+    expect(document.querySelector("#own")?.getAttribute("lang")).toBe("fr");
+    expect(document.querySelector("#changed")?.getAttribute("lang")).toBe("en");
+    document.querySelector("#changed")?.setAttribute("lang", "de");
+
+    await i18n.setLocale("en");
+
+    expect(document.querySelector("#own")?.getAttribute("lang")).toBe("en");
+    expect(document.querySelector("#changed")?.getAttribute("lang")).toBe("de");
+    binding.disconnect();
+  });
+
+  it("marks an element without children by its attributes, and not an element whose children it would mislabel", async () => {
+    document.body.innerHTML = [
+      '<img id="image" data-i18n-alt="fallbackOnly" alt="Image">',
+      '<div id="box" data-i18n-title="fallbackOnly"><span>Texte</span></div>',
+      '<abbr id="mixed" data-i18n="greeting" data-i18n-title="fallbackOnly">Text</abbr>',
+    ].join("");
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, persistLocale: false });
+
+    expect(document.querySelector("#image")?.getAttribute("lang")).toBe("en");
+    expect(document.querySelector("#box")?.hasAttribute("lang")).toBe(false);
+    expect(document.querySelector("#mixed")?.hasAttribute("lang")).toBe(false);
+    binding.disconnect();
+  });
+
+  it("does not mark an element showing its own text after a miss", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    document.body.innerHTML = '<p data-i18n="nowhere">Text</p>';
+
+    const binding = await initializeBrowserI18n({ i18n: createManager(), locale: "fr", root: document.body });
+
+    expect(document.querySelector("p")?.hasAttribute("lang")).toBe(false);
+    binding.disconnect();
+  });
+
+  it("does not mark an element by its attributes when its text key throws", async () => {
+    document.body.innerHTML = '<abbr data-i18n="missing" data-i18n-title="fallbackOnly">Text</abbr>';
+    const i18n = createManager({
+      onMissingKey: () => {
+        throw new Error("missing key");
+      },
+    });
+
+    await expect(initializeBrowserI18n({ i18n, locale: "fr", root: document.body })).rejects.toThrow("missing key");
+
+    expect(document.querySelector("abbr")?.textContent).toBe("Text");
+    expect(document.querySelector("abbr")?.hasAttribute("lang")).toBe(false);
+  });
+
+  it("leaves a lang the application set over a marked element", async () => {
+    document.body.innerHTML = '<p data-i18n="fallbackOnly">Text</p>';
+    const paragraph = document.querySelector("p")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, persistLocale: false });
+    paragraph.setAttribute("lang", "de");
+
+    await i18n.setLocale("ar");
+    expect(paragraph.getAttribute("lang")).toBe("de");
+    await i18n.setLocale("en");
+    expect(paragraph.getAttribute("lang")).toBe("de");
+    await i18n.setLocale("fr");
+    expect(paragraph.getAttribute("lang")).toBe("de");
+    binding.disconnect();
+  });
+
+  it("marks an element whose missed attribute shows nothing", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    document.body.innerHTML = '<button data-i18n="fallbackOnly" data-i18n-title="nowhere">Button</button>';
+
+    const binding = await initializeBrowserI18n({ i18n: createManager(), locale: "fr", root: document.body });
+
+    expect(document.querySelector("button")?.hasAttribute("title")).toBe(false);
+    expect(document.querySelector("button")?.getAttribute("lang")).toBe("en");
+    binding.disconnect();
+  });
+
+  it("marks text by the language it inherits rather than by the active locale", async () => {
+    document.documentElement.lang = "en";
+    document.body.innerHTML = [
+      '<div id="widget">',
+      '<p id="active" data-i18n="greeting">Text</p>',
+      '<p id="inherited" data-i18n="fallbackOnly">Text</p>',
+      '<div lang="FR"><p id="upper" data-i18n="greeting">Text</p></div>',
+      "</div>",
+    ].join("");
+    const i18n = createManager();
+
+    const binding = await initializeBrowserI18n({
+      i18n,
+      locale: "fr",
+      root: document.querySelector("#widget")!,
+      syncDocument: false,
+      persistLocale: false,
+    });
+
+    expect(document.querySelector("#active")?.getAttribute("lang")).toBe("fr");
+    expect(document.querySelector("#inherited")?.hasAttribute("lang")).toBe(false);
+    expect(document.querySelector("#upper")?.hasAttribute("lang")).toBe(false);
+    await i18n.setLocale("en");
+    expect(document.querySelector("#active")?.hasAttribute("lang")).toBe(false);
+    expect(document.querySelector("#upper")?.getAttribute("lang")).toBe("en");
+    binding.disconnect();
+  });
+
+  it("marks text by the active locale when no ancestor declares a language", async () => {
+    document.documentElement.removeAttribute("lang");
+    document.body.innerHTML =
+      '<p id="fallback" data-i18n="fallbackOnly">Text</p><p id="own" data-i18n="greeting">Text</p>';
+
+    const binding = await initializeBrowserI18n({
+      i18n: createManager(),
+      locale: "fr",
+      root: document.body,
+      syncDocument: false,
+      persistLocale: false,
+    });
+
+    expect(document.querySelector("#fallback")?.getAttribute("lang")).toBe("en");
+    expect(document.querySelector("#own")?.hasAttribute("lang")).toBe(false);
+    binding.disconnect();
+  });
+
+  it("marks text in a shadow root by the language its host inherits", async () => {
+    document.documentElement.lang = "en";
+    document.body.innerHTML = "<div></div>";
+    const shadowRoot = document.querySelector("div")!.attachShadow({ mode: "open" });
+    shadowRoot.innerHTML =
+      '<p id="active" data-i18n="greeting">Text</p><p id="inherited" data-i18n="fallbackOnly">Text</p>';
+
+    const binding = await initializeBrowserI18n({
+      i18n: createManager(),
+      locale: "fr",
+      root: shadowRoot,
+      syncDocument: false,
+      persistLocale: false,
+    });
+
+    expect(shadowRoot.querySelector("#active")?.getAttribute("lang")).toBe("fr");
+    expect(shadowRoot.querySelector("#inherited")?.hasAttribute("lang")).toBe(false);
+    binding.disconnect();
+  });
+
+  it("marks a clone of a marked element by the text it shows rather than the lang it copied", async () => {
+    document.body.innerHTML = '<ul><li data-i18n="fallbackOnly">Text</li></ul>';
+    const item = document.querySelector("li")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({
+      i18n,
+      locale: "fr",
+      root: document.body,
+      observe: true,
+      persistLocale: false,
+    });
+    expect(item.getAttribute("lang")).toBe("en");
+
+    const clone = item.cloneNode(true) as Element;
+    clone.setAttribute("data-i18n", "greeting");
+    item.after(clone);
+    await flushMutations();
+
+    expect(clone.textContent).toBe("Bonjour");
+    expect(clone.getAttribute("lang")).toBe("fr");
+    // The copied lang is the clone's own, and labels its English fallback text once the key is gone.
+    clone.removeAttribute("data-i18n");
+    await flushMutations();
+    expect(clone.textContent).toBe("English fallback");
+    expect(clone.getAttribute("lang")).toBe("en");
+    binding.disconnect();
+  });
+
+  it("restores the element's lang when an observed key is removed", async () => {
+    document.body.innerHTML = '<p data-i18n="fallbackOnly">Text</p>';
+    const paragraph = document.querySelector("p")!;
+    const binding = await initializeBrowserI18n({
+      i18n: createManager(),
+      locale: "fr",
+      root: document.body,
+      observe: true,
+    });
+    expect(paragraph.getAttribute("lang")).toBe("en");
+
+    paragraph.removeAttribute("data-i18n");
+    await flushMutations();
+
+    expect(paragraph.hasAttribute("lang")).toBe(false);
+    expect(paragraph.textContent).toBe("Text");
+    binding.disconnect();
+  });
+});
+
+describe("initializeBrowserI18n style sheet titles", () => {
+  it.each([
+    ["style", null],
+    ["link", "stylesheet"],
+    ["link", "alternate"],
+  ])("translates the title of <%s rel=%s>, as 0.4.0 does", async (name, rel) => {
+    const element = document.createElement(name);
+    if (rel !== null) {
+      element.setAttribute("rel", rel);
+    }
+    element.setAttribute("title", "Default");
+    element.setAttribute("data-i18n-title", "greeting");
+    document.head.append(element);
+
+    const binding = await initializeBrowserI18n({
+      i18n: createManager(),
+      locale: "fr",
+      root: document.documentElement,
+    });
+
+    expect(element.getAttribute("title")).toBe("Bonjour");
+    binding.disconnect();
+    element.remove();
   });
 });

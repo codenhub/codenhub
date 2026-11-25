@@ -107,15 +107,15 @@ export interface I18n<TLocale extends string = string, TKey extends string = str
     setLocale(locale: TLocale): Promise<void>;
     resolveLocale(value: string): TLocale | undefined;
     matchLocale(preferences: readonly string[]): TLocale | undefined;
-    translate<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
+    translate<K extends TKey, TValues extends object = DefaultValues>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
     has(key: TKey): boolean;
     has(key: string): key is TKey;
-    t<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
+    t<K extends TKey, TValues extends object = DefaultValues>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
     formatNumber(value: number | bigint, options?: Intl.NumberFormatOptions): string;
     formatDate(value: Date | number, options?: Intl.DateTimeFormatOptions): string;
     formatRelativeTime(value: number, unit: Intl.RelativeTimeFormatUnit, options?: Intl.RelativeTimeFormatOptions): string;
     formatList(values: Iterable<string>, options?: Intl.ListFormatOptions): string;
-    subscribe(listener: () => void): () => void;
+    subscribe: (listener: () => void) => () => void;
     addEventListener<K extends keyof I18nEventMap<TLocale>>(type: K, callback: (this: I18n<TLocale, TKey>, event: I18nEventMap<TLocale>[K]) => void, options?: AddEventListenerOptions | boolean): void;
     addEventListener(type: string, callback: EventListener | EventListenerObject | null, options?: AddEventListenerOptions | boolean): void;
     removeEventListener<K extends keyof I18nEventMap<TLocale>>(type: K, callback: (this: I18n<TLocale, TKey>, event: I18nEventMap<TLocale>[K]) => void, options?: EventListenerOptions | boolean): void;
@@ -181,6 +181,14 @@ readonly locales: readonly TLocale[];
 
 Frozen copy of supported canonical locales.
 
+#### I18n › subscribe
+
+```ts
+subscribe: (listener: () => void) => () => void;
+```
+
+Calls a listener after every applied `init()` and every applied locale change, such as to re-render a framework, once per call, so an `init()` that changes the locale calls it once. A stale or same-locale request, which changes nothing, does not call it.
+
 #### I18n › addEventListener
 
 ```ts
@@ -192,7 +200,7 @@ Adds a typed lifecycle event listener.
 
 **Parameters**
 
-- `type` — `ready`, dispatched after every applied `init()`, or `locale-change`, after every applied locale change.
+- `type` — `ready`, dispatched after every applied `init()`, or `locale-change`, after every applied locale change, by `setLocale()` or by an `init()` that switches a ready manager, after its `ready`.
 - `callback` — Receives the event, whose `detail` holds the locale. An exception is reported as by `I18n.subscribe`.
 - `options` — Standard `EventTarget` listener options, such as `{ once: true }`.
 
@@ -316,7 +324,7 @@ Atomically loads and activates an explicit locale or the default locale.
 
 - `options` — Optional explicit locale selection.
 
-**Returns** — A promise that resolves after loading completes. Applied initialization emits `ready`; a stale request, superseded by a later `init()` or `setLocale()`, resolves without changing state or emitting an event, even when its loading fails, since the later call decides the locale. Failure leaves active state unchanged.
+**Returns** — A promise that resolves after loading completes. Applied initialization emits `ready`, and then, when it switches a manager that was already ready to another locale, `locale-change`; a stale request, superseded by a later `init()` or `setLocale()`, resolves without changing state or emitting an event, even when its loading fails, since the later call decides the locale. Failure leaves active state unchanged.
 
 **Throws**
 
@@ -353,7 +361,7 @@ matchLocale(preferences: readonly string[]): TLocale | undefined;
 
 Picks the configured locale that best serves ordered preferences, such as `navigator.languages` or the tags of an `Accept-Language` header sorted by quality.
 
-Each preference, in order, tries an exact case-insensitive match, then the longest configured locale it starts with as whole subtags and with the same likely script, such as `pt` for `pt-BR`, then likely subtags, such as `zh-Hant` for `zh-TW`, then the same language in the same likely script. `no` and `nb` count as one language, Norwegian Bokmål, so either serves the other; Nynorsk, `nn`, stays apart. A locale in another script never matches, so with `zh`, which is Simplified, `zh-TW` tries the next preference. A configured locale `Intl.Locale` rejects has no likely script, so it matches by language, and by the script it names when it names one. When several configured locales share a preference's language and script and none matches it exactly or by likely region, the first in `locales` wins: list `es-419` before `es-ES` to serve `es-MX` from `es-419`. `es-ES`, and `es`, whose likely region is Spain, still match `es-ES`.
+Each preference, in order, tries an exact case-insensitive match, then the longest configured locale it starts with as whole subtags and with the same likely script, such as `pt` for `pt-BR`, then likely subtags, such as `zh-Hant` for `zh-TW`, then the same language in the same likely script. `no` and `nb` count as one language, Norwegian Bokmål, so either serves the other; Nynorsk, `nn`, stays apart. A locale in another script never matches, so with `zh`, which is Simplified, `zh-TW` tries the next preference. A private-use locale, such as `x-pirate`, has no likely subtags, so it matches only exactly. When several configured locales share a preference's language and script and none matches it exactly or by likely region, the first in `locales` wins: list `es-419` before `es-ES` to serve `es-MX` from `es-419`. `es-ES`, and `es`, whose likely region is Spain, still match `es-ES`.
 
 **Parameters**
 
@@ -414,24 +422,10 @@ Atomically changes the active locale after all required loads succeed.
 - `TypeError` — When direction resolution returns a value other than `ltr` or `rtl`.
 - `I18nError` — When an injected locale loader rejects. Exceptions from the direction callback propagate unchanged.
 
-#### I18n › subscribe
-
-```ts
-subscribe(listener: () => void): () => void;
-```
-
-Calls a listener after every applied `init()` and every applied locale change, such as to re-render a framework. A stale or same-locale request, which changes nothing, does not call it.
-
-**Parameters**
-
-- `listener` — Called without arguments. An exception is reported as for any `EventTarget` listener: in a browser, as an uncaught error that neither stops other listeners nor rejects the change; in Node.js, it crashes the process.
-
-**Returns** — A function that removes the listener; calling it again does nothing.
-
 #### I18n › t
 
 ```ts
-t<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
+t<K extends TKey, TValues extends object = DefaultValues>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
 ```
 
 Short alias of `I18n.translate`, the same bound function.
@@ -439,23 +433,23 @@ Short alias of `I18n.translate`, the same bound function.
 #### I18n › translate
 
 ```ts
-translate<K extends TKey, TValues extends object = Readonly<Record<string, string | number | Date>>>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
+translate<K extends TKey, TValues extends object = DefaultValues>(key: K, ...params: TranslateParams<TMessages, K, TValues>): string;
 ```
 
 Resolves a trimmed key against the active locale's dictionary, then each configured parent locale's, such as `pt` for `pt-BR`, then the default locale's, and formats it as an ICU message.
 
 A parent is made by dropping subtags and is skipped when its likely script differs, so `zh-Hant` never falls back to `zh`, which is Simplified Chinese. The configured locale named by the active locale's likely language and script is a parent too, after those, so `zh-HK` falls back to `zh-Hant` and `sr-ME` to `sr-Latn`.
 
-Messages use ICU syntax: `{name}`, `{n, number}` with an optional `integer` or `percent` style, `{d, date}` and `{d, time}` with an optional `short`, `medium` (the default), `long`, or `full` style, `{n, plural, …}` and `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number in the plural's own forms, and `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An apostrophe before `{`, `}`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not valid syntax warns once, unless silent, and only its `{name}` placeholders are filled.
+Messages use ICU syntax: `{name}`, `{n, number}` with an optional `integer` or `percent` style, `{d, date}` and `{d, time}` with an optional `short`, `medium` (the default), `long`, or `full` style, `{n, plural, …}` and `{n, selectordinal, …}` with `=N` and CLDR category options, an optional `offset:N`, and `#` for the number in the plural's own forms, and `{v, select, …}`. Plural categories and every format use the locale of the dictionary that has the text. An apostrophe before `{`, `}`, or, in a plural, `#` quotes them, and `''` is one apostrophe. A message that is not valid syntax warns once per process for its locale, key, and text, unless silent, and only its `{name}` placeholders are filled.
 
 When `params.count` is a number and the key is a group of plural forms rather than a text, such as `{ one: "{count} item", other: "{count} items" }`, the form is chosen with `Intl.PluralRules` for the locale of the dictionary that has the group, falling back to its `other` form. Forms are named by CLDR plural category: `zero`, `one`, `two`, `few`, `many`, and `other`.
 
 **Parameters**
 
 - `key` — Translation key, or the key of a plural group when `params.count` is a number.
-- `params` — Argument values, read from own properties. An argument without a usable value, such as a string for `{n, number}`, is left as written. A string in `{name}` is inserted as written, a number as `{name, number}` would format it, and a date as `{name, date}` would. A numeric `count` also selects a plural form.
+- `params` — Argument values, read from own properties. An argument without a usable value, such as a string for `{n, number}`, is left as written. A string or number in `{name}` is inserted as JavaScript writes it, and a date as `{name, date}` would format it. A boolean is taken by `{v, select, …}` only, which picks the option named `true` or `false`, or `other`. A numeric `count` also selects a plural form. Where the dictionary type has the message as a literal, the values it uses are type-checked, and any other value may have any type, such as the `isAdmin` of a `User` passed whole.
 
-**Returns** — The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or warns once per recent locale/key pair unless silent.
+**Returns** — The translated text, or the trimmed key when no dictionary has it. A miss calls `onMissingKey`, or warns once per recent locale/key pair in the process unless silent.
 
 **Throws**
 
@@ -539,7 +533,7 @@ Loads a flat or nested dictionary through a consumer-selected transport; callbac
 locales: readonly TLocale[];
 ```
 
-Non-empty, case-insensitively unique ASCII locale identifiers composed of alphanumeric hyphen-separated subtags.
+Non-empty, case-insensitively unique language tags that `Intl` accepts, such as `pt-BR`, or private-use tags, such as `x-pirate`.
 
 #### I18nConfig › onMissingKey
 
@@ -549,7 +543,7 @@ onMissingKey?: ((key: string, locale: NoInfer<TLocale>) => void) | undefined;
 
 Called for every key missing from every dictionary the active locale falls back to, in place of the default warning. Exceptions propagate from the lookup, so a test can throw here to fail on a missing key.
 
-**Default** — A `console.warn` once for each of the 1,000 most recent locale/key pairs, shared by every manager in the process, unless `isSilent`.
+**Default** — A `console.warn` once for each of the roughly 1,000 most recent locale/key pairs, fewer for long keys, shared by every manager in the process, unless `isSilent`.
 
 #### I18nConfig › timeZone
 
@@ -605,7 +599,7 @@ Typed lifecycle events dispatched by an i18n manager.
 "locale-change": CustomEvent<I18nLocaleChangeEventDetail<TLocale>>;
 ```
 
-Successful active locale change event.
+Successful active locale change event, from `setLocale()` or an `init()` that switches a ready manager.
 
 #### I18nEventMap › ready
 
@@ -808,10 +802,18 @@ Safe consumer feedback keyed by stable i18n error code. Each entry provides a fa
 ### AnyValues
 
 ```ts
-type AnyValues<TValues> = [params?: Values<TValues>];
+type AnyValues<TValues> = [params?: TValues];
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
+
+### DefaultValues
+
+```ts
+type DefaultValues = object | Readonly<Record<string, unknown>>;
+```
+
+Not exported; declared in `src/core/types.ts`.
 
 ### Digit
 
@@ -853,6 +855,16 @@ Not exported; declared in `src/core/message-params.ts`.
 
 ```ts
 type Frame = "m" | "o" | "O";
+```
+
+Not exported; declared in `src/core/message-params.ts`.
+
+### HasGroup
+
+```ts
+type HasGroup<V> = true extends (V extends string ? false : V extends {
+    readonly other: string;
+} ? true : false) ? true : false;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -926,7 +938,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### Narrow
 
 ```ts
-type Narrow<T> = [T] extends [number] ? number : [T] extends [Date | number] ? Date | number : [T] extends [string | number] ? string | number : T;
+type Narrow<T> = Extract<ValueKind, T>;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -958,7 +970,9 @@ Not exported; declared in `src/core/message-params.ts`.
 ### ParamsFor
 
 ```ts
-type ParamsFor<U, TValues> = IsUnreadable<U> extends true ? AnyValues<TValues> : ParamsOf<UnionToIntersection<U>, TValues>;
+type ParamsFor<U, TValues, TIsGroup> = IsUnreadable<U> extends true ? TIsGroup extends true ? [params: {
+    readonly count: number;
+} & TValues] : AnyValues<TValues> : ParamsOf<UnionToIntersection<U>, TValues>;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -966,7 +980,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### ParamsOf
 
 ```ts
-type ParamsOf<A, TValues> = keyof A extends never ? AnyValues<TValues> : [params: Readonly<Simplify<A>> & Values<TValues>];
+type ParamsOf<A, TValues> = keyof A extends never ? AnyValues<TValues> : [params: Readonly<Simplify<A>> & TValues];
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
@@ -1074,7 +1088,7 @@ Not exported; declared in `src/core/message-params.ts`.
 ### TranslateParams
 
 ```ts
-type TranslateParams<TMessages, TKey extends string, TValues = {}> = unknown extends TMessages ? AnyValues<TValues> : IsUnion<TKey> extends true ? AnyValues<TValues> : string extends TKey ? AnyValues<TValues> : ParamsFor<ValueArguments<Exclude<ValueAt<TMessages, TKey>, undefined>>, TValues>;
+type TranslateParams<TMessages, TKey extends string, TValues = {}> = unknown extends TMessages ? AnyValues<TValues> : IsUnion<TKey> extends true ? AnyValues<TValues> : string extends TKey ? AnyValues<TValues> : ParamsFor<ValueArguments<Exclude<ValueAt<TMessages, TKey>, undefined>>, TValues, HasGroup<Exclude<ValueAt<TMessages, TKey>, undefined>>>;
 ```
 
 The parameters `t(key, …)` takes: required values when every dictionary type's message at `key` is a literal with arguments, otherwise optional values of any name.
@@ -1151,22 +1165,19 @@ type ValueAt<T, K extends string> = T extends object ? K extends keyof T ? T[K] 
 
 Not exported; declared in `src/core/message-params.ts`.
 
-### ValueOfType
+### ValueKind
 
 ```ts
-type ValueOfType<T> = T extends "number" | "plural" | "selectordinal" ? number : T extends "date" | "time" ? Date | number : T extends "select" ? string | number : Unreadable;
+type ValueKind = string | number | boolean | Date;
 ```
 
 Not exported; declared in `src/core/message-params.ts`.
 
-### Values
+### ValueOfType
 
 ```ts
-type Values<TValues> = TValues & {
-    readonly [K in keyof TValues]: MessageValue;
-};
+type ValueOfType<T> = T extends "number" | "plural" | "selectordinal" ? number : T extends "date" | "time" ? Date | number : T extends "select" ? // A boolean picks the option named `true` or `false`; no other format reads one.
+string | number | boolean : Unreadable;
 ```
-
-The values passed, `TValues`, with each one checked as a message value. Read from the argument rather than written as an index signature, which an `interface` or a class instance lacks, so `t("greeting", user)` takes a `User`.
 
 Not exported; declared in `src/core/message-params.ts`.

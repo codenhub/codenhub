@@ -59,7 +59,7 @@ Because this script runs after the browser first paints, a user who chose dark b
 ## Requirements
 
 - A browser to apply the theme: Chrome 93, Firefox 92, Safari 15.4, or newer, since the package calls `Object.hasOwn`. For older browsers, transpile dependencies and add polyfills in your build. On a server, the manager safely does nothing that needs a browser and reports the default theme.
-- Your own CSS for each theme. The package writes the theme's name, an optional class, `color-scheme`, and optional CSS custom properties to `<html>`; it ships no styles.
+- Your own CSS for each theme. The package writes the theme's name, a `theme-light` or `theme-dark` class for its color scheme, an optional class for the theme itself, `color-scheme`, and optional CSS custom properties to `<html>`; it ships no styles.
 - TypeScript 5.4 or newer, if you use TypeScript, for the `NoInfer` the types rely on.
 
 ## Notes

@@ -1,7 +1,7 @@
 import { isPlainObject } from "../core/plain-object";
 import { resolveConfiguredLocale } from "./configured-locale";
 import { formatReportedKey } from "./dictionary";
-import { isValidLocaleIdentifier } from "./identifier";
+import { isLanguageTag, isValidLocaleIdentifier } from "./identifier";
 
 /**
  * Configuration is checked by hand rather than with `@codenhub/validation`: inlining that library cost about 5 kB
@@ -26,6 +26,11 @@ const describeType = (value: unknown): string => {
   }
   if (value === null) {
     return "null";
+  }
+  // A string is quoted, so a misspelled option, such as `localePrefix: "as-needed"`, is named, as errors quote what
+  // they name.
+  if (typeof value === "string") {
+    return formatReportedKey(value);
   }
   if (Array.isArray(value)) {
     return "array";
@@ -115,6 +120,10 @@ const readLocales = (value: unknown): string[] => {
     }
     if (!isValidLocaleIdentifier(locale)) {
       fail(path, "Must be an ASCII locale identifier with alphanumeric, hyphen-separated subtags");
+    }
+    // A typo such as `en-US-US` would otherwise be a locale that matches nothing and formats as the runtime's default.
+    if (!isLanguageTag(locale)) {
+      fail(path, "Must be a language tag Intl accepts, such as pt-BR, or a private-use tag, such as x-pirate");
     }
     if (seen.has(locale.toLowerCase())) {
       fail(path, "Must be unique, ignoring letter case");

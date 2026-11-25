@@ -1,7 +1,8 @@
-import { formatReportedKey, quoteKey } from "../locale/dictionary";
+import { quoteKey } from "../locale/dictionary";
 import { createFallbackChains } from "../locale/fallback";
 import { createLocaleLoader, type LocaleLoader } from "../locale/loader";
 import { matchConfiguredLocale } from "../locale/matching";
+import { describeUnsupportedLocale } from "../locale/reported-input";
 import { validateI18nConfig, type ValidatedI18nConfig } from "../locale/resolution";
 import { registerI18nInternals } from "./internals";
 import {
@@ -15,7 +16,9 @@ import {
   isPlainMessage,
   MAX_FILLED_ARGUMENTS,
   type MessageValues,
+  NAME_CHARACTER,
   parseCachedMessage,
+  readValue,
 } from "./message-format";
 import { MAX_TRANSLATION_KEY_LENGTH, MAX_UNTRIMMED_KEY_LENGTH, normalizeTranslationKey } from "./string-validation";
 import type {
@@ -29,6 +32,7 @@ import type {
   LocaleDirection,
   TranslationKey,
 } from "./types";
+import { hashText, warnedMessages, warnedMissingKeys } from "./warning-record";
 
 /** A dictionary in the fallback chain, with the locale whose plural rules it uses. */
 interface ChainDictionary<TLocale extends string> {
@@ -36,11 +40,11 @@ interface ChainDictionary<TLocale extends string> {
   readonly dictionary: LocaleDictionary;
 }
 
-const MAX_MISSING_KEY_DIAGNOSTICS = 1_000;
-const MAX_MESSAGE_DIAGNOSTICS = 1_000;
-// Shared by every manager, since a server creates one per request and would otherwise log a miss once per visitor.
-const warnedMissingKeys = new Map<string, undefined>();
-const PLACEHOLDER_PATTERN = /{([A-Za-z0-9_]+)}/g;
+/** Whether an invalid message is new to the process-wide record, by locale, trimmed key, and a hash of its text. */
+const isNewInvalidMessage = (key: string, found: FoundTranslation<string>): boolean =>
+  warnedMessages.remember(`${found.locale}\0${key.trim()}\0${hashText(found.text)}`);
+// A `{name}` with a name the parser reads, so invalid syntax fills the names valid syntax would.
+const PLACEHOLDER_PATTERN = new RegExp(String.raw`\{(${NAME_CHARACTER}+)\}`, "gu");
 // The form every plural group has, used when the count's category has none.
 const PLURAL_FALLBACK_FORM = "other";
 
@@ -65,9 +69,22 @@ const interpolate = ({ text, params, locale, timeZone }: InterpolateOptions): st
       return placeholder;
     }
     filledArguments += 1;
-    const value: unknown = Object.hasOwn(params, name) ? params[name] : undefined;
-    return formatPlainValue(value, locale, timeZone) ?? placeholder;
+    return formatPlainValue(readValue(params, name), locale, timeZone) ?? placeholder;
   });
+};
+
+/**
+ * Whether a message has an argument, which formatting without values leaves as written: any argument of valid ICU
+ * syntax, or a `{name}` placeholder of invalid syntax, which is filled as `interpolate` fills it.
+ */
+const needsValues = (text: string): boolean => {
+  if (isPlainMessage(text)) {
+    return false;
+  }
+  const message = parseCachedMessage(text);
+  return typeof message === "string"
+    ? new RegExp(PLACEHOLDER_PATTERN.source, "u").test(text)
+    : message.some((node) => node.kind !== "text");
 };
 
 class CoreCustomEvent<TDetail> extends Event implements CustomEvent<TDetail> {
@@ -117,12 +134,12 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   private loadingRequest: Promise<unknown> | undefined;
   private applyListener: ((requestId: number) => void) | undefined;
   private readonly pluralRules = new Map<TLocale, Intl.PluralRules | undefined>();
+  private readonly initLocaleChanges = new WeakSet<Event>();
   private readonly localeLookup: ReadonlyMap<string, TLocale>;
   private readonly config: ValidatedI18nConfig<TLocale>;
   private readonly loader: LocaleLoader<TLocale>;
 
   readonly t: (key: string, params?: MessageValues) => string;
-  private readonly warnedMessages = new Set<string>();
 
   constructor(config: I18nConfig<TLocale>) {
     super();
@@ -177,7 +194,9 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       },
       lookup: (key) => {
         const found = this.lookup("translate", key);
-        return found === undefined ? undefined : this.format(key, found, {});
+        return found === undefined
+          ? undefined
+          : { text: this.format(key, found, {}), locale: found.locale, needsValues: needsValues(found.text) };
       },
     });
   }
@@ -220,14 +239,22 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   }
 
   translate(key: string, params?: MessageValues): string {
+    const found = this.find("translate", key, params);
+    return found === undefined ? key.trim() : this.format(key, found, params ?? {});
+  }
+
+  /** Checks a call's values and finds its key, or with a numeric `count`, its plural form. */
+  private find(
+    caller: "translate",
+    key: string,
+    params: MessageValues | undefined,
+  ): FoundTranslation<TLocale> | undefined {
     // `null` or a primitive is a mistake in the calling code, such as plain JavaScript passing a missing value through.
     if (params !== undefined && (typeof params !== "object" || params === null)) {
       throw new TypeError("[I18n] Translation values must be an object or undefined.");
     }
-    const count = params !== undefined && Object.hasOwn(params, "count") ? params["count"] : undefined;
-    const found = this.lookup("translate", key, typeof count === "number" ? count : undefined);
-
-    return found === undefined ? key.trim() : this.format(key, found, params ?? {});
+    const count = params === undefined ? undefined : readValue(params, "count");
+    return this.lookup(caller, key, typeof count === "number" ? count : undefined);
   }
 
   has(key: TKey): boolean;
@@ -298,15 +325,9 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
   }
 
   private reportInvalidMessage(key: string, found: FoundTranslation<TLocale>, reason: string): void {
-    const warningKey = `${found.locale}\0${found.text}`;
-
-    if (this.isSilent || this.warnedMessages.has(warningKey)) {
+    if (this.isSilent || !isNewInvalidMessage(key, found)) {
       return;
     }
-    if (this.warnedMessages.size >= MAX_MESSAGE_DIAGNOSTICS) {
-      this.warnedMessages.delete(this.warnedMessages.values().next().value!);
-    }
-    this.warnedMessages.add(warningKey);
     console.warn(
       `[I18n] Invalid message for ${quoteKey(key.trim())} in locale "${found.locale}": ${reason}; only {name} ` +
         "placeholders are filled. " +
@@ -316,16 +337,22 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
 
   subscribe(listener: () => void): () => void {
     const notify = (): void => listener();
+    // A re-init's `locale-change` follows its `ready`, which already called the listener for that change.
+    const notifyChange = (event: Event): void => {
+      if (!this.initLocaleChanges.has(event)) {
+        listener();
+      }
+    };
     let isSubscribed = true;
 
     this.addEventListener("ready", notify);
-    this.addEventListener("locale-change", notify);
+    this.addEventListener("locale-change", notifyChange);
 
     return () => {
       if (isSubscribed) {
         isSubscribed = false;
         this.removeEventListener("ready", notify);
-        this.removeEventListener("locale-change", notify);
+        this.removeEventListener("locale-change", notifyChange);
       }
     };
   }
@@ -356,12 +383,20 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       return false;
     }
 
+    const previousLocale = this.isReadyState ? this.currentLocale : undefined;
     this.currentLocale = locale;
     this.currentDirection = direction;
     this.dictionaries = dictionaries;
     this.isReadyState = true;
     this.applyListener?.(requestId);
     this.dispatchEvent(createCustomEvent<I18nReadyEventDetail<TLocale>>("ready", { locale }));
+    // A re-init that switches the language is a locale change too, so a `locale-change` listener sees every switch. The
+    // first init has no locale it changes from: `ready` reports it.
+    if (previousLocale !== undefined && previousLocale !== locale) {
+      const event = this.createLocaleChangeEvent(locale, previousLocale);
+      this.initLocaleChanges.add(event);
+      this.dispatchEvent(event);
+    }
     return true;
   }
 
@@ -402,17 +437,16 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     this.currentDirection = direction;
     this.dictionaries = dictionaries;
     this.applyListener?.(requestId);
-    this.dispatchEvent(
-      createCustomEvent<I18nLocaleChangeEventDetail<TLocale>>("locale-change", {
-        locale: nextLocale,
-        previousLocale,
-      }),
-    );
+    this.dispatchEvent(this.createLocaleChangeEvent(nextLocale, previousLocale));
+  }
+
+  private createLocaleChangeEvent(locale: TLocale, previousLocale: TLocale): CustomEvent {
+    return createCustomEvent<I18nLocaleChangeEventDetail<TLocale>>("locale-change", { locale, previousLocale });
   }
 
   /**
    * Finds a key, or with a count, a plural group's form, through the active fallback chain. Errors name `caller`, and a
-   * miss is reported only for `translate`, since `has` exists to check silently.
+   * miss is reported except for `has`, which exists to check silently.
    */
   private lookup(caller: "translate" | "has", key: string, count?: number): FoundTranslation<TLocale> | undefined {
     if (!this.isReadyState || this.dictionaries === undefined) {
@@ -439,7 +473,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       }
     }
 
-    if (caller === "translate") {
+    if (caller !== "has") {
       this.reportMissingKey(normalizedKey);
     }
     return undefined;
@@ -488,24 +522,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
       return;
     }
 
-    const warningKey = `${this.currentLocale}\0${key}`;
-
-    if (!this.isSilent) {
-      if (warnedMissingKeys.delete(warningKey)) {
-        warnedMissingKeys.set(warningKey, undefined);
-        return;
-      }
-
-      warnedMissingKeys.set(warningKey, undefined);
-
-      if (warnedMissingKeys.size > MAX_MISSING_KEY_DIAGNOSTICS) {
-        const oldestWarningKey = warnedMissingKeys.keys().next().value;
-
-        if (oldestWarningKey !== undefined) {
-          warnedMissingKeys.delete(oldestWarningKey);
-        }
-      }
-
+    if (!this.isSilent && warnedMissingKeys.remember(`${this.currentLocale}\0${key}`)) {
       console.warn(`[I18n] Missing key ${quoteKey(key)} in locale "${this.currentLocale}".`);
     }
   }
@@ -550,10 +567,7 @@ class I18nInstance<TLocale extends string, TKey extends string = string>
     const locale = this.resolveLocale(value);
 
     if (locale === undefined) {
-      // The value is calling code's, often from a URL or a header, so it is quoted and truncated, as rejected keys are.
-      throw new RangeError(
-        `[I18n] Unsupported locale ${typeof value === "string" ? formatReportedKey(value) : `of type ${typeof value}`}.`,
-      );
+      throw new RangeError(describeUnsupportedLocale(value));
     }
 
     return locale;

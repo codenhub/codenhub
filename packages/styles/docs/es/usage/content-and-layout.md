@@ -2,7 +2,7 @@
 title: Contenido y layout
 description: Consulta de cada helper de layout con su espaciado, la escala tipográfica con sus tamaños, las tarjetas y los paneles con su relleno interior, las tablas, las citas, el código y las teclas.
 order: 10
-source: 160ae54be3321154eca2f1ce22b843aa6b87314c
+source: 7029232dde1180e32de10f9abc61339f4a0ebe98
 ---
 
 # Contenido y layout
@@ -48,7 +48,9 @@ Los dos tamaños mayores crecen en el breakpoint `md` de Tailwind, 48rem por def
 
 `.text-body` mide 0.875rem, menos que el texto de la página de 1rem; úsalo para texto secundario o denso, no para el texto principal de la página. `/native` es la excepción: define `.text-body` en `body`, así que ahí es el texto de la página, y los párrafos y los elementos de lista lo heredan del elemento en el que estén. Consulta [HTML sin clases](../setup.md#html-sin-clases).
 
-`.selection-contrast` en un elemento cambia los colores del texto seleccionado dentro de él a `--color-primary` sobre `--color-primary-contrast`. Úsalo en una zona `.solid.primary`, donde el color de selección por defecto coincidiría con el fondo.
+El espaciado de la tabla es `normal` en un idioma cuya escritura une sus letras: árabe, persa, urdu, pastún, sindhi, uigur, kurdo sorani, cachemir, siríaco, n'ko, mongol en su propia escritura (`mn-Mong`), adlam (`ff-Adlm`) e idiomas regionales en escritura árabe: árabe egipcio y marroquí (`arz`, `ary`), panyabí occidental (`pnb`), darí (`prs`), azerí del sur (`azb`), saraiki (`skr`), baluchi (`bal`, `bcc`, `bgn`), mazandaraní (`mzn`), guilaki (`glk`), luri (`lrc`, `luz`), kurdo del sur (`sdh`), bajtiarí (`bqi`), hindko (`hno`), khowar (`khw`) y brahui (`brh`), y rohinyá (`rhg`), en hanifi rohinyá. Separar las letras rompe sus uniones y una ligadura como "الله". También es `normal` en un idioma escrito en una escritura que cuelga sus letras de una línea superior, devanagari, bengalí o gurmukhi: hindi, maratí, nepalí, sánscrito, maithili, bhojpuri, konkani, dogri, bodo, newari, bengalí, asamés y panyabí. Ahí el espaciado corta en pedazos la línea que recorre la parte de arriba de una palabra, y puede separar un signo vocálico de su letra. Lo mismo vale para el espaciado de `.label` y `.hint` en un campo, y para el espaciado de etiquetas que una estética da a botones y badges, incluida la clase solo de chunky tile. El idioma viene de `lang`, en el elemento o en uno que lo contenga, así que defínelo: en `<html>` para una página en ese idioma, y en un pasaje en ese idioma dentro de una página en otro. Un idioma que solo a veces se escribe en una de esas escrituras necesita la subetiqueta de escritura, y el paquete nombra las comunes: `ku-Arab`, `ms-Arab`, `kk-Arab`, `az-Arab`, `uz-Arab`, `tg-Arab`, `sat-Deva` y `mni-Beng`. Un idioma o una subetiqueta que no nombra, como `ha-Arab`, conserva el espaciado; dale `tracking-normal` a ese texto. Con `/native`, ese pasaje tampoco toma el espaciado de la página que lo rodea. Tu propia utilidad `tracking-*` sigue aplicándose.
+
+El texto seleccionado es `--color-primary-contrast` sobre `--color-primary`. Sobre una placa sólida, como un botón `.solid.primary` o una card `.solid` y el texto dentro de ella, la selección invierte la placa: el color del texto de la placa como resaltado y el color de la placa como texto, así que destaca en todas las intenciones.
 
 ## Superficies
 
@@ -111,7 +113,7 @@ Una tarjeta `.interactive` o `.pressable` deshabilitada muestra el cursor de no 
 La pantalla de ajustes enumera las claves de API en una tabla:
 
 ```html
-<div class="table-wrap">
+<div class="table-wrap" tabindex="0" role="region" aria-label="API keys">
   <table class="data-table">
     <caption class="visually-hidden">
       API keys
@@ -196,6 +198,8 @@ Una tabla toma la esquina de superficie, como una tarjeta a su lado. Las celdas 
 - Las sombras, como la de una tabla `.raised`, no reciben espacio y quedan recortadas.
 
 Mantén el contenedor en cualquier tabla que pueda ser más ancha que su contenedor; sin él, una tabla ancha ensancha toda la página.
+
+Haz que el contenedor pueda recibir el foco con `tabindex="0"`, y nómbralo como región con `role="region"` y un `aria-label`, como hace el ejemplo. Quien usa el teclado desplaza una tabla ancha poniendo el foco en el contenedor y usando las flechas; Firefox, y Chrome desde la versión 130, permiten enfocar por sí solos un elemento con scroll, pero Safari y las versiones anteriores de Chrome no, así que sin `tabindex` un usuario de teclado en ellos no puede llegar a las columnas que quedan cortadas. El nombre le dice a quien usa lector de pantalla qué contiene la región enfocada. Un contenedor con foco dibuja el anillo de foco que dibuja cualquier elemento.
 
 ## Citas, código y teclas
 

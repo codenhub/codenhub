@@ -2,7 +2,7 @@
 title: URLs localizadas
 description: Coloque o locale no caminho, traduza o próprio caminho, leia os dois de volta, crie links para outros idiomas, gere todas as páginas localizadas e mande os visitantes para o idioma deles num site estático.
 order: 4
-source: 634cc878a98ebcde653e1664e29ee8d1333076b3
+source: 5f0e503e14d61f5148c6bba2a83d6e3e1126ff28
 ---
 
 # URLs localizadas
@@ -17,11 +17,10 @@ Os exemplos continuam o app `en` e `pt` da loja de chá das páginas anteriores.
 // src/routing.ts
 import { createLocaleRouting } from "@codenhub/i18n/routing";
 
-export const routing = createLocaleRouting({
-  locales: ["en", "pt"] as const,
-  defaultLocale: "en",
-  localePrefix: "except-default",
-});
+export const locales = ["en", "pt"] as const;
+export const defaultLocale = "en";
+
+export const routing = createLocaleRouting({ locales, defaultLocale, localePrefix: "except-default" });
 ```
 
 `localePrefix` decide quais caminhos começam com o locale. Ele é obrigatório e não tem padrão, porque cada escolha dá ao seu site URLs diferentes, e URLs são difíceis de mudar depois que as pessoas as salvaram nos favoritos. Deixá-lo de fora lança `TypeError: [I18n] Invalid locale routing configuration: localePrefix: Expected "always", "except-default", or "when-ambiguous", received undefined`.
@@ -38,7 +37,7 @@ Como escolher:
 - `"always"` faz toda URL dizer o idioma dela, então `/about` não é uma página, o que combina com um site que redireciona `/` para o idioma do visitante.
 - `"when-ambiguous"` tira o prefixo dos caminhos traduzidos que só podem pertencer a um idioma, e vale a leitura antes de você escolhê-lo.
 
-Use os mesmos `locales` e `defaultLocale` do seu gerenciador. O roteamento é separado do gerenciador, então funciona também onde não há tradução nenhuma, como na lógica de redirecionamento de um servidor.
+Use os mesmos `locales` e `defaultLocale` do seu gerenciador, importando estas constantes onde você o cria. O roteamento é separado do gerenciador, então funciona também onde não há tradução nenhuma, como na lógica de redirecionamento de um servidor.
 
 Se você guardar a configuração numa variável antes de passá-la, ponha `as const` depois do objeto inteiro: `const config = { … } as const`. Sem isso, o TypeScript alarga `localePrefix` para `string`, e `createLocaleRouting` o rejeita em tempo de compilação. `as const` só em `localePrefix` compila, mas tipa todo locale como `string`, então `localize("/about", "fr")` também compila.
 
@@ -87,7 +86,7 @@ Com `localePrefix: "always"`, um caminho sem locale também devolve `undefined`,
 
 ```ts
 // Um arquivo, como `/favicon.ico`, não é uma página; veja Redirecione para a URL canônica abaixo.
-const isFile = /\.[a-z0-9]+$/i.test(url.pathname);
+const isFile = staticFiles.has(url.pathname);
 const route = isFile ? undefined : routing.parse(url.pathname);
 if (route === undefined && !isFile) {
   const locale = pickLocale(i18n, request);
@@ -125,10 +124,10 @@ Rode este redirecionamento, e o do prefixo que falta acima, só para rotas de p�
 - Com `trailingSlash: "always"`, este redirecionamento manda `/favicon.ico` para `/favicon.ico/`.
 - Com `localePrefix: "always"`, o de cima o manda para `/en/favicon.ico`.
 
-Nenhum dos dois tem arquivo. Se os redirecionamentos precisarem rodar antes, pule os caminhos que terminam numa extensão de arquivo, como os dois exemplos fazem:
+Nenhum dos dois tem arquivo. Se os redirecionamentos precisarem rodar antes, pule os caminhos que você serve como arquivos, como os dois exemplos fazem. `staticFiles` é um `Set` com eles, como cada arquivo do diretório de saída do seu build, escrito como um pathname do tipo `/favicon.ico`. Testar uma extensão de arquivo no lugar disso faz uma página como `/blog/node.js` ou `/users/john.doe` passar por arquivo: ela pula os dois redirecionamentos e fica sem rota:
 
 ```ts
-const isFile = /\.[a-z0-9]+$/i.test(url.pathname);
+const isFile = staticFiles.has(url.pathname);
 const route = isFile ? undefined : routing.parse(url.pathname);
 if (route !== undefined) {
   const canonical = routing.localize(route.pathname, route.locale);
@@ -149,7 +148,11 @@ routing.localize("/about", "pt"); // "/pt/about"
 routing.localize("/about", "en"); // "/about"
 ```
 
-Um caminho canônico nunca começa com um locale, então `localize()` lança um `RangeError` para um que comece, como `/pt/about`. Isso é uma URL; passe `parse("/pt/about").pathname` em vez dele. Ele também lança para uma página sua cujo caminho começa com o código de um locale: com birmanês, `my`, configurado, uma página em inglês em `/my/orders` não tem URL, já que `/my/orders` é o `/orders` em birmanês. Dê outro caminho a essa página.
+Um caminho que já começa com um locale é lido como a URL desse locale, então o prefixo é substituído:
+
+```ts
+routing.localize("/pt/about", "en"); // "/about"
+```
 
 Num site localizado, trocar de idioma é uma navegação, e não só um `setLocale()`: `setLocale()` muda o texto, mas nunca a URL. Então o seletor de idioma da loja lê a página atual com `parse()`, pega o caminho dela no novo idioma em `alternates`, mantém a query string e o fragmento e deixa o seu router ir até lá:
 
@@ -168,17 +171,29 @@ Passar pelo `parse()` importa quando os caminhos ganham tradução: `/sobre` é 
 Use a mesma lista para as tags `<link rel="alternate" hreflang>` que contam aos buscadores sobre cada idioma. Acrescente uma tag `x-default` para os leitores cujo idioma você não oferece, apontando para a página do locale padrão, quando ela existir:
 
 ```ts
-const defaultLocale = "en"; // o defaultLocale que você configurou
+import { defaultLocale, routing } from "./routing";
+
+// O escape do seu framework faz o mesmo.
+const escapeHtml = (text: string) => text.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("'", "&#39;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
 const link = (hreflang: string, pathname: string) => `<link rel="alternate" hreflang="${escapeHtml(hreflang)}" href="${escapeHtml(new URL(pathname, "https://example.com").href)}">`;
 
-const tags = route.alternates.map((page) => link(page.locale, page.pathname));
-const fallback = route.alternates.find((page) => page.locale === defaultLocale);
-if (fallback !== undefined) {
-  tags.push(link("x-default", fallback.pathname));
+// As tags para o `url.pathname` de uma requisição, ou nenhuma para um caminho que não é uma página.
+export function alternateLinks(pathname: string): string[] {
+  const route = routing.parse(pathname);
+  if (route === undefined) {
+    return [];
+  }
+  const tags = route.alternates.map((page) => link(page.locale, page.pathname));
+  const fallback = route.alternates.find((page) => page.locale === defaultLocale);
+  if (fallback !== undefined) {
+    tags.push(link("x-default", fallback.pathname));
+  }
+  return tags;
 }
 ```
 
-Escape os dois valores como faria com qualquer texto no HTML, ou deixe o seu framework criar as tags. Um caminho pode conter caracteres, como `"` ou `&`, que são permitidos numa URL mas não crus dentro de um atributo.
+Escape os dois valores como faria com qualquer texto no HTML, ou deixe o seu framework criar as tags. Um caminho pode conter caracteres, como `&` ou `'`, que são permitidos numa URL mas não crus dentro de um atributo.
 
 ## Traduza caminhos
 
@@ -214,7 +229,7 @@ Como ler a tabela:
 - **O que a tabela não lista mantém as suas palavras.** `/blog` é `/pt/blog`, e `/products/42` em espanhol é `/es/products/42`, já que só o português o traduz.
 - **Segmentos fixos diferenciam maiúsculas de minúsculas**, como as URLs, então `/pt/Sobre` não é a página "sobre". Só o prefixo do locale ignora essa diferença.
 - **Prefira letras simples nos caminhos.** O roteamento não muda as suas palavras, então você só recebe `/servicos` se escrever `/servicos`. A maioria dos sites tira os acentos das URLs, porque um caminho acentuado aparece com percent-encoding em todo lugar em que é copiado como texto, como `/servi%C3%A7os`. Acentos também funcionam: `"/serviços"` corresponde ao `/servi%C3%A7os` que os navegadores mandam, e `localize()` devolve a forma codificada, como faz com todo segmento, como o slug de um produto, e como `parse()` devolve o seu `pathname`. Então um build estático que escreve uma pasta para esse caminho precisa decodificá-lo antes, como em [Gere um site estático](server-rendering.md#gere-um-site-estático).
-- **Uma página volta numa grafia só.** `parse()` escreve cada segmento, listado ou não, como a RFC 3986 normaliza uma URL: um escape de letra, dígito ou `-._~` é decodificado, qualquer outro escape é escrito em maiúsculas, e um caractere que uma URL codifica, como `é`, é codificado. Então `/%61bout` e `/pt/%73obre`, grafias estranhas de `/about` e `/pt/sobre`, dão as duas `pathname: "/about"`, e `/products/caf%c3%a9` dá `/products/caf%C3%A9`. Um caractere reservado escapado continua escapado, então `/products/c%2B%2B` e `/products/c++` são duas páginas, já que um servidor pode ler `%2B` de outro jeito que `+`. Então passe o pathname do jeito que a URL o escreve, como `new URL(request.url).pathname`, e não um que o seu framework decodificou: decodificado, `/100%25` vira `/100%`, que `parse()` recusa.
+- **Uma página volta numa grafia só.** `parse()` escreve cada segmento, listado ou não, como a RFC 3986 normaliza uma URL: um escape de letra, dígito ou `-._~` é decodificado, qualquer outro escape é escrito em maiúsculas, e um caractere que uma URL codifica, como `é`, é codificado. Então `/%61bout` e `/pt/%73obre`, grafias estranhas de `/about` e `/pt/sobre`, dão as duas `pathname: "/about"`, e `/products/caf%c3%a9` dá `/products/caf%C3%A9`. Um caractere reservado escapado continua escapado, então `/products/c%2B%2B` e `/products/c++` são duas páginas, já que um servidor pode ler `%2B` de outro jeito que `+`. Então passe o pathname do jeito que a URL o escreve, como `new URL(request.url).pathname`, e não um que o seu framework decodificou: decodificado, `/products/c%2B%2B` vira `/products/c++`, outra página.
 - **Um segmento fixo ganha de um parâmetro, e um parâmetro ganha de um catch-all.** Com `/products/new` e `/products/:id` listados, `/products/new` é a página de novo produto, seja qual for a ordem em que a tabela os lista. Com `/help/contact` e `/help/:path*`, `/help/contact` é a página de contato, e todo outro caminho `/help/…` vai para o catch-all.
 - **O locale padrão também pode ser traduzido.** Um site que é primeiro em português, com código em inglês, pode usar `defaultLocale: "pt"` e `{ "/about": { pt: "/sobre" } }`, de modo que `/sobre` é a página em português e `/en/about`, a em inglês.
 
@@ -260,7 +275,7 @@ for (const { locale, pathname } of routing.localizeAll("/products/:id")) {
 
 O `@codenhub/router` pega a primeira rota que corresponder, na ordem em que você as registra. Quando dois caminhos de um locale podem corresponder à mesma URL, como `/pt/produtos/novo` e `/pt/produtos/:id`, registre primeiro o que tem palavras fixas.
 
-`localizeAll()` escreve um catch-all como `:name*`. Traduza isso para a sintaxe do seu framework quando registrá-lo, como `[...path]` num router baseado em arquivos. O `@codenhub/router` não tem catch-all, então, com ele, roteie esses caminhos reescrevendo para o caminho canônico.
+Um padrão que termina em `:name*` é traduzido pelo catch-all da tabela, nunca por um parâmetro: com `/help/:id` e `/help/:path*` na tabela, `localizeAll("/help/:path*")` dá o português `/pt/ajuda/:path*`, e não o `/pt/ajuda/artigo/:path*` de um segmento. `localizeAll()` escreve um catch-all como `:name*`. Traduza isso para a sintaxe do seu framework quando registrá-lo, como `[...path]` num router baseado em arquivos. O `@codenhub/router` não tem catch-all, então, com ele, roteie esses caminhos reescrevendo para o caminho canônico.
 
 ## Dispense o prefixo
 
@@ -339,9 +354,14 @@ const config = {
   locales,
   // `zh-TW` é `zh-Hant`: um idioma e a sua escrita provável, como `matchLocale()` os compara, com o norueguês `no` como `nb`.
   languages: Object.fromEntries(
-    locales.map((locale) => {
-      const { language, script } = new Intl.Locale(locale).maximize();
-      return [`${language === "no" ? "nb" : language}-${script}`, locale];
+    locales.flatMap((locale) => {
+      let likely;
+      try {
+        likely = new Intl.Locale(locale).maximize();
+      } catch {
+        return []; // Um locale de uso privado, como `x-pirate`, não tem idioma para comparar; só uma escolha salva o seleciona.
+      }
+      return [[`${likely.language === "no" ? "nb" : likely.language}-${likely.script}`, locale]];
     }),
   ),
   targets: Object.fromEntries(locales.filter((locale) => locale !== defaultLocale).map((locale) => [locale, routing.localize(pathname, locale)])),
@@ -426,14 +446,17 @@ Esta é a parte chata da página. Também é a parte que decide se uma URL forja
 - **Um escape malformado**, um `%` que não é seguido por dois dígitos hexadecimais, como em `/50%off`. Escreva `%25` para um `%` literal… que também é recusado, pela regra anterior, então tire o `%` do caminho.
 - **Mais de 8.192 caracteres ou 100 segmentos**, ou um caminho cujo caminho canônico teria mais do que isso, como pode acontecer com um caminho traduzido curto quando a entrada dele na tabela é longa. Servidores e proxies cortam as URLs por volta desse tamanho de qualquer jeito, e nenhuma página fica 100 pastas abaixo; um pedido com milhares de segmentos de uma letra custaria trabalho em cada locale.
 
-Uma requisição pode trazer qualquer um desses, como um scanner pedindo `//wp-login.php`, então `parse()` devolve `undefined` para eles, e o mesmo 404 os responde como a qualquer outro caminho que não é página. `localize()` e `localizeAll()` montam links a partir dos seus próprios caminhos, em vez de ler requisições, então, para os mesmos caminhos, eles lançam um `TypeError`, como `TypeError: [I18n] pathname must not contain dot segments`, e você corrige o caminho no seu código.
+Uma requisição pode trazer qualquer um desses, como um scanner pedindo `//wp-login.php`, então `parse()` devolve `undefined` para eles, e o mesmo 404 os responde como a qualquer outro caminho que não é página. `localize()` e `localizeAll()` montam links a partir dos seus próprios caminhos, em vez de ler requisições, então, para os mesmos caminhos, eles lançam um `TypeError` que cita o caminho e diz a regra, como `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, e você corrige o caminho no seu código.
 
-Todo método, `parse()` incluído, lança `TypeError: [I18n] pathname must be a valid absolute application pathname` para um valor que nem é o pathname de uma URL:
+Todo método, `parse()` incluído, lança um `TypeError` para um valor que nem é o pathname de uma URL:
 
-- Um que não começa com `/`, como uma URL inteira `https://…`.
-- Um que contém `?` ou `#`, como o `request.url` do Node com a query string.
+- Um que não começa com `/`, como uma URL inteira: `TypeError: [I18n] pathname must start with /; pass url.pathname`.
+- Um que contém `?` ou `#`, como o `request.url` do Node com a query string: `TypeError: [I18n] pathname "/search?…" must not contain ?, which starts a query; pass url.pathname`. O erro diz o que aparece primeiro.
+- Um que não é string: `TypeError: [I18n] pathname must be a string, received undefined`.
 
 Isso é um erro no código que chama, e não uma requisição a responder, então ele falha alto em vez de responder 404 a toda URL com query.
+
+Nenhum erro de roteamento cita uma query ou um fragmento, que podem conter um token: um caminho com `?` ou `#` é citado só até esse caractere. Um valor que não começa com `/`, como uma URL completa, cujas informações de usuário podem conter uma credencial, não é citado.
 
 Escapes comuns, como `%20` e `%C3%A7`, não têm problema, e uma barra final é mantida: `/pt/sobre/` vira `/about/` no parse.
 

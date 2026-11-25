@@ -12,11 +12,14 @@ import { describe, expect, test } from "vitest";
    tuned to. So each compiled entry is compiled again from its `/tw`
    counterpart, naming every utility it ships, and the two compared.
 
-   Two differences are by design. Tailwind heads every build with its banner,
+   Three differences are by design. Tailwind heads every build with its banner,
    and the compiled build only an entry that carries some of Tailwind's own
-   CSS. And `/tw` ships all nine `--tw-*` registrations the package's bodies
+   CSS. `/tw` ships all nine `--tw-*` registrations the package's bodies
    need, where the compiled build writes those its output uses: both are
-   compared as sets, the compiled one inside the other.
+   compared as sets, the compiled one inside the other. And Tailwind writes a
+   `@theme` on `:root, :host`, where the compiled build writes its tokens on
+   `:root` alone, so a shadow root inherits the page's overrides (see
+   `src/tokens.css`): that selector is compared as `:root`.
 
    On the catalog's Tailwind, the one `src/base/` is copied from, the rest is
    byte for byte. On another release, as the Tailwind workflow runs, Tailwind's
@@ -92,12 +95,31 @@ const consumerBuild = async (imports: string[], candidates: string[]) => {
 };
 
 const REGISTRATION = /@property --tw-[\w-]+\{[^}]*\}/g;
+const THEME_HOST = ":root,:host{";
 const PACKAGE_NOTICE = /\/\*! @codenhub\/styles[^]*?\*\/\n?/g;
 
 /* The stylesheet without Tailwind's banner and the `--tw-*` registrations,
    and those registrations on their own. */
 const separate = (css: string) => {
   let rules = css.replace(/^\/\*! tailwindcss v[^*]*\*\/\n/, "").replace(REGISTRATION, "");
+
+  /* Read as `:root`, Tailwind's theme rule sits beside the package's own
+     `:root` rule, which the compiled build's minifier merged into it, so the
+     two are merged the same way. Not by minifying again: Lightning CSS adds
+     another `-webkit-` prefix on every pass. */
+  if (rules.includes(THEME_HOST)) {
+    const root = postcss.parse(rules.replaceAll(THEME_HOST, ":root{"));
+
+    root.walkRules(":root", (rule) => {
+      const previous = rule.prev();
+
+      if (previous?.type === "rule" && previous.selector === ":root") {
+        previous.append(rule.nodes);
+        rule.remove();
+      }
+    });
+    rules = root.toString();
+  }
 
   if (!isCatalogRelease) {
     const root = postcss.parse(rules);
@@ -144,5 +166,93 @@ describe(`/tw compiled by Tailwind ${tailwindVersion}`, () => {
         [],
       );
     });
+  }
+});
+
+/* The package's `dark:`, `contrast-more:`, `contrast-less:`, `motion-safe:`,
+   and `motion-reduce:` read an attribute, so they are selectors as well as
+   media queries, and Tailwind writes a selector variant after the
+   pseudo-element when it follows one: `before:motion-reduce:hidden` comes out
+   as `.x::before:where(…)`, which no browser accepts, and Tailwind says
+   nothing. Lightning CSS empties what it cannot keep, so the attribute arm is
+   lost; the query arm comes out as `::placeholder:not(:where())`, which some
+   engines accept (`tw-consumer.spec.ts` reads which). Tailwind's own `rtl:`
+   and `aria-*:` fail the same way. Under Tailwind 4.3.4 no shape of the
+   variant serves both orders: one that puts the condition first,
+   `:where(…)&`, rescues `placeholder:` but not `before:` or `after:`, whose
+   rule Tailwind nests under the one that sets `content`, and it
+   breaks `not-contrast-less:`, `in-*`, and `has-*`, which substitute `*` for
+   `&`. So docs/integrating/tailwind.md tells the consumer to write
+   these variants first. The documented order is held to the attribute; the
+   other is pinned too, so a Tailwind that learns to place it fails here and
+   the docs can drop the rule. */
+describe("the package's variants beside a pseudo-element variant", () => {
+  const VARIANTS = ["dark", "contrast-more", "contrast-less", "motion-safe", "motion-reduce"];
+  const PSEUDO_ELEMENTS = {
+    before: [":before"],
+    after: [":after"],
+    placeholder: ["::placeholder"],
+    file: ["::file-selector-button"],
+    selection: ["::selection"],
+    marker: ["::marker", "::-webkit-details-marker"],
+    backdrop: ["::backdrop"],
+  } as const;
+
+  /* The selectors of the rules that hide the candidate, each split from its
+     list. Each candidate is compiled on its own: Lightning CSS merges adjacent
+     rules with the same declarations into one selector list, which would mix
+     candidates. */
+  const selectorsHiding = async (candidate: string) => {
+    const compiler = await compile(
+      ["tailwindcss/utilities.css layer(utilities)", "theme.css"].map(importOf).join("\n"),
+      {
+        base: packageRoot,
+        from: path.join(packageRoot, "consumer.css"),
+        polyfills: POLYFILLS_NONE,
+        onDependency() {},
+      },
+    );
+    const selectors: string[] = [];
+
+    postcss.parse(optimize(compiler.build([candidate]), { minify: false }).code).walkDecls("display", (declaration) => {
+      const rule = declaration.parent;
+
+      if (declaration.value === "none" && rule?.type === "rule") {
+        selectors.push(...(rule as postcss.Rule).selectors);
+      }
+    });
+
+    return selectors;
+  };
+
+  /* A browser accepts a selector with a pseudo-element only when the
+     pseudo-element ends it, but for some logical pseudo-classes: Lightning
+     CSS empties the `:where()` it cannot keep there, and some engines accept
+     `::placeholder:not(:where())`. So the reversed order is held to what
+     every engine shares, that the attribute is not read before the
+     pseudo-element, on the element. Every variant's selector names its
+     attribute, `dark:` its classes too. */
+  const usable = (selector: string, endings: readonly string[]) =>
+    endings.some((ending) => selector.endsWith(ending)) && !/:(?:is|where)\(\)/.test(selector);
+  const readsAttribute = (selector: string, endings: readonly string[]) => {
+    const pseudoElement = Math.min(
+      ...endings.map((ending) => selector.lastIndexOf(ending)).filter((index) => index !== -1),
+    );
+
+    return /\[data-(?:theme|contrast|motion)=/.test(selector.slice(0, pseudoElement));
+  };
+
+  for (const [pseudo, endings] of Object.entries(PSEUDO_ELEMENTS)) {
+    for (const variant of VARIANTS) {
+      test(`${variant}:${pseudo}: reads the attribute, and ${pseudo}:${variant}: does not`, async () => {
+        const first = await selectorsHiding(`${variant}:${pseudo}:hidden`);
+        const after = await selectorsHiding(`${pseudo}:${variant}:hidden`);
+
+        expect(first.length).toBeGreaterThan(0);
+        expect(first.filter((selector) => !usable(selector, endings))).toEqual([]);
+        expect(first.some((selector) => readsAttribute(selector, endings))).toBe(true);
+        expect(after.filter((selector) => readsAttribute(selector, endings))).toEqual([]);
+      });
+    }
   }
 });

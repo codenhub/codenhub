@@ -6,7 +6,9 @@ import {
   getColorDistance,
   isTransparent,
   ORIGIN,
+  pixelStep,
   readSrgb,
+  settleAnimations,
   stopTransitions,
 } from "./test-utils";
 
@@ -534,7 +536,13 @@ test.describe("aesthetics", () => {
 
         const styles = getComputedStyle(bubble);
 
-        return { boxShadow: styles.boxShadow, clipPath: styles.clipPath, filter: styles.filter };
+        return {
+          boxShadow: styles.boxShadow,
+          clipPath: styles.clipPath,
+          filter: styles.filter,
+          borderTopLeftRadius: styles.borderTopLeftRadius,
+          cornerShape: styles.getPropertyValue("corner-shape"),
+        };
       }, extraClass);
     };
 
@@ -546,7 +554,7 @@ test.describe("aesthetics", () => {
     /* The silhouette reaches the bubble, because `--ui-clip` is a plain material
        token the bubble resolves at its own root. */
     expect(plain.clipPath, "default bubble clip").toBe("none");
-    expect(stepped.clipPath, "pixel bubble clip").toContain("polygon(");
+    expect(pixelStep(stepped), "pixel bubble step").toBe("4px");
 
     /* Shape and edge material reach the bubble; part-based depth does not, because
        the bubble rests flat and depth is opt-in. The plain and brutalist bubbles
@@ -594,6 +602,8 @@ test.describe("aesthetics", () => {
         const result = {
           backdrop: styles.backdropFilter || styles.getPropertyValue("-webkit-backdrop-filter"),
           borderRadius: styles.borderRadius,
+          borderTopLeftRadius: styles.borderTopLeftRadius,
+          cornerShape: styles.getPropertyValue("corner-shape"),
           borderWidth: styles.borderTopWidth,
           boxShadow: styles.boxShadow,
           clipPath: styles.clipPath,
@@ -618,9 +628,8 @@ test.describe("aesthetics", () => {
       ["direct pixel", bubbles.directPixel],
       ["glass ancestor, pixel tooltip", bubbles.glassOverPixel],
     ] as const) {
-      expect(styles.clipPath, `${label} clip`).toContain("polygon(");
+      expect(pixelStep(styles), `${label} step`).toBe("4px");
       expect(styles.borderWidth, `${label} border`).toBe("0px");
-      expect(styles.borderRadius, `${label} radius`).toBe("0px");
       expect(styles.backdrop === "" || styles.backdrop === "none", `${label} backdrop`).toBe(true);
     }
 
@@ -629,6 +638,7 @@ test.describe("aesthetics", () => {
       ["pixel ancestor, glass tooltip", bubbles.pixelOverGlass],
     ] as const) {
       expect(styles.clipPath, `${label} clip`).toBe("none");
+      expect(pixelStep(styles), `${label} step`).toBeNull();
       expect(styles.filter, `${label} filter`).toBe("none");
       expect(styles.borderRadius, `${label} radius`).toBe("12px");
       /* Glass declares a border width and the bubble is a box that reads it --
@@ -767,7 +777,12 @@ test.describe("aesthetics", () => {
 
       const [[, soft]] = await read(BUTTONS_URL, ["btn-soft-edged-primary"]);
 
-      expect(readSrgb(soft!["background-color"]!).alpha, "soft button keeps its whole tint").toBeCloseTo(0.12, 2);
+      /* The playground places the button straight in the region, so its whole
+         0.12 tint rests on glass's 69% control ground: 1 - 0.88 * 0.31. */
+      expect(readSrgb(soft!["background-color"]!).alpha, "soft button keeps its whole tint").toBeCloseTo(
+        1 - (1 - 0.12) * (1 - 0.69),
+        2,
+      );
     });
 
     /* A table is a pane of content, and next to frosted cards an opaque one read
@@ -1180,6 +1195,143 @@ test.describe("aesthetics", () => {
         expect(readSrgb(read.ghost.ground).alpha, "a ghost button rests on liquid's ground").toBeCloseTo(0.3, 2);
       });
 
+      /* An alert is a line or two tall, and the pane's lens band is 8px of
+         erosion under a 10px blur from each edge: on a one-line alert the two
+         sides' ramps met in the middle and bent the backdrop behind the text.
+         It takes the control's lens, in a liquid region, as a liquid surface,
+         and as a solo pane, and a card keeps the pane's. A tooltip bubble is
+         one line too, and a `.soft` or `.ghost` one shows the backdrop. */
+      test("gives an alert and a tooltip bubble the control's lens", async ({ page, browserName }) => {
+        await allowTransparency(page, browserName);
+        await page.goto(withAesthetic(SURFACES_URL, "glass"));
+
+        const read = await page.getByTestId("preview-root").evaluate((root) => {
+          const region = document.createElement("div");
+
+          region.innerHTML =
+            '<div class="glass-liquid"><div class="alert" data-probe="region">Region</div>' +
+            '<span class="tooltip-bubble soft" data-probe="bubble-region">Region</span>' +
+            '<div class="card" data-probe="card">Card</div>' +
+            '<button class="btn ghost glass-liquid" data-probe="button">Button</button></div>' +
+            '<div class="alert glass-liquid" data-probe="one">One</div>' +
+            '<div class="alert glass-solo glass-liquid" data-probe="solo">Solo</div>' +
+            '<span class="tooltip-bubble ghost glass-liquid" data-probe="bubble-one">One</span>' +
+            '<span class="tooltip-bubble soft glass-solo glass-liquid" data-probe="bubble-solo">Solo</span>';
+          root.append(region);
+
+          const lens = (probe: string) =>
+            getComputedStyle(region.querySelector(`[data-probe="${probe}"]`)!, "::after").backdropFilter;
+          const result = Object.fromEntries(
+            ["region", "card", "button", "one", "solo", "bubble-region", "bubble-one", "bubble-solo"].map((probe) => [
+              probe,
+              lens(probe),
+            ]),
+          );
+
+          region.remove();
+
+          return result;
+        });
+
+        expect(read.button, "the control's lens").toContain("#lens");
+        expect(read.card, "a card keeps the pane's lens").not.toBe(read.button);
+        for (const probe of ["region", "one", "solo"] as const) {
+          expect(read[probe], `${probe} alert`).toBe(read.button);
+        }
+        for (const probe of ["bubble-region", "bubble-one", "bubble-solo"] as const) {
+          expect(read[probe], probe).toBe(read.button);
+        }
+      });
+
+      /* The pixels behind a one-line alert's text, with the lens and without.
+         Chromium is the engine that draws the lens; the pane's lens moved 55% of
+         them on a 40px box, the control's none. A `.soft` tooltip bubble, 38px
+         tall, had 55% moved too. */
+      for (const [name, markup, selector] of [
+        ["alert", '<div class="alert" style="width:240px;color:transparent">One line</div>', ".alert"],
+        [
+          "tooltip bubble",
+          '<span class="tooltip" style="margin-inline-start:80px" data-state="open" data-tooltip-position="bottom"><button class="btn" style="opacity:0">Save</button><span class="tooltip-bubble soft" style="color:transparent">Saves the draft</span></span>',
+          ".tooltip-bubble",
+        ],
+      ] as const) {
+        test(`keeps the backdrop straight behind a one-line ${name}'s text`, async ({ page, browserName }) => {
+          test.skip(browserName !== "chromium", "only Chromium draws an SVG filter in backdrop-filter");
+          await allowTransparency(page, browserName);
+          await page.goto(SURFACES_URL);
+
+          await page.waitForSelector('[data-testid="preview-root"]');
+          /* On the body, alone: the playground's own boxes would be the backdrop. */
+          const box = await page.evaluate(
+            ([content, target]) => {
+              const stage = document.createElement("div");
+
+              document.body.replaceChildren(stage);
+              stage.id = "lens-stage";
+              stage.className = "glass glass-liquid";
+              stage.style.cssText =
+                "position:fixed;inset:0;z-index:9;padding:16px;background:repeating-conic-gradient(#000 0 25%,#fff 0 50%) 0 0/20px 20px";
+              stage.innerHTML = content;
+
+              return stage.querySelector(target)!.getBoundingClientRect().toJSON() as DOMRect;
+            },
+            [markup, selector] as const,
+          );
+          const clip = { x: box.x, y: box.y, width: box.width, height: box.height };
+
+          await settleAnimations(page);
+          const bent = await page.screenshot({ clip, scale: "css" });
+
+          await page.locator(`#lens-stage ${selector}`).evaluate((element: HTMLElement) => {
+            element.style.setProperty("--_glass-liquid-lens", "none");
+            element.style.setProperty("--_glass-liquid-lens-control", "none");
+          });
+          await settleAnimations(page);
+          const straight = await page.screenshot({ clip, scale: "css" });
+
+          const moved = await page.evaluate(
+            async ([a, b]) => {
+              const decode = async (source: string) => {
+                const image = new Image();
+
+                image.src = `data:image/png;base64,${source}`;
+                await image.decode();
+                const canvas = document.createElement("canvas");
+
+                canvas.width = image.width;
+                canvas.height = image.height;
+                const context = canvas.getContext("2d")!;
+
+                context.drawImage(image, 0, 0);
+
+                return context.getImageData(0, 0, image.width, image.height);
+              };
+              const [x, y] = [await decode(a), await decode(b)];
+              const middle = Math.floor(x.height / 2);
+              let changed = 0;
+              let total = 0;
+
+              for (let row = middle - 4; row < middle + 4; row += 1) {
+                for (let column = Math.floor(x.width / 4); column < Math.floor((3 * x.width) / 4); column += 1) {
+                  const i = (row * x.width + column) * 4;
+
+                  total += 1;
+                  if (Math.max(...[0, 1, 2].map((c) => Math.abs(x.data[i + c]! - y.data[i + c]!))) > 24) {
+                    changed += 1;
+                  }
+                }
+              }
+
+              return changed / total;
+            },
+            [bent.toString("base64"), straight.toString("base64")] as const,
+          );
+
+          expect(box.height, `a one-line ${name}`).toBeLessThan(70);
+          expect(moved, "share of the backdrop the lens moves behind the text").toBeLessThan(0.05);
+        });
+      }
+
       /* Surfaces and the listed hosts take the layers, so anything else that
          frosts under glass -- a bare `<table>` under `/native` -- takes none.
          It keeps a blur of its own instead: with the backdrop cleared on the
@@ -1299,6 +1451,94 @@ test.describe("aesthetics", () => {
         for (const other of Object.keys(read.nested)) {
           expect(read.nested[other], `a card in ${other} inside liquid`).toEqual(read.reference[other]);
           expect(read.reentered[other], `a card in liquid inside ${other} inside liquid`).toEqual(read.alone);
+        }
+      });
+
+      /* A liquid button asks for the layers itself, and the nearest region
+         still decides: inside a pixel region nested in glass, a
+         `.btn.glass-liquid` matched `.glass *` and kept both layers, the
+         anchor, and the isolation. */
+      test("layers a liquid button by the nearest region", async ({ page, browserName }) => {
+        await allowTransparency(page, browserName);
+        await page.goto(SURFACES_URL);
+
+        const read = await page.getByTestId("preview-root").evaluate((root) => {
+          const others = ["neobrutalism", "pixel", "chunky-tile", "cyber", "sketch"];
+          const paint = (regions: string[]) => {
+            const wrapper = document.createElement("div");
+
+            wrapper.innerHTML = `${regions.map((region) => `<div class="${region}">`).join("")}<button class="btn ghost glass-liquid">x</button>${"</div>".repeat(regions.length)}`;
+            root.append(wrapper);
+
+            const button = wrapper.querySelector("button")!;
+            const styles = getComputedStyle(button);
+            const result = {
+              before: getComputedStyle(button, "::before").content,
+              after: getComputedStyle(button, "::after").content,
+              position: styles.position,
+              isolation: styles.isolation,
+              ground: styles.backgroundColor,
+            };
+
+            wrapper.remove();
+
+            return result;
+          };
+
+          return {
+            alone: paint(["glass"]),
+            nested: Object.fromEntries(others.map((other) => [other, paint(["glass", other])])),
+            reference: Object.fromEntries(others.map((other) => [other, paint([other])])),
+            reentered: Object.fromEntries(others.map((other) => [other, paint(["glass", other, "glass"])])),
+          };
+        });
+
+        expect(read.alone.before, "a liquid button in glass").toBe('""');
+        for (const other of Object.keys(read.nested)) {
+          expect.soft(read.nested[other], `a liquid button in ${other} inside glass`).toEqual(read.reference[other]);
+          expect
+            .soft(read.reentered[other], `a liquid button in glass inside ${other} inside glass`)
+            .toEqual(read.alone);
+        }
+      });
+
+      /* Liquid's ink and ground, too: inside a pixel region nested in glass,
+         a `.card.glass-liquid` matched `.glass .glass-liquid` and took liquid's
+         clear ground and white rim in place of the region's own. */
+      test("gives a liquid element liquid's tokens by the nearest region", async ({ page, browserName }) => {
+        await allowTransparency(page, browserName);
+        await page.goto(SURFACES_URL);
+
+        const read = await page.getByTestId("preview-root").evaluate((root) => {
+          const others = ["neobrutalism", "pixel", "chunky-tile", "cyber", "sketch"];
+          const paint = (regions: string[]) => {
+            const wrapper = document.createElement("div");
+
+            wrapper.innerHTML = `${regions.map((region) => `<div class="${region}">`).join("")}<div class="card glass-liquid">x</div>${"</div>".repeat(regions.length)}`;
+            root.append(wrapper);
+
+            const styles = getComputedStyle(wrapper.querySelector(".card")!);
+            const result = {
+              ink: styles.getPropertyValue("--ui-ink"),
+              ground: styles.getPropertyValue("--ui-surface-ground"),
+            };
+
+            wrapper.remove();
+
+            return result;
+          };
+
+          return {
+            alone: paint(["glass"]),
+            nested: Object.fromEntries(others.map((other) => [other, paint(["glass", other])])),
+            reference: Object.fromEntries(others.map((other) => [other, paint([other])])),
+            reentered: Object.fromEntries(others.map((other) => [other, paint(["glass", other, "glass"])])),
+          };
+        });
+
+        for (const other of Object.keys(read.nested)) {
+          expect.soft(read.nested[other], `a liquid card in ${other} inside glass`).toEqual(read.reference[other]);
+          expect.soft(read.reentered[other], `a liquid card in glass inside ${other} inside glass`).toEqual(read.alone);
         }
       });
 
@@ -1534,14 +1774,8 @@ test.describe("aesthetics", () => {
     test("cuts stepped corners and draws the edge as an inset ring", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
 
-      const button = await readStyles(page, "btn-default-none", [
-        "clip-path",
-        "border-top-width",
-        "box-shadow",
-        "border-radius",
-      ]);
-
-      const properties = ["clip-path", "border-top-width", "box-shadow", "border-radius"];
+      const properties = ["clip-path", "border-top-width", "box-shadow", "border-top-left-radius", "corner-shape"];
+      const button = await readStyles(page, "btn-default-none", properties);
 
       await page.goto(withAesthetic(SURFACES_URL, "pixel"));
 
@@ -1554,14 +1788,21 @@ test.describe("aesthetics", () => {
       for (const [testId, styles] of [["btn-default-none", button] as const, ...card, ...input]) {
         /* A surface holds other things -- a tooltip, a menu, a child's focus
            ring and shadow -- and a clip cuts all of them, so it is square. */
+        const step = pixelStep({
+          clipPath: styles["clip-path"]!,
+          borderTopLeftRadius: styles["border-top-left-radius"]!,
+          cornerShape: styles["corner-shape"]!,
+        });
         if (testId.startsWith("card")) {
           expect(styles["clip-path"], `${testId} clip`).toBe("none");
+          expect(step, `${testId} step`).toBeNull();
+          expect(styles["border-top-left-radius"], `${testId} radius`).toBe("0px");
         } else {
-          expect(styles["clip-path"], `${testId} clip`).toContain("polygon(");
+          expect(step, `${testId} step`).toBe("4px");
         }
-        /* `clip-path` clips a border away, so the element must not draw one. */
+        /* The ring draws the edge: a clip would cut a border away at the
+           straight sides, and the notch draws the same edge. */
         expect(styles["border-top-width"], `${testId} border`).toBe("0px");
-        expect(styles["border-radius"], `${testId} radius`).toBe("0px");
         expect(styles["box-shadow"], `${testId} ring`).toMatch(/inset/);
         /* The ring must be as deep as the corner cut, or the staircase shows
            through and the edge reads as broken at every corner. */
@@ -1576,12 +1817,20 @@ test.describe("aesthetics", () => {
     test("cuts one square grid unit off each corner", async ({ page }) => {
       await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
 
-      const structural = await readStyles(page, "btn-default-none", ["clip-path"]);
+      const structural = await readStyles(page, "btn-default-none", ["clip-path", "border-radius", "corner-shape"]);
 
-      /* Left edge to the cut, across the corner square, then up to the top edge:
-         two vertices where the staircase needed four. The unit is the ring's own
-         depth, so the cut and what covers it agree by construction. */
-      expect(structural["clip-path"], "button clip").toContain("polygon(0px 4px, 4px 4px, 4px 0px");
+      if (await page.evaluate(() => CSS.supports("corner-shape", "notch"))) {
+        /* A `notch` corner one unit long on each corner: the same square cut,
+           drawn as the shape rather than clipped. */
+        expect(structural["clip-path"], "button clip").toBe("none");
+        expect(structural["border-radius"], "button corner").toBe("4px");
+        expect(structural["corner-shape"], "button corner shape").toMatch(/notch|superellipse\(-infinity\)/);
+      } else {
+        /* Left edge to the cut, across the corner square, then up to the top
+           edge: two vertices where the staircase needed four. The unit is the
+           ring's own depth, so the cut and what covers it agree by construction. */
+        expect(structural["clip-path"], "button clip").toContain("polygon(0px 4px, 4px 4px, 4px 0px");
+      }
     });
 
     /* A clip cuts everything inside the element, not only its own corners: a
@@ -1589,6 +1838,36 @@ test.describe("aesthetics", () => {
        shadow, a child's focus outline and a consumer's menu went with it. A
        surface is the one box whose job is to hold other things, so it takes
        no clip and is square with the ring, as a table is. */
+    /* The polygon cut a button's own children with its corners: a badge
+       pinned past an icon button's corner was trimmed at the button's edge.
+       Where `corner-shape: notch` is drawn, the step is the shape and nothing
+       is clipped; elsewhere the polygon is the only way to draw it. */
+    test("paints a badge pinned past a button's corner where the notch is drawn", async ({ page }) => {
+      await page.goto(withAesthetic(BUTTONS_URL, "pixel"));
+      test.skip(!(await page.evaluate(() => CSS.supports("corner-shape", "notch"))), "no corner-shape: notch");
+
+      const hit = await page.getByTestId("preview-root").evaluate((root) => {
+        const holder = document.createElement("div");
+
+        holder.style.padding = "2rem";
+        holder.innerHTML =
+          '<button type="button" class="btn icon ghost edged" style="position: relative" aria-label="Mail">M' +
+          '<span class="badge solid destructive" style="position: absolute; top: -8px; right: -10px">3</span></button>';
+        root.append(holder);
+
+        const button = holder.querySelector("button")!;
+        button.scrollIntoView({ block: "center" });
+        const box = button.getBoundingClientRect();
+        const result = document.elementFromPoint(box.right + 4, box.top - 4) === button.querySelector(".badge");
+
+        holder.remove();
+
+        return result;
+      });
+
+      expect(hit, "the badge past the corner is painted").toBe(true);
+    });
+
     test("leaves a surface unclipped so what it holds is not cut", async ({ page }) => {
       await page.goto(withAesthetic(SURFACES_URL, "pixel"));
 
@@ -1635,21 +1914,23 @@ test.describe("aesthetics", () => {
           ancestor.append(host);
           document.querySelector('[data-testid="preview-root"]')!.append(ancestor);
 
-          const { clipPath, boxShadow } = getComputedStyle(card);
+          const styles = getComputedStyle(card);
+          const read = {
+            clipPath: styles.clipPath,
+            boxShadow: styles.boxShadow,
+            borderTopLeftRadius: styles.borderTopLeftRadius,
+            cornerShape: styles.getPropertyValue("corner-shape"),
+          };
 
           ancestor.remove();
-          return { clipPath, boxShadow };
+          return read;
         };
 
         return { ancestor: build("ancestor"), self: build("self") };
       });
 
-      expect(measured.ancestor.clipPath, "an ancestor's knob cuts the corner").toContain(
-        "polygon(0px 6px, 6px 6px, 6px 0px",
-      );
-      expect(measured.self.clipPath, "so does one on the element itself").toContain(
-        "polygon(0px 6px, 6px 6px, 6px 0px",
-      );
+      expect(pixelStep(measured.ancestor), "an ancestor's knob cuts the corner").toBe("6px");
+      expect(pixelStep(measured.self), "so does one on the element itself").toBe("6px");
       /* One knob, and the ring follows it too -- the cut and what covers it are the
          same unit by construction, which is the reason there is only one. */
       expect(measured.ancestor.boxShadow, "and the ring it covers with").toContain("6px");
@@ -1820,7 +2101,8 @@ test.describe("aesthetics", () => {
 
           return {
             selector,
-            clipped: styles.clipPath.startsWith("polygon("),
+            clipPath: styles.clipPath,
+            cornerShape: styles.getPropertyValue("corner-shape"),
             ring: styles.boxShadow,
             borderTopWidth: styles.borderTopWidth,
             borderTopLeftRadius: styles.borderTopLeftRadius,
@@ -1832,15 +2114,15 @@ test.describe("aesthetics", () => {
 
       for (const shape of shapes) {
         expect(shape.borderTopWidth, `${shape.selector} border`).toBe("0px");
-        expect(shape.borderTopLeftRadius, `${shape.selector} radius`).toBe("0px");
       }
 
       /* The structural silhouette on the two structural elements, and the chip
          one -- squared, under this aesthetic -- on the content chip. Both are
          material tokens, so both travel. */
-      expect(button!.clipped, "button clip").toBe(true);
-      expect(input!.clipped, "input clip").toBe(true);
-      expect(code!.clipped, "code clip").toBe(false);
+      expect(pixelStep(button!), "button step").toBe("4px");
+      expect(pixelStep(input!), "input step").toBe("4px");
+      expect(pixelStep(code!), "code step").toBeNull();
+      expect(code!.borderTopLeftRadius, "code radius").toBe("0px");
 
       /* A clip removes a border, so the edge has to be the inset ring instead or
          the element loses its outline entirely. The ring travels through the
@@ -3358,3 +3640,286 @@ test("keeps a small icon button's icon in sight when focused under pixel", async
       .toBeGreaterThanOrEqual(0.5);
   }
 });
+
+/* A glass surface's backdrop filter, and a liquid one's isolation, make it a
+   stacking context, which traps the bubble's `z-index` inside it: an open
+   tooltip in one card was painted under the next card. The surface holding an
+   open tooltip is lifted to the popover layer. Every aesthetic is read, since
+   any of them may make a surface a stacking context. */
+for (const region of ["", "chunky-tile", "cyber", "glass", "glass glass-liquid", "neobrutalism", "pixel", "sketch"]) {
+  test(`paints an open tooltip over the next surface${region ? ` under .${region.replace(" ", ".")}` : ""}`, async ({
+    page,
+  }) => {
+    await page.goto(FEEDBACK_URL);
+    await page.evaluate((classes) => {
+      const host = document.createElement("div");
+      host.className = classes;
+      host.style.cssText = "padding: 2rem";
+      host.innerHTML =
+        '<div class="card"><span class="tooltip" data-state="open" data-tooltip-position="bottom">' +
+        '<button type="button">Trigger</button>' +
+        '<span class="tooltip-bubble" data-probe="bubble">A message long enough to cover the card below</span>' +
+        "</span></div>" +
+        '<div class="card" data-probe="next">Next card</div>' +
+        '<table class="data-table"><tbody><tr><td><span class="tooltip" data-state="open" data-tooltip-position="bottom">' +
+        '<button type="button">Cell</button><span class="tooltip-bubble" data-probe="cell-bubble">Below the table</span>' +
+        '</span></td></tr></tbody></table><div class="card" data-probe="after-table" style="min-height: 4rem">After the table</div>';
+      document.body.prepend(host);
+    }, region);
+    await settleAnimations(page);
+
+    for (const [probe, next] of [
+      ["bubble", "next"],
+      ["cell-bubble", "after-table"],
+    ]) {
+      // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+      const paint = await page.locator(`[data-probe="${probe}"]`).evaluate((element, nextProbe) => {
+        const rect = element.getBoundingClientRect();
+        const below = document.querySelector(`[data-probe="${nextProbe}"]`)!.getBoundingClientRect();
+        const x = rect.left + rect.width / 2;
+        const y = rect.bottom - 2;
+        const hit = document.elementFromPoint(x, y);
+
+        return {
+          overlaps: y > below.top && y < below.bottom && x > below.left && x < below.right,
+          onTop: hit === element || element.contains(hit),
+        };
+      }, next);
+
+      expect(paint.overlaps, `${probe} reaches over the surface after it`).toBe(true);
+      expect(paint.onTop, `${probe} is painted on top`).toBe(true);
+    }
+  });
+}
+
+/* The lift stays under the page's own layers. A card holding a tooltip and a
+   focused field took the popover layer, and painted over a sticky header and
+   an open menu at `z-index: 10` above it, taking their clicks. The lift is a
+   step above the next surface, not a layer of its own. */
+for (const region of ["", "glass"]) {
+  test(`keeps a sticky header and an open menu over a card holding a focused tooltip${region ? ` under .${region}` : ""}`, async ({
+    page,
+  }) => {
+    await page.goto(FEEDBACK_URL);
+    await page.evaluate((classes) => {
+      const host = document.createElement("div");
+      host.className = classes;
+      host.style.cssText = "position: relative; padding: 0 2rem 2rem";
+      host.innerHTML =
+        '<header data-probe="header" style="position: sticky; top: 0; z-index: 10; height: 3rem; background: white">Header</header>' +
+        '<div data-probe="menu" style="position: absolute; z-index: 10; top: 5rem; left: 2rem; width: 12rem; height: 3rem; background: white">Menu</div>' +
+        '<div class="card" data-probe="card" style="margin-top: -1.5rem; min-height: 8rem">' +
+        '<span class="tooltip"><button type="button">Trigger</button><span class="tooltip-bubble">A message</span></span>' +
+        '<input class="ipt" data-probe="field" aria-label="Field"></div>';
+      document.body.prepend(host);
+    }, region);
+    await page.locator('[data-probe="field"]').focus();
+    await settleAnimations(page);
+
+    const hits = await page.evaluate(() =>
+      ["header", "menu"].map((probe) => {
+        const element = document.querySelector(`[data-probe="${probe}"]`)!;
+        const card = document.querySelector('[data-probe="card"]')!.getBoundingClientRect();
+        const rect = element.getBoundingClientRect();
+        const x = rect.left + 8;
+        const y = Math.max(rect.top, card.top) + 4;
+
+        return {
+          probe,
+          overlaps: y > card.top && y < card.bottom && y < rect.bottom,
+          onTop: document.elementFromPoint(x, y) === element,
+        };
+      }),
+    );
+
+    for (const hit of hits) {
+      expect(hit.overlaps, `${hit.probe} overlaps the card`).toBe(true);
+      expect(hit.onTop, `${hit.probe} is painted over the card`).toBe(true);
+    }
+  });
+}
+
+/* Hover moves nothing. Hovering a card with a tooltip turned it from static to
+   relative, so an absolutely positioned child anchored to a wrapper outside
+   the card jumped to the card. A glass surface is a stacking context at rest,
+   so it is anchored at rest as well, and hover changes only its `z-index`. */
+for (const [region, position] of [
+  ["", "static"],
+  ["glass", "relative"],
+] as const) {
+  test(`keeps a card's position through hover${region ? ` under .${region}` : ""}`, async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+    await page.evaluate((classes) => {
+      const host = document.createElement("div");
+      host.className = classes;
+      host.style.cssText = "padding: 2rem";
+      host.innerHTML =
+        '<div class="card" data-probe="card"><span class="tooltip"><button type="button">Trigger</button>' +
+        '<span class="tooltip-bubble">A message</span></span></div>';
+      document.body.prepend(host);
+    }, region);
+
+    const card = page.locator('[data-probe="card"]');
+    const read = () => card.evaluate((element) => getComputedStyle(element).position);
+
+    expect(await read()).toBe(position);
+    await card.hover();
+    expect(await read()).toBe(position);
+  });
+}
+
+/* Outside glass nothing is lifted, so a surface keeps the `z-index` the page
+   gave it in a layer below the package's utilities. The lift, invalid there,
+   computed to `auto`, and a sticky header built with `@apply panel` in
+   `@layer components` dropped under the content while it held focus. */
+test("keeps a z-index the page sets in its components layer on a surface holding a focused tooltip", async ({
+  page,
+}) => {
+  await page.goto(FEEDBACK_URL);
+  await page.addStyleTag({ content: "@layer components { .probe-header { position: sticky; top: 0; z-index: 10 } }" });
+  await page.evaluate(() => {
+    const header = document.createElement("header");
+
+    header.className = "panel probe-header";
+    header.dataset.probe = "header";
+    header.innerHTML =
+      '<span class="tooltip"><button type="button" data-probe="trigger">Trigger</button><span class="tooltip-bubble">A message</span></span>';
+    document.body.prepend(header);
+  });
+
+  const header = page.locator('[data-probe="header"]');
+
+  await page.locator('[data-probe="trigger"]').focus();
+  expect(await header.evaluate((element) => getComputedStyle(element).zIndex)).toBe("10");
+});
+
+/* Under glass the package sets a surface `relative` at rest from its utilities
+   layer, so it beats a position the page sets in `@layer components` on an
+   element carrying a package surface class. A layer nested in a Tailwind
+   `@utility` body is a sublayer of utilities, so the anchor cannot sit below
+   `components`. A utility -- here a rule in `@layer utilities` as Tailwind
+   writes `sticky` -- or a rule outside any layer still positions it.
+   docs/usage/tooltips.md documents the exception; this pins it. */
+test("positions a glass surface with a utility or an unlayered rule, not a components-layer one", async ({ page }) => {
+  await page.goto(FEEDBACK_URL);
+  await page.addStyleTag({
+    content:
+      "@layer components { .probe-layered { position: sticky } } @layer utilities { .probe-utility { position: sticky } } .probe-unlayered { position: sticky }",
+  });
+  await page.evaluate(() => {
+    const host = document.createElement("div");
+
+    host.className = "glass";
+    host.innerHTML = ["panel probe-layered", "panel probe-utility", "panel probe-unlayered"]
+      .map((classes, index) => `<div class="${classes}" data-probe="p${index}">Panel</div>`)
+      .join("");
+    document.body.prepend(host);
+  });
+
+  const read = (index: number) =>
+    page.locator(`[data-probe="p${index}"]`).evaluate((element) => getComputedStyle(element).position);
+
+  expect([await read(0), await read(1), await read(2)]).toEqual(["relative", "sticky", "sticky"]);
+});
+
+/* The glass anchor leaves the top layer alone. Its `relative` beat the user
+   agent's `position: fixed` on a modal dialog and a popover, so on a page
+   scrolled 2000px a `<dialog class="card">` opened 1683px above the window in
+   WebKit, a `.card.floating` popover 2000px above it, and a toast pinned to
+   the window's corner scrolled with the page in every engine. A non-modal
+   dialog keeps the user agent's `absolute`. */
+test("keeps a surface dialog and popover where the top layer places them under .glass", async ({ page }) => {
+  await page.goto(FEEDBACK_URL);
+  await page.evaluate(() => {
+    const host = document.createElement("main");
+
+    host.className = "glass";
+    host.innerHTML =
+      '<div style="height: 6000px"></div>' +
+      '<dialog class="card" data-probe="modal">Modal</dialog>' +
+      '<dialog class="panel" data-probe="dialog">Dialog</dialog>' +
+      '<div class="card floating" popover data-probe="popover">Popover</div>' +
+      '<div class="alert success" popover="manual" data-probe="toast" style="inset: auto 1rem 1rem auto; margin: 0">Toast</div>' +
+      '<div class="tooltip-bubble" popover data-probe="bubble">Bubble</div>';
+    document.body.prepend(host);
+    window.scrollTo(0, 2000);
+  });
+
+  const open = (probe: string, how: "showModal" | "show" | "showPopover") =>
+    page.locator(`[data-probe="${probe}"]`).evaluate((element, method) => {
+      (element as unknown as Record<string, () => void>)[method]!();
+      const rect = element.getBoundingClientRect();
+      const read = {
+        position: getComputedStyle(element).position,
+        top: rect.top,
+        bottom: rect.bottom,
+        inView: rect.top >= 0 && rect.bottom <= window.innerHeight,
+        fromBottom: Math.round(window.innerHeight - rect.bottom),
+      };
+      if (method === "showPopover") {
+        (element as HTMLElement).hidePopover();
+      } else {
+        (element as HTMLDialogElement).close();
+      }
+
+      return read;
+    }, how);
+
+  const modal = await open("modal", "showModal");
+  expect.soft(modal.position, "modal dialog").toBe("fixed");
+  expect.soft(modal.inView, `modal dialog in the window, at ${modal.top}`).toBe(true);
+
+  expect.soft((await open("dialog", "show")).position, "non-modal dialog").toBe("absolute");
+
+  const popover = await open("popover", "showPopover");
+  expect.soft(popover.position, "popover").toBe("fixed");
+  expect.soft(popover.inView, `popover in the window, at ${popover.top}`).toBe(true);
+
+  const toast = await open("toast", "showPopover");
+  expect.soft(toast.position, "toast").toBe("fixed");
+  expect.soft(toast.fromBottom, "toast pinned 1rem above the window's bottom").toBe(16);
+
+  expect.soft((await open("bubble", "showPopover")).position, "popover bubble").toBe("fixed");
+});
+
+/* Under glass every surface is a stacking context, so whatever overhangs one
+   -- a menu, a listbox -- is painted under the next surface whatever its own
+   `z-index`. A glass surface steps up while it holds focus, or holds an open
+   popover, a `[data-state="open"]` widget, or an `[open]` element, as it
+   does for a tooltip. */
+for (const region of ["glass", "glass glass-liquid"]) {
+  test(`paints a menu overhanging a card over the next card under .${region.replace(" ", ".")}`, async ({ page }) => {
+    await page.goto(FEEDBACK_URL);
+    await page.evaluate((classes) => {
+      const host = document.createElement("div");
+      host.className = classes;
+      host.style.cssText = "padding: 2rem";
+      const card = (state: string, probe: string) =>
+        `<div class="card"><div style="position: relative"${state}><button type="button" class="btn" data-probe="${probe}-button">Menu</button>` +
+        `<div data-probe="${probe}" style="position: absolute; top: 100%; left: 0; z-index: 50; width: 12rem; height: 8rem; background: white">menu</div></div></div>` +
+        `<div class="card" data-probe="${probe}-next" style="min-height: 8rem">Next card</div>`;
+      host.innerHTML = card("", "focused") + card(' data-state="open"', "stated");
+      document.body.prepend(host);
+    }, region);
+    await page.locator('[data-probe="focused-button"]').focus();
+    await settleAnimations(page);
+
+    for (const probe of ["focused", "stated"]) {
+      // oxlint-disable-next-line no-await-in-loop -- one page, read in turn.
+      const paint = await page.locator(`[data-probe="${probe}"]`).evaluate((element, nextProbe) => {
+        const rect = element.getBoundingClientRect();
+        const below = document.querySelector(`[data-probe="${nextProbe}"]`)!.getBoundingClientRect();
+        const x = rect.left + 8;
+        const y = rect.bottom - 4;
+
+        return {
+          overlaps: y > below.top && y < below.bottom,
+          onTop: document.elementFromPoint(x, y) === element,
+        };
+      }, `${probe}-next`);
+
+      expect.soft(paint.overlaps, `${probe} menu reaches over the next card`).toBe(true);
+      expect.soft(paint.onTop, `${probe} menu is painted on top`).toBe(true);
+    }
+  });
+}

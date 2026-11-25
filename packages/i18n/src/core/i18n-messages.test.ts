@@ -5,7 +5,14 @@ import { describe, expect, it, vi } from "vitest";
 
 import { createI18n } from "../index";
 import { getI18nInternals } from "./internals";
-import { MessageSyntaxError, parseCachedMessage, parseMessage, parseMessageWithCost } from "./message-format";
+import {
+  getDateTimeFormat,
+  getNumberFormat,
+  MessageSyntaxError,
+  parseCachedMessage,
+  parseMessage,
+  parseMessageWithCost,
+} from "./message-format";
 
 const messages = {
   hello: "Hello, {name}!",
@@ -64,17 +71,29 @@ describe("ICU messages", () => {
     expect(i18n.t("whole", { amount: 1234 })).toBe("1,234 units");
   });
 
-  it("should format a number in a plain argument as {name, number} does", async () => {
+  it("should insert a number in a plain argument as JavaScript writes it, as 0.4.0 does", async () => {
     const i18n = create({ pt: { hello: "Olá, {name}!", broken: "Olá {name} }" } });
     await i18n.init();
 
-    expect(i18n.t("hello", { name: 1234.5 })).toBe("Hello, 1,234.5!");
-    expect(i18n.t("hello", { name: "1234.5" })).toBe("Hello, 1234.5!");
+    expect(i18n.t("hello", { name: 12_345.5 })).toBe("Hello, 12345.5!");
 
     await i18n.setLocale("pt");
-    expect(i18n.t("hello", { name: 1234.5 })).toBe("Olá, 1.234,5!");
+    expect(i18n.t("hello", { name: 12_345.5 })).toBe("Olá, 12345.5!");
     // A message that is not valid ICU syntax fills its arguments the same way.
-    expect(i18n.t("broken", { name: 1234.5 })).toBe("Olá 1.234,5 }");
+    expect(i18n.t("broken", { name: 12_345.5 })).toBe("Olá 12345.5 }");
+  });
+
+  it("should leave an argument as written for a bigint, as 0.4.0 does", async () => {
+    const i18n = create();
+    await i18n.init();
+    // Plain JavaScript can pass one; the types take only a number.
+    const values = { name: 3n, amount: 3n, count: 3n, n: 3n, gender: 3n } as unknown as Record<string, number>;
+
+    expect(i18n.t("hello", values)).toBe("Hello, {name}!");
+    expect(i18n.t("price", values)).toBe("Costs {amount, number}");
+    expect(i18n.t("items", values)).toBe("{count, plural, =0 {No items} one {# item} other {# items}}");
+    expect(i18n.t("place", values)).toBe("{n, selectordinal, one {#st} two {#nd} few {#rd} other {#th}}");
+    expect(i18n.t("greet", values)).toBe("{gender, select, female {She} male {He} other {They}} replied");
   });
 
   it("should format dates and times as Intl does", async () => {
@@ -182,6 +201,41 @@ describe("ICU messages", () => {
     expect(i18n.t("greet", { gender: "unknown" })).toBe("They replied");
     expect(i18n.t("nested", { count: 1, gender: "female" })).toBe("her item");
     expect(i18n.t("nested", { count: 2, gender: "female" })).toBe("2 items");
+  });
+
+  describe("a boolean in a select", () => {
+    const create = () =>
+      createI18n({
+        defaultLocale: "en",
+        locales: ["en"],
+        loadLocale: () => ({
+          role: "{isAdmin, select, true {Admin} false {Member} other {Guest}}",
+          onlyTrue: "{isAdmin, select, true {Admin} other {Member}}",
+          plain: "Admin: {isAdmin}",
+          number: "{isAdmin, number}",
+          plural: "{isAdmin, plural, other {#}}",
+        }),
+        isSilent: true,
+      });
+
+    it.each([
+      { key: "role", isAdmin: true, text: "Admin" },
+      { key: "role", isAdmin: false, text: "Member" },
+      { key: "onlyTrue", isAdmin: true, text: "Admin" },
+      { key: "onlyTrue", isAdmin: false, text: "Member" },
+    ] as const)("should pick the option named $isAdmin in $key, or other", async ({ key, isAdmin, text }) => {
+      const i18n = create();
+      await i18n.init();
+
+      expect(i18n.t(key, { isAdmin })).toBe(text);
+    });
+
+    it.each(["plain", "number", "plural"] as const)("should leave a boolean in %s as written", async (key) => {
+      const i18n = create();
+      await i18n.init();
+
+      expect(i18n.t(key, { isAdmin: true })).toBe(i18n.t(key));
+    });
   });
 
   it("should treat apostrophes as ICU does", async () => {
@@ -316,6 +370,43 @@ describe("ICU messages", () => {
     expect(i18n.t("malformed", { a: "v" })).toBe(`${"v".repeat(100)}{a} }`);
   });
 
+  describe("# toward the 100-argument limit", () => {
+    const create = () =>
+      createI18n({
+        defaultLocale: "en",
+        locales: ["en"],
+        loadLocale: () => ({
+          pounds: `{n, plural, other {${"#".repeat(101)}}}`,
+          poundsThenArgument: `{n, plural, other {${"#".repeat(99)}{a}}}`,
+          argumentsThenPounds: `${"{a}".repeat(98)}{n, plural, other {##}}`,
+          nested: `{n, plural, other {${"#".repeat(50)}{m, plural, other {${"#".repeat(50)}}}}}`,
+          huge: `{n, plural, other {${"#".repeat(99_970)}}}`,
+        }),
+        isSilent: true,
+      });
+
+    // The plural is the first argument, so 99 `#` are left before the limit.
+    it.each([
+      { key: "pounds", values: { n: 5 }, text: `${"5".repeat(99)}##` },
+      { key: "poundsThenArgument", values: { n: 5, a: "v" }, text: `${"5".repeat(99)}{a}` },
+      { key: "argumentsThenPounds", values: { n: 5, a: "v" }, text: `${"v".repeat(98)}5#` },
+      { key: "nested", values: { n: 1, m: 2 }, text: `${"1".repeat(50)}${"2".repeat(48)}##` },
+    ] as const)("should count each # in $key and write the rest as #", async ({ key, values, text }) => {
+      const i18n = create();
+      await i18n.init();
+
+      expect(i18n.t(key, values)).toBe(text);
+    });
+
+    it("should keep a long number repeated by # within 100 copies", async () => {
+      const i18n = create();
+      await i18n.init();
+      const number = i18n.formatNumber(1e308);
+
+      expect(i18n.t("huge", { n: 1e308 })).toBe(`${number.repeat(99)}${"#".repeat(99_970 - 99)}`);
+    });
+  });
+
   it("should format a plural's number once however many # its form repeats", async () => {
     const i18n = createI18n({
       defaultLocale: "en",
@@ -356,9 +447,118 @@ describe("ICU messages", () => {
     const i18n = create();
     await i18n.init();
 
-    expect(getI18nInternals(i18n).lookup("apostrophe")).toBe("It's {name}");
-    expect(getI18nInternals(i18n).lookup("items")).toBe("{count, plural, =0 {No items} one {# item} other {# items}}");
+    const { lookup } = getI18nInternals(i18n);
+    expect(lookup("apostrophe")).toEqual({ text: "It's {name}", locale: "en", needsValues: true });
+    expect(lookup("items")).toMatchObject({ needsValues: true });
+    expect(lookup("quoted")).toEqual({ text: "Write {name} literally", locale: "en", needsValues: false });
+    expect(lookup("pound")).toMatchObject({ needsValues: false });
+    // Invalid syntax fills only complete `{name}` placeholders, and this one has none.
+    expect(lookup("broken")).toMatchObject({ needsValues: false });
+    expect(lookup("plain")).toEqual({ text: "Just text", locale: "en", needsValues: false });
   });
+
+  it("should say that a malformed message with a placeholder needs values", async () => {
+    const i18n = createI18n({
+      defaultLocale: "en",
+      locales: ["en"],
+      loadLocale: () => ({ since: "Since {when} }" }),
+      isSilent: true,
+    });
+    await i18n.init();
+
+    expect(getI18nInternals(i18n).lookup("since")).toMatchObject({ needsValues: true });
+  });
+
+  it("should say which locale's dictionary has the text DOM translation reads", async () => {
+    const i18n = create({ pt: { plain: "Só texto" } });
+    await i18n.init({ locale: "pt" });
+
+    expect(getI18nInternals(i18n).lookup("plain")).toMatchObject({ locale: "pt" });
+    expect(getI18nInternals(i18n).lookup("pound")).toMatchObject({ locale: "en" });
+  });
+
+  it("should warn once per process for a malformed message, as a server with a manager per request has", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      const requests = [1, 2, 3].map(() =>
+        createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => ({ broken: "Per request {name" }) }),
+      );
+      await Promise.all(requests.map((i18n) => i18n.init()));
+      for (const i18n of requests) {
+        i18n.t("broken", { name: "Ana" });
+      }
+
+      expect(warn).toHaveBeenCalledTimes(1);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+});
+
+// Every identifier the message grammar reads: an argument's name in each form, a select key, and a placeholder of
+// invalid syntax.
+describe("names in a message", () => {
+  const read = async (name: string) => {
+    const dictionary = {
+      plain: `{${name}}`,
+      number: `{${name}, number}`,
+      plural: `{${name}, plural, one {# one} other {# more}}`,
+      select: `{g, select, ${name} {chosen} other {other}}`,
+      invalid: `{${name}} {`,
+    };
+    const i18n = createI18n({ defaultLocale: "en", locales: ["en"], loadLocale: () => dictionary, isSilent: true });
+    await i18n.init();
+    return {
+      plain: i18n.t("plain", { [name]: "x" }),
+      number: i18n.t("number", { [name]: 1234 }),
+      plural: i18n.t("plural", { [name]: 1 }),
+      select: i18n.t("select", { g: name }),
+      invalid: i18n.t("invalid", { [name]: "x" }),
+    };
+  };
+
+  it.each([
+    { script: "ASCII", name: "user_1" },
+    { script: "Latin with a diacritic", name: "año" },
+    { script: "Cyrillic", name: "имя" },
+    { script: "Han", name: "名前" },
+    { script: "Devanagari, with combining marks", name: "नाम" },
+    { script: "Arabic, with Arabic-Indic digits", name: "اسم١" },
+    { script: "a letter outside the BMP", name: "𠮷野" },
+  ])("should read a name in $script", async ({ name }) => {
+    expect(await read(name)).toEqual({
+      plain: "x",
+      number: "1,234",
+      plural: "1 one",
+      select: "chosen",
+      invalid: "x {",
+    });
+  });
+
+  it.each([
+    { kind: "a symbol", name: "a€" },
+    { kind: "a space inside", name: "a b" },
+    { kind: "punctuation", name: "a.b" },
+    { kind: "an emoji", name: "a😀" },
+  ])("should not read a name with $kind", async ({ name }) => {
+    const result = await read(name);
+
+    expect(result.plain).toBe(`{${name}}`);
+    expect(result.select).toBe(`{g, select, ${name} {chosen} other {other}}`);
+    expect(result.invalid).toBe(`{${name}} {`);
+  });
+
+  it.each(["año-nuevo", "help-link", "a-", "a--b"])(
+    "should take a hyphen after the first character in a select key, as in %s, and not in an argument's name",
+    async (name) => {
+      const result = await read(name);
+
+      expect(result.select).toBe("chosen");
+      expect(result.plain).toBe(`{${name}}`);
+      expect(result.number).toBe(`{${name}, number}`);
+      expect(result.invalid).toBe(`{${name}} {`);
+    },
+  );
 });
 
 describe("parseMessage", () => {
@@ -530,6 +730,26 @@ describe("formatters", () => {
     expect(i18n.formatDate(0, full)).toBe(new Intl.DateTimeFormat("en", full).format(0));
   });
 
+  // `Intl` reads a number option as a number and `hour12` as a boolean, so a long string is valid for each.
+  it.each([
+    {
+      formatter: "number",
+      get: (options: object) => getNumberFormat("en", options),
+      long: { minimumFractionDigits: `${" ".repeat(10_000)}2` },
+      short: { minimumFractionDigits: 2 },
+    },
+    {
+      formatter: "date",
+      get: (options: object) => getDateTimeFormat("en", options),
+      long: { hour12: "x".repeat(10_000) },
+      short: { hour12: true },
+    },
+  ])("should not cache a $formatter formatter whose options would make a long key", ({ get, long, short }) => {
+    expect(get(short)).toBe(get(short));
+    expect(get(long)).not.toBe(get(long));
+    expect(get(long).resolvedOptions()).toEqual(get(short).resolvedOptions());
+  });
+
   it("should read inherited number options without changing later calls", async () => {
     const i18n = create();
     const other = create();
@@ -629,7 +849,7 @@ describe("parseCachedMessage", () => {
     expect(parseCachedMessage("Hello {name")).toBe("Expected , at character 12");
   });
 
-  it("should parse quoted text with doubled apostrophes into the same text", () => {
+  it("should parse quoted text with doubled apostrophes as text", () => {
     expect(parseMessage("a '{b ''c'' d}' e")).toEqual([{ kind: "text", text: "a {b 'c' d} e" }]);
     expect(parseMessage("it''s '{open")).toEqual([{ kind: "text", text: "it's {open" }]);
   });

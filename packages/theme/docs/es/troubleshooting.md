@@ -2,7 +2,7 @@
 title: Solución de problemas
 description: Síntomas, cómo confirmar su causa y cómo resolverlos.
 order: 7
-source: d8cb7e198162be48eb6fd956c960af106d16ae9d
+source: e57cbe7082e7a34cf639de2cef4af89f51825f58
 ---
 
 # Solución de problemas
@@ -33,7 +33,7 @@ El script previo al pintado falta, está bloqueado o no coincide con tu app. En 
 
 ## El tema ignora el sistema operativo
 
-El usuario hizo una elección, que siempre gana. `theme.preference` muestra una elección guardada; una que el navegador no pudo guardar, porque el almacenamiento está bloqueado o lleno, sigue ganando mientras la página está abierta, salvo que otra pestaña cambie el tema, aunque `theme.preference` muestre entonces `null` o una elección guardada anterior. Una elección hecha antes de `init()` es la excepción; consulta [Cuando falla el almacenamiento](persistence-and-sync.md#cuando-falla-el-almacenamiento). Llama a `theme.clearPreference()`, desde una opción "Automático" o "Sistema" de tu UI, para volver a seguir al sistema operativo. Si el navegador se niega a borrar la elección guardada, la consola muestra un error `[theme]`, el tema del sistema se aplica una vez y los cambios del sistema operativo se siguen ignorando mientras la elección siga guardada.
+El usuario hizo una elección, que siempre gana. `theme.preference` muestra una elección guardada; una que el navegador no pudo guardar, porque el almacenamiento está bloqueado o lleno, sigue ganando mientras la página está abierta, salvo que otra pestaña cambie el tema. `theme.preference` muestra esa elección mientras el almacenamiento está bloqueado, pero una elección guardada anterior, si la hay, mientras está lleno. Una elección hecha antes de `init()` es la excepción; consulta [Cuando falla el almacenamiento](persistence-and-sync.md#cuando-falla-el-almacenamiento). Llama a `theme.clearPreference()`, desde una opción "Automático" o "Sistema" de tu UI, para volver a seguir al sistema operativo. Si el navegador se niega a borrar la elección guardada, la consola muestra un error `[theme]`, el tema del sistema se aplica una vez y los cambios del sistema operativo se siguen ignorando mientras la elección siga guardada.
 
 ## `createTheme()` lanza una excepción
 

@@ -1,8 +1,8 @@
 ---
 title: Escreva as suas traduções
-description: Dicionários, arquivos JSON, placeholders, mensagens ICU, plurais, formatadores, chaves e valores tipados, verificação de chaves não traduzidas e limites de tamanho.
+description: Dicionários, arquivos JSON, placeholders, mensagens ICU, links e negrito, plurais, formatadores, chaves e valores tipados, verificação de chaves não traduzidas e limites de tamanho.
 order: 1
-source: c7f13bdaf19725a0e60bfcc193823ab5bb951c03
+source: 7fdff4bea2e0abd927cb111859a280ad2ef0691c
 ---
 
 # Escreva as suas traduções
@@ -109,7 +109,7 @@ t("home.title"); // "Bem-vindo", vindo de pt
 Uma chave é procurada nesta ordem:
 
 1. O locale ativo.
-2. Cada locale configurado que se obtém tirando as últimas subtags, como `zh-Hant` para `zh-Hant-TW`. Um pai escrito em outra escrita é pulado: `zh` é chinês simplificado, então uma página `zh-Hant` faz fallback para o padrão em vez de misturar escritas.
+2. Cada locale configurado que se obtém tirando as últimas subtags, como `zh-Hant` para `zh-Hant-TW`. Um pai escrito em outra escrita é pulado: `zh` é chinês simplificado, então uma página `zh-Hant` faz fallback para o padrão em vez de misturar escritas. Um código de idioma obsoleto conta como o que o substituiu, como o `Intl` o lê, então `he-IL` faz fallback para um `iw` configurado, e `iw-IL` para `he`. `no` e `nb` contam como um idioma só, como na [correspondência](index.md#transforme-entrada-externa-em-um-locale).
 3. O locale configurado nomeado pelo seu idioma e escrita, como `zh-Hant` para `zh-HK`, que é escrito em chinês tradicional, ou `sr-Latn` para `sr-ME`. Assim um dicionário `zh-HK` pode conter só o que Hong Kong diz de outro jeito.
 4. O locale padrão.
 
@@ -128,19 +128,19 @@ Escreva `{name}` onde vai um valor e passe o valor para `t()`:
 ```
 
 ```ts
-t("order.confirmed", { name: "Ana", orderId: "1042" });
+t("order.confirmed", { name: "Ana", orderId: 1042 });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
-Os valores podem ser strings, números ou datas. Os nomes de placeholder usam letras ASCII, dígitos e `_`, como `{firstName}` ou `{first_name}`. Um nome com qualquer outra coisa, como `{first-name}` ou `{nome_ç}`, não é placeholder: a mensagem tem sintaxe inválida, registra um aviso e mostra `{first-name}` como foi escrito.
+Os valores podem ser strings, números ou datas, e um `select` também aceita um booleano. Os nomes de placeholder usam letras e dígitos de qualquer escrita, e `_`, como `{firstName}`, `{first_name}` ou `{año}`. Um nome com qualquer outra coisa, como `{first-name}` ou `{price€}`, não é placeholder: a mensagem tem sintaxe inválida, registra um aviso e mostra `{first-name}` como foi escrito.
 
 Use placeholders em vez de juntar pedaços. `t("before") + name + t("after")` prende todos os idiomas à ordem das palavras do inglês, enquanto uma frase inteira com um placeholder deixa cada tradução pôr o valor onde ele cabe. A ordem das palavras é a primeira coisa que todo tradutor quer mudar, e quase sempre ele tem razão.
 
 Alguns detalhes:
 
 - Um placeholder sem valor correspondente fica como foi escrito, então um valor que falta aparece como `{name}` na tela em vez de sumir.
-- Uma chamada de `t()` preenche no máximo 100 argumentos, contando os que ficam dentro de formas de plural e de select, e deixa o resto como foi escrito. Uma frase de interface nunca chega nem perto; o limite impede que uma mensagem enorme vinda da rede custe um passo de formatação por placeholder.
-- Um número num `{name}` simples é formatado para o leitor, como `{name, number}` faz: `1234.5` aparece como "1,234.5" em inglês e "1.234,5" em português. Escreva `{name, number, integer}` ou outro estilo, como mostra a próxima seção, para formatá-lo de outro jeito.
+- Uma chamada de `t()` preenche no máximo 100 argumentos, contando os que ficam dentro de formas de plural e de select e cada `#`, e deixa o resto como foi escrito, um `#` como `#`. Uma frase de interface nunca chega nem perto; o limite impede que uma mensagem enorme vinda da rede custe um passo de formatação por placeholder, ou repita um número longo milhares de vezes.
+- Números num `{name}` simples entram do jeito que o JavaScript os escreve: `1234.5`. Escreva `{name, number}` para formatá-los para o leitor, como mostra a próxima seção.
 - Chaves (`{` e `}`) e apóstrofos são sintaxe de mensagem, então um texto que os mostra literalmente precisa de aspas; veja [Chaves literais e apóstrofos](#chaves-literais-e-apóstrofos).
 
 ### Formate números e datas no texto
@@ -165,14 +165,14 @@ t("cart.discount", { rate: 0.15 }); // "15% off"
 t("order.shipped", { date: new Date() });
 ```
 
-| Argumento               | Estilos                                                           | Valor                  |
-| ----------------------- | ----------------------------------------------------------------- | ---------------------- |
-| `{n, number}`           | nenhum, `integer`, `percent`                                      | número                 |
-| `{d, date}`             | `short`, `medium` (o padrão), `long`, `full`                      | `Date` ou um timestamp |
-| `{d, time}`             | `short`, `medium` (o padrão), `long`, `full`                      | `Date` ou um timestamp |
-| `{n, plural, …}`        | veja [Plurais](#plurais)                                          | número                 |
-| `{n, selectordinal, …}` | formas ordinais, como `one {#st} two {#nd} few {#rd} other {#th}` | número                 |
-| `{v, select, …}`        | quaisquer palavras, mais `other`                                  | string ou número       |
+| Argumento               | Estilos                                                           | Valor                      |
+| ----------------------- | ----------------------------------------------------------------- | -------------------------- |
+| `{n, number}`           | nenhum, `integer`, `percent`                                      | número                     |
+| `{d, date}`             | `short`, `medium` (o padrão), `long`, `full`                      | `Date` ou um timestamp     |
+| `{d, time}`             | `short`, `medium` (o padrão), `long`, `full`                      | `Date` ou um timestamp     |
+| `{n, plural, …}`        | veja [Plurais](#plurais)                                          | número                     |
+| `{n, selectordinal, …}` | formas ordinais, como `one {#st} two {#nd} few {#rd} other {#th}` | número                     |
+| `{v, select, …}`        | quaisquer palavras, mais `other`                                  | string, número ou booleano |
 
 A formatação usa o idioma do dicionário de onde o texto veio, então um texto em inglês que cobre uma chave que falta em português é escrito do jeito inglês. Um argumento cujo valor tem o tipo errado, como uma string para `{n, number}`, fica como foi escrito.
 
@@ -186,6 +186,8 @@ Um `select` escolhe o texto por um valor, como um pronome, e precisa de uma opç
 ```json
 { "review": { "replied": "{gender, select, female {She} male {He} other {They}} replied to your review" } }
 ```
+
+Um booleano escolhe a opção chamada `true` ou `false`, então `{isAdmin, select, true {Admin} other {Member}}` mostra "Admin" com `{ isAdmin: true }`. Só `select` lê um booleano; num `{isAdmin}` simples ele fica como foi escrito.
 
 Para formatar um valor no código, use os formatadores do gerenciador. Eles seguem o locale ativo:
 
@@ -231,7 +233,7 @@ Dentro das formas de um plural, `#` representa o número; escreva `'#'` para um 
 
 Texto entre aspas também é texto para os tipos: em `'{it''s {x}'`, que mostra `{it's {x}`, `x` não é um valor que `t()` pede.
 
-Um texto que não é sintaxe válida, como uma `{` sem fechamento ou uma `}` perdida, registra um aviso, a menos que o gerenciador esteja em silêncio, e aparece com apenas os placeholders `{name}` preenchidos. O aviso diz a chave e o locale, e vem uma vez para cada texto em cada locale, entre os 1.000 mais recentes. [Encontre chaves não traduzidas](#encontre-chaves-não-traduzidas) mostra um teste que confere todas as mensagens.
+Um texto que não é sintaxe válida, como uma `{` sem fechamento ou uma `}` perdida, registra um aviso, a menos que o gerenciador esteja em silêncio, e aparece com apenas os placeholders `{name}` preenchidos. O aviso diz a chave e o locale, e vem uma vez para cada chave, texto e locale, entre os aproximadamente 1.000 mais recentes, então um texto editado avisa de novo. [Encontre chaves não traduzidas](#encontre-chaves-não-traduzidas) mostra um teste que confere a sintaxe de todas as mensagens.
 
 ## Plurais
 
@@ -275,6 +277,27 @@ Três coisas a observar:
 - **`count` precisa ser um número.** Uma string como `"5"` não escolhe forma nenhuma; o grupo então é tratado como chave que falta. Converta o valor onde ele entra, como `Number(params.get("count"))`. O gerenciador não adivinha, já que `"1,5"` é um e meio em português e não é número nenhum para o JavaScript.
 - **Uma string simples na mesma chave ganha das formas.** Se `cart.items` for uma string, `count` só preenche `{count}`.
 - **Sem `other`, não é um grupo de plural.** `{ "one": "…", "two": "…" }` só funciona para as quantidades cuja forma por acaso esteja ali; qualquer outra quantidade mostra a chave. `has()` diz que um grupo assim não é uma chave, e as chaves tipadas não o oferecem. Acrescente `other`.
+
+### Mostre uma contagem formatada
+
+Um `{count}` simples escreve o número do jeito do JavaScript, então 1234 itens aparece como "1234 items" em vez de "1,234 items", ou "1.234 itens" em português. Escreva `{count, number}` nas formas:
+
+```json
+{
+  "cart": {
+    "items": {
+      "one": "{count, number} item",
+      "other": "{count, number} items"
+    }
+  }
+}
+```
+
+```ts
+t("cart.items", { count: 1234 }); // "1,234 items"
+```
+
+É muito chá, mas pelo menos a vírgula está certa.
 
 ### Plurais no meio da frase
 
@@ -374,12 +397,12 @@ Quais valores cada argumento aceita:
 
 - Argumentos `number`, `plural` e `selectordinal` aceitam um número.
 - `date` e `time` aceitam um `Date` ou um timestamp.
-- `select` aceita uma string ou um número.
-- Um `{name}` simples aceita qualquer um desses.
+- `select` aceita uma string, um número ou um booleano.
+- Um `{name}` simples aceita uma string, um número ou um `Date`.
 
-Valores a mais são permitidos. Quando vários dicionários são tipados, uma chave precisa dos valores de todos os que a têm.
+Só os valores que a mensagem usa são conferidos. Qualquer outro valor pode ter qualquer tipo, então `t("home.greeting", user)` aceita um `User` inteiro com um `isAdmin: boolean`, e um objeto literal também pode levar valores a mais. Quando vários dicionários são tipados, uma chave precisa dos valores de todos os que a têm.
 
-Um import de JSON tipa todo texto como `string`, já que o TypeScript não guarda os valores das strings de um JSON, então um dicionário JSON confere as chaves mas aceita quaisquer valores. Para conferir os valores, escreva o idioma padrão em TypeScript com `as const` e mantenha os outros idiomas em JSON, tipados como o padrão:
+Um import de JSON tipa todo texto como `string`, já que o TypeScript não guarda os valores das strings de um JSON, então um dicionário JSON confere as chaves mas aceita quaisquer valores, exceto que um grupo de plural ainda pede um `count` numérico. Para conferir os valores, escreva o idioma padrão em TypeScript com `as const` e mantenha os outros idiomas em JSON, tipados como o padrão:
 
 ```ts
 import en from "./locales/en";
@@ -394,8 +417,9 @@ O tipo de retorno do loader é o que tipa `t()`, então uma tradução precisa u
 Ler os argumentos de uma mensagem acontece inteiramente no sistema de tipos, o que é muito esperto até o momento em que ele não consegue ver a mensagem. Nestes casos, `t()` aceita quaisquer valores, ou nenhum, para aquela chave. Nada deixa de compilar; a verificação simplesmente fica desligada:
 
 - **A chave é uma entre várias.** Em `t(hasFailed ? "checkout.failed" : "checkout.done")`, o TypeScript vê uma união de duas chaves e não tem como saber de qual mensagem vêm os valores. Chame `t()` com cada chave no seu próprio ramo, `hasFailed ? t("checkout.failed", { orderId }) : t("checkout.done")`, e cada chamada é conferida.
-- **A mensagem é uma `string` simples**, como todo texto de um dicionário JSON. Escreva o idioma padrão em TypeScript com `as const`, como acima.
-- **A mensagem tem sintaxe inválida**, como uma `{` sem fechamento, um nome de placeholder que não é feito de letras ASCII, dígitos e `_` (`{first-name}`), `{n, number, currency}`, ou um `select` ou `plural` sem `other`. Algumas sintaxes inválidas, como uma opção escrita duas vezes, uma forma de plural desconhecida ou aninhamento além de 10 níveis, ainda podem pedir valores. De um jeito ou de outro, o runtime também não consegue lê-la: ele registra um aviso e mostra o texto com apenas os placeholders `{name}` válidos preenchidos. Conserte a mensagem; a [verificação de mensagens](#encontre-chaves-não-traduzidas) encontra esses casos.
+- **A mensagem é uma `string` simples**, como todo texto de um dicionário JSON. Um grupo de plural ainda pede um `count` numérico, já que o formato dele diz isso. Escreva o idioma padrão em TypeScript com `as const`, como acima.
+- **A mensagem tem sintaxe inválida**, como uma `{` sem fechamento, um nome de placeholder com um caractere que não é letra, dígito nem `_` (`{first-name}`), `{n, number, currency}`, ou um `select` ou `plural` sem `other`. Algumas sintaxes inválidas, como uma opção escrita duas vezes, uma forma de plural desconhecida ou aninhamento além de 10 níveis, ainda podem pedir valores. De um jeito ou de outro, o runtime também não consegue lê-la: ele registra um aviso e mostra o texto com apenas os placeholders `{name}` válidos preenchidos. Conserte a mensagem; a [verificação de mensagens](#encontre-chaves-não-traduzidas) encontra esses casos.
+- **Um nome de placeholder tem uma letra fora do ASCII**, como `{año}`. O runtime lê, mas fora do ASCII os tipos não distinguem uma letra de um símbolo como `€`, que torna a mensagem inválida, então deixam a mensagem sem ler em vez de pedir um valor que o runtime nunca lê. Use um nome ASCII onde quiser a verificação.
 - **A mensagem é longa demais para os tipos lerem**: uns 900 apóstrofos, 450 argumentos ou 900 espaços dentro das chaves de um argumento, num só texto. O TypeScript tem um limite de profundidade para os tipos, e a leitura para antes de chegar nele em vez de quebrar o seu build. Em tempo de execução, a mensagem funciona normalmente. Se você tem uma dessas, ela provavelmente são três mensagens disfarçadas de uma; dividi-la traz as verificações de volta.
 - **O tipo do gerenciador foi escrito à mão, sem o dicionário.** `I18n<"en" | "pt", Key>` confere as chaves, mas não os valores. Passe o tipo do dicionário como terceiro argumento de tipo, `I18n<"en" | "pt", Key, typeof en>`, para mantê-los conferidos.
 
@@ -461,8 +485,9 @@ test("every message is valid", async () => {
     }
   }
 
-  expect(warn.mock.calls.filter(([text]) => String(text).startsWith("[I18n] Invalid message"))).toEqual([]);
+  const invalid = warn.mock.calls.filter(([text]) => String(text).startsWith("[I18n] Invalid message"));
   warn.mockRestore();
+  expect(invalid).toEqual([]);
 });
 ```
 

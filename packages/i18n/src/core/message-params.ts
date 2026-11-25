@@ -9,12 +9,9 @@
  */
 
 type MessageValue = string | number | Date;
-/**
- * The values passed, `TValues`, with each one checked as a message value. Read from the argument rather than written as
- * an index signature, which an `interface` or a class instance lacks, so `t("greeting", user)` takes a `User`.
- */
-type Values<TValues> = TValues & { readonly [K in keyof TValues]: MessageValue };
-type AnyValues<TValues> = [params?: Values<TValues>];
+// The values passed, read from the argument rather than written as an index signature, which an `interface` or a class
+// instance lacks. Only the values a message uses are checked, so a `User` with an `isAdmin: boolean` is still taken.
+type AnyValues<TValues> = [params?: TValues];
 
 /** Marks a message these types can't read. */
 declare const unreadable: unique symbol;
@@ -119,7 +116,8 @@ type ValueOfType<T> = T extends "number" | "plural" | "selectordinal"
   : T extends "date" | "time"
     ? Date | number
     : T extends "select"
-      ? string | number
+      ? // A boolean picks the option named `true` or `false`; no other format reads one.
+        string | number | boolean
       : Unreadable;
 
 // The styles the runtime reads; another, such as `{n, number, currency}`, is invalid syntax.
@@ -159,7 +157,9 @@ type Letter =
   | "z";
 type NameCharacter = Digit | Letter | Uppercase<Letter> | "_";
 
-// The runtime reads only ASCII letters, digits, and `_` as a name, so a message with `{first-name}` is invalid syntax.
+// The runtime reads letters, marks, and digits in any script, and `_`, as a name, so `{first-name}` is invalid syntax.
+// These types read only ASCII ones: they can't tell a letter outside ASCII from a symbol such as `€`, which makes the
+// message invalid, so a message with `{año}` is left unread and accepts any values rather than requiring a wrong one.
 type IsName<N, TSteps extends Steps = []> = TSteps["length"] extends MaxSteps
   ? false
   : N extends `${infer C}${infer R}`
@@ -294,26 +294,31 @@ type ValueAt<T, K extends string> = T extends object
 
 type IsUnion<T, U = T> = T extends unknown ? ([U] extends [T] ? false : true) : never;
 
-// An argument used twice, such as `{count}` and `{count, plural, …}`, takes the narrower type.
-type Narrow<T> = [T] extends [number]
-  ? number
-  : [T] extends [Date | number]
-    ? Date | number
-    : [T] extends [string | number]
-      ? string | number
-      : T;
+// An argument used twice, such as `{count}` and `{count, plural, …}`, takes the kinds of value both read. Each kind is
+// tested on its own, since an intersection such as `(string | boolean) & (string | Date)` keeps `true & Date`, which
+// no value is.
+type ValueKind = string | number | boolean | Date;
+type Narrow<T> = Extract<ValueKind, T>;
 type Simplify<T> = { readonly [K in keyof T]: Narrow<T[K]> } & {};
 
 // Whether any member is the marker. `Unreadable extends U` is not that test: a message without arguments reads as `{}`,
 // which the marker is assignable to.
 type IsUnreadable<U> = [Extract<U, Unreadable>] extends [never] ? false : true;
 
-// Any dictionary whose message can't be read makes the values loose; otherwise every dictionary's arguments apply.
-type ParamsFor<U, TValues> =
-  IsUnreadable<U> extends true ? AnyValues<TValues> : ParamsOf<UnionToIntersection<U>, TValues>;
-type ParamsOf<A, TValues> = keyof A extends never
-  ? AnyValues<TValues>
-  : [params: Readonly<Simplify<A>> & Values<TValues>];
+// Whether any dictionary has a plural group at the key, which `t()` reads only with a numeric `count`.
+type HasGroup<V> = true extends (V extends string ? false : V extends { readonly other: string } ? true : false)
+  ? true
+  : false;
+
+// Any dictionary whose message can't be read makes the values loose, except the `count` a plural group needs, as one
+// from JSON, whose forms are only `string`; otherwise every dictionary's arguments apply.
+type ParamsFor<U, TValues, TIsGroup> =
+  IsUnreadable<U> extends true
+    ? TIsGroup extends true
+      ? [params: { readonly count: number } & TValues]
+      : AnyValues<TValues>
+    : ParamsOf<UnionToIntersection<U>, TValues>;
+type ParamsOf<A, TValues> = keyof A extends never ? AnyValues<TValues> : [params: Readonly<Simplify<A>> & TValues];
 
 /**
  * The parameters `t(key, …)` takes: required values when every dictionary type's message at `key` is a literal with
@@ -328,4 +333,8 @@ export type TranslateParams<TMessages, TKey extends string, TValues = {}> = unkn
     : string extends TKey
       ? AnyValues<TValues>
       : // An optional key, as in a `Partial` dictionary type, is checked as the message it has where present.
-        ParamsFor<ValueArguments<Exclude<ValueAt<TMessages, TKey>, undefined>>, TValues>;
+        ParamsFor<
+          ValueArguments<Exclude<ValueAt<TMessages, TKey>, undefined>>,
+          TValues,
+          HasGroup<Exclude<ValueAt<TMessages, TKey>, undefined>>
+        >;

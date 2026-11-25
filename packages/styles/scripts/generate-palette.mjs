@@ -50,9 +50,9 @@ const GROUNDS = [
   { suffix: "subtle", component: "kbd" },
 ];
 const BASE_COMPONENT = GROUNDS[0].component;
-/* Matches `theme.css`'s explicit-override arm exactly (`.dark`, `.theme-dark`,
-   `[data-theme="dark"]`), not the `prefers-color-scheme` arm -- the doc's
-   "Dark mode" section is explicit that no OS-preference fallback is generated. */
+/* Each value is read once per scheme and written in a light and a dark block,
+   under the selectors `theme.css` sets `color-scheme` with -- the doc's "Dark
+   mode" section. */
 const THEMES = ["light", "dark"];
 /* The three flat neutral tokens (`docs/internal/generated-palette.md`, "Flat
    neutral values"): no intent, no presentation, no ground, no hover -- so each
@@ -165,7 +165,17 @@ async function readTheme(browser, stylesheetPath, theme, temporaryRoot) {
     `<!doctype html><html data-theme="${theme}"><head><meta charset="utf-8" /><link rel="stylesheet" href="${stylesheetHref}" /><style>*, *::before, *::after { transition: none !important; animation: none !important; }</style></head><body>${body}</body></html>`,
   );
 
-  const page = await browser.newPage();
+  /* Every preference the palette reads, pinned. These are Playwright 1.63's
+     defaults, stated so that neither a change of default nor a shared
+     context option lets the contributor's own setting reach the palette:
+     under `prefers-contrast: more` a border reads its strong tone, and forced
+     colours repaint every probe. */
+  const page = await browser.newPage({
+    colorScheme: "light",
+    contrast: "no-preference",
+    forcedColors: "none",
+    reducedMotion: "no-preference",
+  });
 
   try {
     await page.goto(pathToFileURL(htmlPath).href, { waitUntil: "load" });
@@ -313,19 +323,40 @@ async function main() {
         "@layer theme {",
         /* The light values answer the explicit light selectors too, so a light
            subtree nested inside a dark one reads them, as the package's own
-           tokens do. Before the dark block, so dark still wins on an element
-           carrying both, as `color-scheme` does in `theme.css`. */
+           tokens do. */
         "  :root,",
-        "  .light,",
         "  .theme-light,",
         '  [data-theme="light"] {',
         indent(toDeclarations(light)),
         "  }",
         "",
-        "  .dark,",
+        /* The system's dark setting, on a root no light selector forces light:
+           `theme.css`'s `color-scheme: light dark` renders the package dark
+           there, so the palette reads dark too. */
+        "  @media (prefers-color-scheme: dark) {",
+        '    :root:not(.theme-light, [data-theme="light"]) {',
+        indent(indent(toDeclarations(dark))),
+        "    }",
+        "  }",
+        "",
+        /* Last, so dark still wins on an element carrying both, as
+           `color-scheme` does in `theme.css`. */
+        "  :root.dark,",
         "  .theme-dark,",
         '  [data-theme="dark"] {',
         indent(toDeclarations(dark)),
+        "  }",
+        "",
+        /* Print is light, as `theme.css`'s print rule makes the package's own
+           tokens: every selector that reads dark reads light again on paper.
+           Last, so it wins over the dark blocks at equal specificity. */
+        "  @media print {",
+        '    :root:not(.theme-light, [data-theme="light"]),',
+        "    :root.dark,",
+        "    .theme-dark,",
+        '    [data-theme="dark"] {',
+        indent(indent(toDeclarations(light))),
+        "    }",
         "  }",
         "}",
         "",

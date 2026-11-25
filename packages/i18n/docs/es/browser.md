@@ -2,7 +2,7 @@
 title: Traduce una app de navegador
 description: Detecta y recuerda el idioma del visitante, mantén sincronizados lang y dir, vuelve a renderizar un framework, traduce HTML y ejecuta en un Web Worker.
 order: 2
-source: 5bc4faa8216bdff685ecfcd53861ec49e2c72561
+source: 6a775daf3e47a15508d88a2935ff933d9a4de880
 ---
 
 # Traduce una app de navegador
@@ -29,7 +29,7 @@ Sin ninguna otra opción, esto:
 2. Asigna `<html lang="pt" dir="ltr">` para que coincida, así los lectores de pantalla pronuncian bien el texto y los [idiomas de derecha a izquierda](index.md#idiomas-de-derecha-a-izquierda) se maquetan bien.
 3. Guarda el idioma que elige tu app y lo vuelve a leer en la siguiente visita.
 
-Devuelve un binding. Guárdalo si tu selector de idioma tiene una opción "Sistema", como muestra [Ofrece una opción "Sistema"](#ofrece-una-opción-sistema). Su método `disconnect()` solo hace falta cuando desmontas la app, como en los tests o en los micro-frontends.
+Devuelve un binding. Guárdalo para tu selector de idioma, que se renderiza desde su `subscribe()`, como muestra [Deja que los visitantes cambien de idioma](#deja-que-los-visitantes-cambien-de-idioma). Su método `disconnect()` solo hace falta cuando desmontas la app, como en los tests o en los micro-frontends.
 
 ### Cómo se elige el locale
 
@@ -46,31 +46,49 @@ En un sitio localizado, eso significa que cada vista de página guarda el idioma
 
 También significa que un visitante que sigue un enlace compartido en portugués hacia un té tiene el portugués guardado desde ese momento, hasta que lea una página en otro idioma, aunque su navegador pida inglés. Basta un enlace de un amigo brasileño para que la tienda le hable en portugués.
 
-Si prefieres guardar solo lo que el visitante elige en tu selector de idioma, desactiva el guardado con `persistLocale: false` y guarda tú la elección del selector. Esa opción también hace que el binding deje de leer la elección guardada, así que lee la tuya y pásala como `locale`. Si tu selector también tiene [una opción "Sistema"](#ofrece-una-opción-sistema), borra la elección que guardaste cuando el visitante la elija, y arranca sin `locale` mientras no haya nada guardado, para que el binding vuelva a detectar.
+Si prefieres guardar solo lo que el visitante elige en tu selector de idioma, desactiva el guardado con `persistLocale: false` y haz que el selector guarde su elección donde la lee tu redirección, y que la borre cuando el visitante elija [una opción "Sistema"](#ofrece-una-opción-sistema). No vuelvas a leer esa elección para pasarla como `locale`: el idioma de la página lo decide la URL.
+
+Para guardar la elección en otro lugar que no sea `localStorage`, como una cookie que también lee tu servidor, pasa `storage` en lugar de leer tú la elección y pasarla como `locale`. Entonces el binding lee, guarda y olvida la elección a través de él igual que en `localStorage`: una elección guardada cuyo diccionario no carga recurre a otro idioma como describe la sección siguiente, mientras que un `locale` explícito se rechazaría, y una opción "Sistema" funciona sin cambios. [Pasa el locale al navegador](server-rendering.md#pasa-el-locale-al-navegador) la guarda en una cookie.
 
 #### Cuando un loader falla durante el arranque
 
-Si tu loader falla con un locale guardado, el binding advierte y prueba el locale que detecta a partir del navegador, y después el locale por defecto, para que el visitante siga recibiendo un idioma que lee en lugar de una app rota. Un locale detectado que falla recurre al locale por defecto de la misma forma. La elección guardada se conserva para la próxima vez.
+Si tu loader falla con un locale guardado, ya sea en `localStorage` o en tu `storage`, el binding advierte y prueba el locale que detecta a partir del navegador, y después el locale por defecto, para que el visitante siga recibiendo un idioma que lee en lugar de una app rota. Un locale detectado que falla recurre al locale por defecto de la misma forma. La elección guardada se conserva para la próxima vez.
 
 Dos fallos siguen rechazándose:
 
-- Un fallo del loader con un locale que pasaste explícitamente, o con el locale por defecto, porque no hay nada sensato a lo que recurrir.
+- Un fallo del loader con un locale que pasaste explícitamente, o con el locale por defecto, porque no hay nada sensato a lo que recurrir. Una elección que guardas tú, como en una cookie, recurre a otro idioma como una guardada cuando la entregas como `storage`, y se rechaza cuando la pasas como `locale`.
 - Un diccionario que carga pero [rompe las reglas](troubleshooting.md#se-rechaza-un-diccionario), sea cual sea el locale. Eso es un bug que hay que corregir, no un tropiezo de la red que se puede aguantar.
 
 ## Deja que los visitantes cambien de idioma
 
-Llama a `setLocale()` desde tu selector de idioma. El binding reacciona a cada cambio que se aplica: guarda la elección y actualiza `lang` y `dir`.
+Llama a `setLocale()` desde tu selector de idioma y muestra el idioma que informa el binding. El binding reacciona a cada cambio que se aplica: guarda la elección y actualiza `lang` y `dir`.
 
 ```ts
+const binding = await initializeBrowserI18n({ i18n });
 const picker = document.querySelector<HTMLSelectElement>("#language")!;
+const showLanguage = () => {
+  picker.value = i18n.locale;
+};
+let latestPick = 0;
 
-picker.value = i18n.locale;
+showLanguage();
+binding.subscribe(showLanguage);
 picker.addEventListener("change", async () => {
-  await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+  const pick = ++latestPick;
+  try {
+    await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+  } finally {
+    // Una elección que falla no cambia nada, así que vuelve a mostrar el idioma en uso, salvo que una elección posterior aún esté cargando.
+    if (pick === latestPick) {
+      showLanguage();
+    }
+  }
 });
 ```
 
-Del visitante que cambia de opinión rápido ya se encarga el paquete. Cuando dos cambios se superponen, gana el posterior, y el anterior se resuelve sin cambiar nada, como explica [Gana la última llamada](index.md#gana-la-última-llamada). Así que lee `i18n.locale` después del `await` en lugar de dar por hecho el valor del selector.
+El idioma puede cambiar sin el selector: un visitante que nunca eligió uno sigue el idioma de su navegador en mitad de la visita, como describe [Ofrece una opción "Sistema"](#ofrece-una-opción-sistema). `binding.subscribe()` llama a `showLanguage` después de cada cambio, así que el selector nunca muestra un idioma que la página dejó.
+
+Del visitante que cambia de opinión rápido ya se encarga el paquete. Cuando dos cambios se superponen, gana el posterior, y el anterior se resuelve sin cambiar nada, como explica [Gana la última llamada](index.md#gana-la-última-llamada). `latestPick` evita que ese anterior vuelva a poner el idioma viejo en el selector mientras el posterior aún está cargando. Cuando un diccionario no carga, `setLocale()` rechaza y la página conserva su idioma, así que el `finally` vuelve a poner el selector en él en lugar de dejar seleccionado el idioma que falló.
 
 Solo se guardan las elecciones que hace tu app: la opción `locale` y cada `setLocale()` o `init()` aplicado después de que el binding arrancó. Estas no se guardan:
 
@@ -79,18 +97,24 @@ Solo se guardan las elecciones que hace tu app: la opción `locale` y cada `setL
 
 Un visitante que nunca eligió uno sigue la configuración de su navegador, también cuando agregas su idioma más adelante.
 
-La elección se guarda en `localStorage` como `{"locale":"pt"}` bajo la clave `"i18n"`. Cambia la clave con `storageKey`, o desactiva el guardado con `persistLocale: false`. Si el almacenamiento no está disponible, como en algunos modos de navegación privada, el binding advierte y sigue sin él.
+La elección se guarda en `localStorage` como `{"locale":"pt"}` bajo la clave `"i18n"`. Cambia la clave con `storageKey`, guarda la elección en otro lugar con `storage`, o desactiva el guardado con `persistLocale: false`. Si el almacenamiento no está disponible, como en algunos modos de navegación privada, o tu `storage` lanza una excepción, el binding advierte y sigue sin él.
 
 ### Ofrece una opción "Sistema"
 
-Cuando un visitante elige un idioma, se queda, y esa es la idea. Una opción "Sistema" en el selector le permite deshacerlo y volver a seguir a su navegador. Guarda el binding que devuelve `initializeBrowserI18n()`; esto sustituye el arranque y el selector de arriba:
+Cuando un visitante elige un idioma, se queda, y esa es la idea. Una opción "Sistema" en el selector le permite deshacerlo y volver a seguir a su navegador. Esto sustituye el selector de arriba:
 
 ```ts
 const binding = await initializeBrowserI18n({ i18n });
 const picker = document.querySelector<HTMLSelectElement>("#language")!;
+const showChoice = () => {
+  picker.value = binding.isUsingSystemLocale ? "system" : i18n.locale;
+};
+let latestPick = 0;
 
-picker.value = binding.isUsingSystemLocale ? "system" : i18n.locale;
+showChoice();
+binding.subscribe(showChoice);
 picker.addEventListener("change", async () => {
+  const pick = ++latestPick;
   try {
     if (picker.value === "system") {
       await binding.switchToSystemLocale();
@@ -98,8 +122,10 @@ picker.addEventListener("change", async () => {
       await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
     }
   } finally {
-    // Muestra la elección del visitante, aunque el cambio fallara o uno posterior lo adelantara.
-    picker.value = binding.isUsingSystemLocale ? "system" : i18n.locale;
+    // Vuelve a mostrar la elección del visitante después de un cambio que falló, salvo que una elección posterior aún esté cargando.
+    if (pick === latestPick) {
+      showChoice();
+    }
   }
 });
 ```
@@ -110,7 +136,7 @@ picker.addEventListener("change", async () => {
 
 Mientras `isUsingSystemLocale` es `true`, el binding también escucha el evento `languagechange` del navegador, así que un visitante que cambia el idioma del navegador en mitad de la visita recibe el nuevo sin recargar. Un idioma que el visitante acaba de elegir y que aún está cargando se mantiene, no se pisa.
 
-En un framework, renderiza el selector desde `binding.subscribe()` en lugar de `i18n.subscribe()`. Elegir el idioma que ya se muestra, o "Sistema" mientras el idioma detectado es el que se muestra, cambia la selección sin cambiar el idioma, así que el gestor no tiene nada que avisar. El binding avisa de ambos casos, y de cada cambio de idioma. En React:
+Renderiza el selector desde `binding.subscribe()` en lugar de `i18n.subscribe()`, también en un framework. Elegir el idioma que ya se muestra, o "Sistema" mientras el idioma detectado es el que se muestra, cambia la selección sin cambiar el idioma, así que el gestor no tiene nada que avisar. El binding avisa de ambos casos, y de cada cambio de idioma. `binding.subscribe` funciona separado del binding, así que se puede pasar tal cual. En React:
 
 ```tsx
 import { useState, useSyncExternalStore } from "react";
@@ -189,9 +215,9 @@ Cómo se comporta cada parte:
 - **`data-i18n` reemplaza todo el contenido de un elemento.** El elemento tiene que contener solo texto, sin elementos hijos, para que una traducción nunca pueda borrar tu marcado. Los elementos con hijos se omiten con una advertencia.
 - **Los comentarios también se reemplazan.** No son elementos, así que no cuentan como hijos. No pongas `data-i18n` en un elemento que un framework renderiza o hidrata, porque los frameworks guardan marcadores en comentarios ahí; traduce ese texto con `t()`.
 - **`data-i18n-<atributo>` traduce un atributo.** Solo se permiten los atributos que contienen texto para personas o lectores de pantalla: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription` y `aria-valuetext`. Los demás, como `data-i18n-href` o `data-i18n-onclick`, se ignoran, así que una traducción nunca puede cambiar un enlace, un estilo ni un manejador de eventos.
-- **El texto que ya está en el HTML es el último respaldo.** Una clave que le falta a un idioma muestra el texto del siguiente locale de su cadena de respaldo, igual que `t()`: un padre configurado, como `pt` para `pt-BR`, y después el locale por defecto. El texto original vuelve solo cuando ningún diccionario de la cadena tiene la clave.
+- **El texto que ya está en el HTML es el último respaldo.** Una clave que le falta a un idioma muestra el texto del siguiente locale de su cadena de respaldo, igual que `t()`: un padre configurado, como `pt` para `pt-BR`, y después el locale por defecto. El texto original vuelve solo cuando ningún diccionario de la cadena tiene la clave. Un elemento que muestra texto en un idioma distinto del que ya tiene, por su propio `lang` o, si no, por el de su ancestro más cercano, recibe el `lang` de ese locale, como `<p lang="en">` en una página en portugués, para que un lector de pantalla lo pronuncie en el idioma correcto. Con `syncDocument: false`, ese es el idioma que declara tu página y no el locale activo, y el locale activo solo cuando no hay ningún `lang`. El binding restaura el `lang` propio del elemento cuando el texto vuelve a estar en ese idioma, y una vez que tu código cambia ese `lang`, el binding se lo deja a tu código. Un elemento con contenido propio, como texto o hijos, se marca solo por su texto de `data-i18n`, ya que `lang` cubriría también ese contenido, y un elemento cuyas claves muestran texto de locales distintos, o el propio texto del HTML tras una clave que falta, no se marca.
 - **El texto se asigna como texto plano, nunca como HTML.** El texto de `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>` y `<plaintext>` nunca se toca, ya que se ejecuta como código, decide qué se muestra o se escribe sin escapar cuando la página se guarda como HTML. Sus atributos se traducen como los de cualquier otro, así que `<iframe data-i18n-title="video.title">` recibe un nombre accesible traducido.
-- **Los placeholders como `{name}` no se completan aquí**, porque en el HTML no hay de dónde pasar un valor. Renderiza el texto con valores desde tu código con `t()`.
+- **Un mensaje que necesita valores conserva el texto del HTML**, con una advertencia una vez por clave, porque en el HTML no hay de dónde pasar un valor. Eso abarca `{name}` y cualquier otro argumento, como un plural entero, que si no mostraría su sintaxis ICU a los visitantes. Renderiza el texto con valores desde tu código con `t()`.
 - **La página muestra el texto de su HTML hasta que el diccionario del visitante carga**, y después cambia en el lugar, algo que en una conexión lenta se nota. Hay dos formas de evitarlo:
   - Renderiza de antemano una página por idioma, como en [Genera un sitio estático](server-rendering.md#genera-un-sitio-estático), y pasa su `locale`.
   - Mantén oculto el root hasta que la promesa del binding termine, ya sea que se resuelva o se rechace, con un plazo máximo en el loader como en [Nunca falla, solo se queda colgado](troubleshooting.md#nunca-falla-solo-se-queda-colgado), para que una solicitud trabada no pueda dejar la página en blanco.
@@ -213,6 +239,8 @@ await initializeBrowserI18n({ i18n, root: document.querySelector("#app")!, obser
 
 Con `observe`, agregar un elemento, o cambiar o quitar una clave `data-i18n`, se procesa en el momento en que ocurre. Eso incluye los elementos que otro código agrega mientras el binding está traduciendo, como un custom element que renderiza hijos cuando cambia su atributo.
 
+El texto de un elemento pertenece a su clave `data-i18n`, así que con `observe` el binding vuelve a escribir la traducción sobre el texto que pone tu código al reemplazar el contenido del elemento, como hace `textContent`: un botón cuya etiqueta tu código cambia a "Enviando pedido…" vuelve a decir "Hacer pedido" al instante, y "Enviando pedido…" nunca pasa a ser su respaldo: un idioma sin la clave, o quitar la clave, muestra el texto del HTML. Una edición de un nodo de texto existente, como `button.firstChild.data`, no se observa, y se queda hasta el siguiente cambio de idioma. Quita la clave antes de poner el texto, lo que restaura primero el texto del HTML, o pon el texto que cambia en un elemento sin clave.
+
 El binding procesa esos cambios una vez por pasada. Si ese código vuelve a cambiar una clave en respuesta, como haría un elemento que restablece una y otra vez su propio atributo `data-i18n-*`, el segundo cambio espera al siguiente cambio de locale en lugar de iniciar un bucle infinito. Dos piezas de código que no dejan de contestarse son una conversación sin fin, y el binding se retira con educación.
 
 Un elemento que se agrega y después se mueve fuera de `root` antes de que el binding llegue a él no se traduce: para entonces pertenece a otra parte de la página.
@@ -221,7 +249,9 @@ Deja `observe` desactivado cuando un framework renderiza la página: el framewor
 
 ### Custom elements
 
-El binding no mira dentro de los custom elements, tengan o no un shadow root, y no advierte cuando omite uno. Eso abarca las etiquetas con guion, como `<my-widget>`, y los elementos integrados personalizados con `is`, como `<button is="my-button">`.
+El binding no mira dentro de los custom elements y no advierte cuando omite uno. Eso abarca las etiquetas con guion, como `<my-widget>`, y los elementos integrados personalizados con `is`, como `<button is="my-button">`.
+
+El binding tampoco entra nunca en un shadow root, sea de un custom element o de cualquier otro. Un shadow root puede ser él mismo el `root` que pasas, cuando esa es la parte de la página que traduce el binding.
 
 Un componente tiene vida propia: puede renderizarse después de que se tradujo la página, y agrega y quita texto a medida que la gente lo usa, texto que de todos modos tiene que traducir él mismo. Así que el componente traduce su propio contenido: llama a `i18n.t()` cuando renderiza, y vuelve a renderizar desde `i18n.subscribe()`. La tarjeta de producto de la tienda hace exactamente eso:
 
@@ -260,7 +290,7 @@ Un Web Worker no tiene página, así que no hay un `<html>` en el que asignar `l
 await initializeBrowserI18n({ i18n, syncDocument: false });
 ```
 
-Pasa `syncDocument: false` y ningún `root`. Con el valor por defecto `syncDocument: true` y sin `document`, `initializeBrowserI18n()` lanza `TypeError: [I18n] Document synchronization requires a page document; pass syncDocument: false without one.` antes de arrancar el gestor, así que el gestor queda sin arrancar en lugar de quedar a medio vincular.
+Pasa `syncDocument: false` y ningún `root`. Con el valor por defecto `syncDocument: true` y sin `document`, `initializeBrowserI18n()` se rechaza con `TypeError: [I18n] Document synchronization requires a page document; pass syncDocument: false without one.` antes de arrancar el gestor, así que el gestor queda sin arrancar en lugar de quedar a medio vincular.
 
 Un worker tampoco tiene `localStorage`, así que el guardado advierte y se omite. Agrega `persistLocale: false` para arrancar sin ruido.
 
@@ -272,6 +302,7 @@ Un worker tampoco tiene `localStorage`, así que el guardado advierte y se omite
 | `locale`        | ninguno           | Un locale que se impone al guardado y al detectado. También se guarda mientras `persistLocale` está activado.                |
 | `persistLocale` | `true`            | Lee la elección guardada, y guarda la opción `locale` y cada cambio de idioma que hace tu app después del arranque.          |
 | `storageKey`    | `"i18n"`          | La clave de `localStorage` para la elección guardada.                                                                        |
+| `storage`       | ninguno           | Dónde guardar la elección en lugar de `localStorage`, con `get()`, `set(locale)` y `remove()`.                               |
 | `syncDocument`  | `true`            | Mantiene `<html lang>` y `dir` sincronizados con el locale. Necesita un `document` de página; pasa `false` en un Web Worker. |
 | `root`          | ninguno           | La parte de la página que se traduce con atributos `data-i18n`.                                                              |
 | `observe`       | `false`           | Traduce también los cambios debajo de `root` a medida que ocurren. Necesita `root`.                                          |
@@ -279,7 +310,9 @@ Un worker tampoco tiene `localStorage`, así que el guardado advierte y se omite
 ## Reglas que conviene saber
 
 - **Un binding por gestor.** Una segunda llamada a `initializeBrowserI18n()` para el mismo gestor se rechaza hasta que el primero se desconecta.
-- **Dale a cada binding su propia parte de la página.** Dos bindings, como en los micro-frontends, cada uno con su propio gestor, necesitan `root`s que no se contengan entre sí. Donde se superponen, cada uno traduce los elementos compartidos en su propio idioma, y gana el que se ejecuta último.
+- **Inicia el binding una sola vez, cuando arranca la app**, con un `await` en el nivel superior de un módulo o antes de montar la app, no en el efecto de un componente. Un inicio que todavía está cargando no se puede cancelar, así que un segundo inicio, como el que provoca el StrictMode de React al ejecutar un efecto dos veces, se rechaza con `TypeError: [I18n] The manager already has a browser binding.`, sin un binding al que llamar `disconnect()` todavía.
+- **`storage` sustituye a `storageKey` y necesita el guardado activado.** Pasarlo con `storageKey`, o con `persistLocale: false`, se rechaza con un `TypeError` antes de que arranque el gestor, ya que ambos dicen dónde vive la elección o que no se guarda. Cada método se ejecuta de forma síncrona: el binding no espera una promesa que devuelva uno de ellos.
+- **Dale a cada binding su propia parte de la página.** Dos bindings, como en los micro-frontends, cada uno con su propio gestor, necesitan `root`s que no se contengan entre sí. Donde se superponen, cada uno traduce los elementos compartidos en su propio idioma, y gana el que se ejecuta último. También comparten la elección guardada y `<html lang>` salvo que se indique lo contrario: dale a cada binding adicional su propio `storageKey` o `storage`, para que la elección que guarda un binding no sobrescriba la de otro, y `syncDocument: false` a todos menos al binding dueño de la página.
 - **Deja que el binding arranque el gestor.** La promesa del binding se rechaza con `Error: [I18n] Browser initialization was superseded before its locale became active.` cuando, antes de que el locale del binding esté activo, tu código:
   - llama a `i18n.init()`, o
   - llama a `i18n.setLocale()` sobre un gestor que ya estaba inicializado, aunque sea al locale que ya se muestra.

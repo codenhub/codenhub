@@ -99,7 +99,7 @@ describe("validateI18nConfig", () => {
     [
       "non-boolean silent mode",
       createConfig({ isSilent: "yes" as unknown as boolean }),
-      "isSilent: Expected boolean, received string",
+      'isSilent: Expected boolean, received "yes"',
     ],
     [
       "fractional dictionary limit",
@@ -137,6 +137,31 @@ describe("validateI18nConfig", () => {
 });
 
 describe("validateI18nConfig own properties", () => {
+  // Each is alphanumeric, hyphen-separated subtags, yet no language tag, so a typo such as `en-US-US` would be a locale
+  // that matches nothing and formats as the runtime's default.
+  it.each(["abcdefghi", "en-US-US", "en-a", "1234", "en-gb-oed", "zh-Hant-Hans", "en-u", "x", "i-klingon", "root"])(
+    "rejects %s, which Intl rejects",
+    (locale) => {
+      expect(() => Intl.getCanonicalLocales(locale)).toThrow(RangeError);
+      expect(() => validateI18nConfig(createConfig({ locales: ["en-US", locale] }))).toThrow(
+        "locales[1]: Must be a language tag Intl accepts, such as pt-BR, or a private-use tag, such as x-pirate",
+      );
+    },
+  );
+
+  it.each(["x-test", "X-Pirate", "x-a-12345678", "en-x-foo", "und", "qaa", "ca-ES-valencia"])(
+    "accepts %s",
+    (locale) => {
+      expect(validateI18nConfig(createConfig({ locales: ["en-US", locale] })).locales).toEqual(["en-US", locale]);
+    },
+  );
+
+  it("rejects a private-use subtag over 8 characters, as a private-use tag can't hold one", () => {
+    expect(() => validateI18nConfig(createConfig({ locales: ["en-US", "x-abcdefghi"] }))).toThrow(
+      "locales[1]: Must be a language tag Intl accepts",
+    );
+  });
+
   it("checks every slot of a sparse locales array", () => {
     // eslint-disable-next-line no-sparse-arrays
     const sparse = ["en-US", , "pt-BR"] as unknown as string[];
@@ -155,7 +180,7 @@ describe("validateI18nConfig own properties", () => {
           return 2 + Math.min(lengthReads, 1_000);
         }
         if (typeof property === "string" && /^\d+$/.test(property) && Number(property) >= 2) {
-          return `x${property}`;
+          return `x-${property}`;
         }
         return Reflect.get(target, property, receiver) as unknown;
       },

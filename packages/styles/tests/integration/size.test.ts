@@ -34,21 +34,56 @@ const tailwindCss = pathToFileURL(fileURLToPath(import.meta.resolve("tailwindcss
 const twEntry = (file: string) => pathToFileURL(path.join(packageRoot, "tw", file)).href;
 
 // Minified bytes, measured with Tailwind 4.3.4 on the dates `docs/internal/tests.md` records.
+/* 0.11.0 set again, about 3% above the release's final measurement, the
+   ceilings its growth had left with less than 2% to spare: the complete,
+   native, components, aesthetics, glass, and pixel files, and the three
+   consumer builds below. */
 const COMPILED_CEILINGS: Record<string, number> = {
-  "dist/index.css": 233_000,
-  "dist/components.css": 188_300,
-  "dist/native.css": 348_500,
-  "dist/theme.css": 13_200,
-  "dist/palette.css": 26_800,
-  "dist/aesthetics/index.css": 49_750,
-  "dist/aesthetics/chunky-tile.css": 5_600,
+  /* The four below set again, with `/tw` and `/button/tw`'s button pages,
+     after 0.11.0's reduced-motion reset reached scroll-driven animations and
+     three more pseudo-elements, and a plate began handing its colour down
+     beside its ink for the selection, one declaration in every component
+     that composes `box`: 238,000, 191,400, 355,400, and 13,200 until then.
+     The first three set again once the release's branches met: 247,100,
+     195,900, and 367,000 until the read-only rest arrived and glass lifted
+     a surface holding focus or an open popover. `/native` set again from
+     375,500 when glass began grounding a control placed straight in its
+     region, at 375,517. */
+  "dist/index.css": 252_700,
+  "dist/components.css": 201_400,
+  "dist/native.css": 386_800,
+  "dist/theme.css": 13_650,
+  /* 26,800 until 0.11.0 wrote the dark values a second time, for the
+     system's dark setting with no theme selector; 40,100 until it wrote the
+     light values a second time, for print. */
+  "dist/palette.css": 52_500,
+  /* 50,450 until glass's lift and pixel's notch grew, as their own files did;
+     51,500 until liquid's tokens followed the nearest region. */
+  "dist/aesthetics/index.css": 52_900,
+  /* 5,600 until 0.11.0 kept the solo class's tracking off scripts that join
+     their letters or hang them from a headstroke: it ships without the
+     components, so it carries the language list itself, regional languages
+     and script subtags included; 6,200 until fourteen Arabic-script
+     languages and Rohingya joined the list. */
+  "dist/aesthetics/chunky-tile.css": 6_350,
   "dist/aesthetics/cyber.css": 4_900,
-  "dist/aesthetics/glass.css": 14_500,
+  /* 14,700 until 0.11.0 gave liquid's tokens only where glass is the
+     nearest region, a second selector for each of six rules. */
+  "dist/aesthetics/glass.css": 16_200,
   "dist/aesthetics/neobrutalism.css": 4_750,
-  "dist/aesthetics/pixel.css": 5_000,
+  /* 5,100 until 0.11.0 drew the step as a `corner-shape: notch` where an
+     engine draws one, beside the polygon, on components and solo actions. */
+  "dist/aesthetics/pixel.css": 5_620,
   "dist/aesthetics/sketch.css": 15_350,
   /* Read by `chs build`, never served, but every consumer installs it. */
-  "dist/purge/index.css": 314_500,
+  /* 314,500 until 0.11.0 kept tracking off scripts that join their letters,
+     a fallback in each of the eleven rules that copy a text style, and
+     raised a glass surface holding a tooltip, scoped the bubble to it, gave
+     a glass pane an opaque ground on a plate, and let a button label wrap;
+     327,000 until the reset and the selection grew as the complete file's
+     did; 339,200 until the release's branches met, as the complete
+     file's did. */
+  "dist/purge/index.css": 344_800,
   "dist/purge/classes.json": 7_100,
 };
 
@@ -105,20 +140,30 @@ describe("a /tw consumer build", { timeout: 60_000 }, () => {
       imports: [tailwindCss, twEntry("components/button.css")],
       candidates: ["btn", "primary"],
       /* 21,800 until 0.11.0 capped a held neutral box's fill, 18 bytes more;
-         22,600 since its held boxes and toggles drew a surface's ink. */
-      ceiling: 22_600,
+         22,600 since its held boxes and toggles drew a surface's ink;
+         22,950 until the reduced-motion reset and the selection grew. */
+      ceiling: 23_500,
     },
     {
       name: "a page that names no package class, through /button/tw",
       imports: [tailwindCss, twEntry("components/button.css")],
       candidates: [],
-      ceiling: 9_900,
+      // 10,150 until the reduced-motion reset grew.
+      ceiling: 10_350,
     },
     {
       name: "a page with one primary button, through /tw",
       imports: [twEntry("index.css")],
       candidates: ["btn", "primary"],
-      ceiling: 27_550,
+      /* 27,550 until 0.11.0's reset reached a dialog's backdrop and a view
+         transition, rules every page with the reset carries, and the button
+         learned to wrap its label and a pane its ground on a plate, and the
+         view transition reset and the no-tracking language list grew;
+         31,400 until the reset reached scroll-driven animations and three
+         more pseudo-elements and the selection read the plate;
+         35,700 until the release's branches met, as the complete file's
+         ceiling was set again. */
+      ceiling: 36_400,
     },
   ];
 

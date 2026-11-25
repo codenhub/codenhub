@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
@@ -97,6 +98,22 @@ describe("findFiles", () => {
       },
     );
 
+    // The listing check walks the entry again, and has to leave node_modules out as the first walk does.
+    it("keeps the listing check out of node_modules too, with failOnUnreadable", () => {
+      const opened = vi.spyOn(fs, "opendirSync");
+
+      try {
+        expect(
+          relative(findFiles(["**/*.html"], { cwd: root, skipNodeModules: true, failOnUnreadable: true })),
+        ).toEqual(["app/views/a.html", "app/views/nested/b.html"]);
+        expect(
+          opened.mock.calls.map(([folder]) => String(folder)).filter((folder) => folder.includes("node_modules")),
+        ).toEqual([]);
+      } finally {
+        opened.mockRestore();
+      }
+    });
+
     it("reads node_modules without it", () => {
       expect(relative(findFiles(["**/*.html"], { cwd: root }))).toContain("node_modules/dep/demo.html");
     });
@@ -157,6 +174,66 @@ describe("findFiles", () => {
     it("fails on a literal folder", () => {
       expect(() => findFiles(["app/views"], { cwd: root, failOnUnmatched: true })).toThrow(UnmatchedEntryError);
     });
+
+    // "Check the path" sent a reader to fix a path that was right: it names a folder, not the files in it.
+    it.each(["app/views", "app/views/"])("says %s is a folder and shows a glob for its files", (entry) => {
+      expect(() => findFiles([entry], { cwd: root, failOnUnmatched: true })).toThrow(
+        `"${entry}" is a folder in ${root}, not a file; name the files in it, as in "app/views/**/*".`,
+      );
+    });
+
+    // Unescaped, the suggested `app/[locale]/**/*` reads `[locale]` as a set and matched nothing either.
+    it("shows a glob for a folder whose name holds a bracket that matches its files", () => {
+      fs.mkdirSync(path.join(root, "app", "[locale]"));
+      fs.writeFileSync(path.join(root, "app", "[locale]", "page.tsx"), "locale");
+
+      expect(() => findFiles(["app/[locale]"], { cwd: root, failOnUnmatched: true })).toThrow(
+        `as in "app/[[]locale]/**/*".`,
+      );
+      expect(relative(findFiles(["app/[[]locale]/**/*"], { cwd: root }))).toEqual(["app/[locale]/page.tsx"]);
+    });
+
+    it("says a wildcard skips node_modules when its only matches are there", () => {
+      fs.mkdirSync(path.join(root, "node_modules", "dep"), { recursive: true });
+      fs.writeFileSync(path.join(root, "node_modules", "dep", "demo.html"), "dependency");
+
+      expect(() => findFiles(["**/demo.html"], { cwd: root, skipNodeModules: true, failOnUnmatched: true })).toThrow(
+        `"**/demo.html" matches no file in ${root}; a * or ** does not enter node_modules, so name the folder to read one, as in "node_modules/<package>/**/*".`,
+      );
+    });
+
+    // `[locale]` is a set matching one of its letters; on Windows `\[` is a separator, not an escape.
+    it("says how to match a bracket when an entry holding one matches nothing", () => {
+      fs.mkdirSync(path.join(root, "app", "[locale]"));
+      fs.writeFileSync(path.join(root, "app", "[locale]", "page.tsx"), "locale");
+
+      expect(() => findFiles(["app/[locale]/**/*.tsx"], { cwd: root, failOnUnmatched: true })).toThrow(
+        `"app/[locale]/**/*.tsx" matches no file in ${root}; a [ in a glob starts a set of characters, so write [[] for a bracket in a name, as in "app/[[]locale]/**/*.tsx".`,
+      );
+      expect(relative(findFiles(["app/[[]locale]/**/*.tsx"], { cwd: root }))).toEqual(["app/[locale]/page.tsx"]);
+    });
+
+    it("escapes only the brackets not escaped yet", () => {
+      fs.mkdirSync(path.join(root, "app", "[locale]", "[slug]"), { recursive: true });
+      fs.writeFileSync(path.join(root, "app", "[locale]", "[slug]", "page.tsx"), "slug");
+
+      expect(() => findFiles(["app/[[]locale]/[slug]/*.tsx"], { cwd: root, failOnUnmatched: true })).toThrow(
+        `as in "app/[[]locale]/[[]slug]/*.tsx".`,
+      );
+    });
+
+    // The escaped entry failed again and was escaped a second time, as `[[][[]]slug`.
+    it.each(["src/pages/[slug].astro", "src/pages/[[]slug].astro", "app/[locale]/*.css"])(
+      "tells %s, whose escaped form matches nothing either, to check the path",
+      (entry) => {
+        fs.mkdirSync(path.join(root, "app", "[locale]"));
+        fs.writeFileSync(path.join(root, "app", "[locale]", "page.tsx"), "locale");
+
+        expect(() => findFiles([entry], { cwd: root, failOnUnmatched: true })).toThrow(
+          `"${entry}" matches no file in ${root}; check the path, or run from the project root.`,
+        );
+      },
+    );
   });
 });
 
@@ -231,6 +308,79 @@ describe("readFiles", () => {
       read.mockRestore();
     }
   });
+
+  /* A glob skips a folder it cannot list without a word, so a build lost the
+     classes of every file in it and succeeded, or was told a right path
+     matches nothing. Windows denies listing through an ACL, POSIX through the
+     mode, which root ignores. */
+  describe.skipIf(process.platform !== "win32" && process.getuid?.() === 0)("a folder it cannot list", () => {
+    const locked = () => path.join(root, "app", "views", "locked");
+
+    beforeEach(() => {
+      fs.mkdirSync(locked());
+      fs.writeFileSync(path.join(locked(), "c.html"), "c");
+      if (process.platform === "win32") {
+        execFileSync("icacls", [locked(), "/deny", `${os.userInfo().username}:(RD)`], { stdio: "ignore" });
+      } else {
+        fs.chmodSync(locked(), 0o000);
+      }
+    });
+
+    afterEach(() => {
+      if (process.platform === "win32") {
+        execFileSync("icacls", [locked(), "/remove:d", os.userInfo().username], { stdio: "ignore" });
+      } else {
+        fs.chmodSync(locked(), 0o755);
+      }
+    });
+
+    it.each(["app/views/**/*.html", "app/views/locked/*.html", "app/*/locked/*.html"])(
+      "fails naming the folder %s has to list, with failOnUnreadable",
+      (entry) => {
+        expect(() => findFiles([entry], { cwd: root, failOnUnreadable: true })).toThrow(
+          expect.objectContaining({
+            code: expect.stringMatching(/^(EACCES|EPERM)$/),
+            message: expect.stringContaining(locked()),
+          }),
+        );
+      },
+    );
+
+    it("does not fail on a folder the glob never enters, with failOnUnreadable", () => {
+      expect(relative(findFiles(["app/views/*.html"], { cwd: root, failOnUnreadable: true }))).toEqual([
+        "app/views/a.html",
+      ]);
+    });
+
+    it("skips the folder without failOnUnreadable", () => {
+      expect(relative(findFiles(["app/views/**/*.html"], { cwd: root }))).toEqual([
+        "app/views/a.html",
+        "app/views/nested/b.html",
+      ]);
+    });
+  });
+
+  /* The listing check opens each folder the entry would list. A `**` matches
+     files as well, and opening each of them too made the check about three
+     times slower on a tree of many assets. */
+  it.each(["app/**", "app/**/*.html", "**/*", "app/*/*.html"])(
+    "opens only folders to check that %s can list them, with failOnUnreadable",
+    (entry) => {
+      const opened = vi.spyOn(fs, "opendirSync");
+
+      try {
+        findFiles([entry], { cwd: root, failOnUnreadable: true });
+
+        const notFolders = opened.mock.calls
+          .map(([folder]) => String(folder))
+          .filter((folder) => !fs.statSync(folder).isDirectory());
+
+        expect(notFolders).toEqual([]);
+      } finally {
+        opened.mockRestore();
+      }
+    },
+  );
 
   it("fails before reading on an entry that names no file, with failOnUnmatched", () => {
     expect(() => readFiles(["app/views/a.html", "missing.html"], { cwd: root, failOnUnmatched: true })).toThrow(

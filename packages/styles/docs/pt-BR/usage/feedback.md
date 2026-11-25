@@ -2,7 +2,7 @@
 title: Feedback
 description: Um botão de salvando, alertas, badges, placeholders de carregamento e barras de progresso, e o que o seu código precisa manter em sincronia com eles.
 order: 3
-source: 90f3b926ce9f13e34183267232f56ec0ce38ab27
+source: b9e6381383bd60c3305a4d3df95041b68ed6c645
 ---
 
 # Feedback
@@ -33,21 +33,27 @@ Desabilitar o botão impede que um segundo clique envie o formulário duas vezes
 
 ## Confirme o resultado com um alerta
 
-Quando o salvamento der certo, mostre um alerta acima do formulário:
+Quando o salvamento der certo, mostre um alerta acima do formulário. Os leitores de tela anunciam uma live region quando o conteúdo dela muda, não quando ela aparece, então a região precisa estar na página antes da mensagem. Renderize um `<div role="status">` simples quando a página carregar, vazio e sem classe, e insira o `.alert` nele quando houver algo a dizer:
 
 ```html
-<div class="alert success" role="status">Profile saved.</div>
+<div role="status">
+  <!-- Inserted when the save succeeds: -->
+  <div class="alert success">Profile saved.</div>
+</div>
 ```
 
 `role="status"` faz os leitores de tela anunciarem o texto de forma educada, depois do que estiverem lendo. Para um erro em que o usuário precisa agir, use `role="alert"`, que interrompe:
 
 ```html
-<div class="alert destructive" role="alert">Your changes were not saved. Check your connection and try again.</div>
+<div role="alert">
+  <!-- Inserted when the save fails: -->
+  <div class="alert destructive">Your changes were not saved. Check your connection and try again.</div>
+</div>
 ```
 
-Os leitores de tela anunciam uma live region quando o conteúdo dela muda, então renderize a região vazia quando a página carregar e coloque a mensagem dentro dela, em vez de inserir um elemento de alerta novo já com o texto dentro. O pacote não acrescenta role, tempo de exibição nem botão de dispensar; isso fica com você.
+Mantenha a role no wrapper, e não no `.alert`. Um `.alert` vazio ainda desenha o padding, a tonalidade e a borda, então uma região deixada na página à espera de uma mensagem apareceria como uma caixa vazia; o wrapper simples não ocupa espaço até o alerta chegar. Para limpar a mensagem, remova o alerta, não o wrapper. O pacote não acrescenta role, tempo de exibição nem botão de dispensar; isso fica com você.
 
-Um alerta é uma linha com espaçamento de 0.75rem, então um ícone colocado antes da mensagem fica espaçado automaticamente. `.alert-icon` dimensiona um ícone em 1.25rem e o alinha com a primeira linha do texto:
+Um alerta distribui a mensagem como um único parágrafo, então um link ou um `<strong>` dentro dela fica na mesma linha das palavras ao redor. Um ícone colocado antes da mensagem fica no começo da primeira linha, a 0.75rem do texto; as linhas que quebram depois do ícone continuam embaixo dele. `.alert-icon` dimensiona um ícone em 1.25rem, a altura da primeira linha do alerta:
 
 ```html
 <div class="alert warning" role="status">

@@ -1,7 +1,7 @@
 ---
 title: Visión general
 description: Qué hace @codenhub/i18n, las cuatro ideas en las que se basa, un recorrido de cinco minutos, los idiomas de derecha a izquierda y cómo se comporta el gestor cuando las llamadas se superponen.
-source: 1e936e9462e1f95bef5dcd7db88d7f526dbad33a
+source: 9688cd5e72d7f9b4516d076de3bd61453e572a7b
 ---
 
 # Traduce tu app
@@ -137,7 +137,7 @@ Las traducciones rara vez se quedan completas. La tienda de té agrega envoltura
 En el segundo caso, el gestor también registra una advertencia, como `[I18n] Missing key "home.subtitle" in locale "pt".`. Con qué frecuencia, y adónde va:
 
 - Advierte una vez por cada par de locale y clave, entre todos los gestores del proceso, así una clave usada en cada render, o por un gestor por solicitud, no inunda la consola.
-- Recuerda los 1000 pares más recientes, así que un par que sale de esa lista puede volver a advertir.
+- Recuerda los pares más recientes, unos 1000 y menos con claves largas, así que un par que sale de esa lista puede volver a advertir.
 - Un gestor creado con `isSilent: true` nunca la registra.
 - Para mandar las claves faltantes a tu propio logger, pasa `onMissingKey(key, locale)`. Reemplaza la advertencia y se ejecuta en cada clave faltante, no una vez por par. Si lanza un error, `t()` lanza el mismo error, así que una prueba puede fallar en la primera clave faltante; el binding del navegador traduce el resto de la página y luego rechaza con ese error.
 
@@ -211,11 +211,12 @@ En esa oración, "aplicado" hace mucho trabajo:
 - Un `setLocale()` al locale que ya está activo no cambia nada, así que no llama al listener.
 - Una llamada a la que se adelantó otra posterior (siguiente sección) tampoco cambia nada, así que no llama al listener.
 - Llamar a `init()` otra vez con el mismo locale sí se aplica, y sí lo llama.
+- Llamar a `init()` otra vez con otro locale lo llama una vez, no una por evento.
 
 Para el código que necesita saber qué cambió, el gestor también es un `EventTarget` con dos eventos:
 
 - `ready`, después de cada `init()` aplicado. `event.detail.locale` es el locale con el que arrancó.
-- `locale-change`, después de cada cambio de locale aplicado. `event.detail.locale` es el nuevo locale y `event.detail.previousLocale`, el anterior.
+- `locale-change`, después de cada cambio de locale aplicado. `event.detail.locale` es el nuevo locale y `event.detail.previousLocale`, el anterior. Eso incluye un `init()` que cambia a otro locale un gestor que ya estaba listo, que emite `ready` y después `locale-change`. El primer `init()` solo emite `ready`, sea cual sea el locale con el que arranca.
 
 ```ts
 i18n.addEventListener("locale-change", (event) => {
@@ -274,7 +275,7 @@ El noruego tiene dos códigos para el bokmål, `no` y `nb`, y los navegadores en
 
 Un locale en otro script nunca coincide, porque una página en un script que el visitante no lee le sirve peor que su siguiente idioma. Con `zh`, que es chino simplificado, un visitante `zh-TW` que también incluye inglés recibe inglés, y uno que no incluye nada más recibe `undefined`.
 
-Un locale configurado que `Intl.Locale` rechaza, como uno con un subtag de uso privado de más de ocho caracteres, no tiene script probable. Coincide por idioma, y por el script que nombra cuando nombra uno.
+Un locale configurado de uso privado, como `x-pirate`, no tiene subtags probables, ya que `Intl.Locale` lo rechaza, así que solo coincide con una preferencia que lo nombre exactamente.
 
 El resto de su comportamiento es breve:
 

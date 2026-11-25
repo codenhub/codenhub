@@ -33,6 +33,27 @@
     color: var(--color-text);
   }
 
+  /* A shadow root types its text as the page does at the host. Tailwind's
+     Preflight, on the entries that carry it, sets its own sans stack, leading,
+     tab size, and font settings on `html, :host`; the rule above puts the
+     brand font back on `html` alone, so a shadow root printed Tailwind's
+     font beside the page's, and inside a region with a font or a leading of
+     its own, such as an aesthetic's, every one of these stopped at the host.
+     Each is an inherited property, so `inherit` is what the host would take
+     with no Preflight. No background and no colour: the host sits on whatever
+     the page draws, and inherits the page's text colour, a plate's ink
+     included, which `var(--color-text)` here would replace. */
+  :host {
+    -webkit-tap-highlight-color: inherit;
+    -webkit-text-size-adjust: inherit;
+    text-size-adjust: inherit;
+    font-family: inherit;
+    font-feature-settings: inherit;
+    font-variation-settings: inherit;
+    line-height: inherit;
+    tab-size: inherit;
+  }
+
   h1,
   h2,
   h3,
@@ -70,9 +91,14 @@
     }
   }
 
+  /* On a plate the selection inverts it: the plate's ink as the highlight,
+     the plate's colour as the text, the pair the plate already prints its
+     text in. The brand colour painted a `.solid.primary` button's selection
+     primary on primary, at 1:1, and could land near any other solid plate.
+     Off a plate, `--_held-on` is 0% and the brand colour stays. */
   ::selection {
-    background: var(--color-primary);
-    color: var(--color-primary-contrast);
+    background: color-mix(in srgb, var(--_held-ink, transparent) var(--_held-on, 0%), var(--color-primary));
+    color: color-mix(in srgb, var(--_held-plate, transparent) var(--_held-on, 0%), var(--color-primary-contrast));
   }
 
   /* Negative, so the ring is drawn over the edge rather than beside it: at a
@@ -138,7 +164,32 @@
      it was given; a transform, a size, or a position lands at once. A keyframe
      animation cannot be told apart by what it animates, so every one ends at
      once, a fade-in included, the near-zero duration keeping its
-     `animationend`. `visibility` stays so a fade-out is still seen to the end.
+     `animationend`: a dialog's `::backdrop` too, and a view transition, whose
+     group glides between the old and new positions and whose images a page
+     often slides. A scroll-driven animation is put back on the document's
+     clock, since on a scroll or view timeline the duration means nothing and
+     the element kept following the scroll. `visibility` stays so a fade-out
+     is still seen to the end.
+
+     The pseudo-elements a page animates beside `::before` and `::after` --
+     an open `<details>`'s `::details-content` sliding open, a file input's
+     `::file-selector-button`, a customisable select's `::picker(select)` --
+     each take a rule of their own, as the view transition's do: an engine
+     that does not know one drops the whole rule that names it.
+
+     The author's durations, delays, and timing functions are lists matched to
+     their own properties by position, and the browser pairs them with this
+     list instead, which no stylesheet can re-pair. On a popover, a dialog,
+     and a backdrop, the elements written to fade out of the top layer, their
+     behaviours are not kept either: `display` and `overlay` are always
+     `allow-discrete`, or a popover whose author named them anywhere but
+     second and third closes at once; a `::picker(select)` is one such popover.
+     Everywhere else the author's behaviour
+     stands: forced, it paired `display` with whatever duration sat second,
+     so an element hidden with `display: none` under a `transform` transition
+     stayed on screen, and took clicks, for that long.
+     Delays are kept, since a hide that puts `opacity` first holds
+     `visibility` back by the fade's length; set to zero, it hid at once.
 
      `data-motion` on `<html>` decides in place of the query: `reduce` asks for
      this, `full` and `none` leave it out. See docs/accessibility.md. */
@@ -160,25 +211,133 @@
           :root:is([data-motion="full"], [data-motion="none"]),
           :root:is([data-motion="full"], [data-motion="none"]) *
         )
-      )::after {
+      )::after,
+    *:not(
+        :where(
+          :root:is([data-motion="full"], [data-motion="none"]),
+          :root:is([data-motion="full"], [data-motion="none"]) *
+        )
+      )::backdrop {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
+      animation-timeline: auto !important;
       scroll-behavior: auto !important;
       transition-property:
         opacity, display, overlay, visibility, color, background-color, border-color, outline-color,
         text-decoration-color, fill, stroke !important;
     }
+
+    :where(:root:not([data-motion="full"], [data-motion="none"])) *::details-content {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      animation-timeline: auto !important;
+      scroll-behavior: auto !important;
+      transition-property:
+        opacity, display, overlay, visibility, color, background-color, border-color, outline-color,
+        text-decoration-color, fill, stroke !important;
+    }
+
+    :where(:root:not([data-motion="full"], [data-motion="none"])) *::file-selector-button {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      animation-timeline: auto !important;
+      scroll-behavior: auto !important;
+      transition-property:
+        opacity, display, overlay, visibility, color, background-color, border-color, outline-color,
+        text-decoration-color, fill, stroke !important;
+    }
+
+    :where(:root:not([data-motion="full"], [data-motion="none"])) *::picker(select) {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      animation-timeline: auto !important;
+      scroll-behavior: auto !important;
+      transition-property:
+        opacity, display, overlay, visibility, color, background-color, border-color, outline-color,
+        text-decoration-color, fill, stroke !important;
+    }
+
+    :is([popover], dialog):not(
+      :where(
+        :root:is([data-motion="full"], [data-motion="none"]),
+        :root:is([data-motion="full"], [data-motion="none"]) *
+      )
+    ),
+    *:not(
+        :where(
+          :root:is([data-motion="full"], [data-motion="none"]),
+          :root:is([data-motion="full"], [data-motion="none"]) *
+        )
+      )::backdrop {
+      transition-behavior: allow-discrete !important;
+    }
+
+    :where(:root:not([data-motion="full"], [data-motion="none"])) *::picker(select) {
+      transition-behavior: allow-discrete !important;
+    }
+
+    /* Rules of their own: an engine that does not know a pseudo-element drops
+       the whole rule that names it. */
+    :root:not([data-motion="full"])::view-transition,
+    :root:not([data-motion="full"])::view-transition-group(*),
+    :root:not([data-motion="full"])::view-transition-image-pair(*),
+    :root:not([data-motion="full"])::view-transition-old(*),
+    :root:not([data-motion="full"])::view-transition-new(*) {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
   }
 
   *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *),
   *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *)::before,
-  *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *)::after {
+  *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *)::after,
+  *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *)::backdrop {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-timeline: auto !important;
     scroll-behavior: auto !important;
     transition-property:
       opacity, display, overlay, visibility, color, background-color, border-color, outline-color,
       text-decoration-color, fill, stroke !important;
+  }
+
+  :where(:root[data-motion="reduce"]) *::details-content {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-timeline: auto !important;
+    scroll-behavior: auto !important;
+    transition-property:
+      opacity, display, overlay, visibility, color, background-color, border-color, outline-color,
+      text-decoration-color, fill, stroke !important;
+  }
+
+  :where(:root[data-motion="reduce"]) *::file-selector-button {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-timeline: auto !important;
+    scroll-behavior: auto !important;
+    transition-property:
+      opacity, display, overlay, visibility, color, background-color, border-color, outline-color,
+      text-decoration-color, fill, stroke !important;
+  }
+
+  :where(:root[data-motion="reduce"]) *::picker(select) {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-timeline: auto !important;
+    scroll-behavior: auto !important;
+    transition-property:
+      opacity, display, overlay, visibility, color, background-color, border-color, outline-color,
+      text-decoration-color, fill, stroke !important;
+  }
+
+  :is([popover], dialog):where(:root[data-motion="reduce"], :root[data-motion="reduce"] *),
+  *:where(:root[data-motion="reduce"], :root[data-motion="reduce"] *)::backdrop {
+    transition-behavior: allow-discrete !important;
+  }
+
+  :where(:root[data-motion="reduce"]) *::picker(select) {
+    transition-behavior: allow-discrete !important;
   }
 
   /* No motion, asked for by the app: every animation and transition ends at
@@ -186,11 +345,46 @@
      `animationend` still fires. */
   *:where(:root[data-motion="none"], :root[data-motion="none"] *),
   *:where(:root[data-motion="none"], :root[data-motion="none"] *)::before,
-  *:where(:root[data-motion="none"], :root[data-motion="none"] *)::after {
+  *:where(:root[data-motion="none"], :root[data-motion="none"] *)::after,
+  *:where(:root[data-motion="none"], :root[data-motion="none"] *)::backdrop {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
+    animation-timeline: auto !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  :where(:root[data-motion="none"]) *::details-content {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-timeline: auto !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  :where(:root[data-motion="none"]) *::file-selector-button {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-timeline: auto !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  :where(:root[data-motion="none"]) *::picker(select) {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-timeline: auto !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+
+  :root:is([data-motion="reduce"], [data-motion="none"])::view-transition,
+  :root:is([data-motion="reduce"], [data-motion="none"])::view-transition-group(*),
+  :root:is([data-motion="reduce"], [data-motion="none"])::view-transition-image-pair(*),
+  :root:is([data-motion="reduce"], [data-motion="none"])::view-transition-old(*),
+  :root:is([data-motion="reduce"], [data-motion="none"])::view-transition-new(*) {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
   }
 }
 

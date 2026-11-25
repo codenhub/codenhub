@@ -9,6 +9,9 @@ const FEEDBACK_URL = `${ORIGIN}/feedback/?env=vanilla`;
 const NATIVE_URL = `${ORIGIN}/native/?env=vanilla`;
 const COMPONENT_STYLES_URL = `${ORIGIN}/shared/entry-components.css`;
 const NATIVE_STYLES_URL = `${ORIGIN}/native/entry-vanilla.css`;
+const registry = JSON.parse(
+  await readFile(path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../registry.json"), "utf8"),
+) as { intents: Record<string, unknown> };
 const CONTROL_CLASSES = ["text-control", "ipt", "textarea", "select", "checkbox", "radio", "switch"] as const;
 
 test("associates every native form label with its control", async ({ page }) => {
@@ -1030,6 +1033,197 @@ test("rings a bare focusable element on a solid surface at 3:1", async ({ browse
   }
 });
 
+/* A focus indicator is a change the eye can find: the focused control,
+   screenshotted, against the same control at rest. An intent toggle drew its
+   ring in the primary colour at 64% whatever surface it sat on, so on a
+   `.card.solid.primary` focusing a checkbox changed no pixel by more than
+   1.1:1, and on the other solid plates by 1 to 2:1. Every control that draws
+   a ring of its own is read, in every intent and `aria-invalid`, checked and
+   not, on the plain card and every solid plate, in both schemes. The pass is
+   a change of 3:1 over at least the control's perimeter in pixels: a ring
+   one pixel wide all round. Read from pixels rather than the cascade, so
+   every way a control draws focus (outline, ring shadow, inset line) counts
+   as what it paints. */
+const FOCUS_INTENTS = ["", ...Object.keys(registry.intents).filter((name) => name !== "neutral"), "invalid"] as const;
+const focusControls = (intent: string) => {
+  const cls = intent === "invalid" ? "" : intent;
+  const aria = intent === "invalid" ? 'aria-invalid="true"' : "";
+
+  return [
+    ...["", "checked"].flatMap((checked) => [
+      `<input type="checkbox" class="checkbox ${cls}" ${aria} ${checked} />`,
+      `<input type="radio" class="radio ${cls}" ${aria} ${checked} />`,
+      `<input type="checkbox" role="switch" class="switch ${cls}" ${aria} ${checked} />`,
+    ]),
+    `<input class="ipt ${cls}" ${aria} />`,
+    `<textarea class="textarea ${cls}" ${aria}></textarea>`,
+    `<select class="select ${cls}" ${aria}><option>One</option></select>`,
+    `<div class="input-group ${cls}"><input class="ipt" ${aria} /></div>`,
+    ...["solid", "soft", "ghost"].map((fill) => `<button class="btn ${fill} ${cls}" ${aria}>Go</button>`),
+  ];
+};
+
+for (const scheme of ["light", "dark"] as const) {
+  for (const plate of ["card", "card solid", ...Object.keys(registry.intents).map((name) => `card solid ${name}`)]) {
+    test(`shows focus on every control in a ${scheme} .${plate.replaceAll(" ", ".")}`, async ({
+      browserName,
+      page,
+    }) => {
+      test.setTimeout(120_000);
+      await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
+      await page.setContent("<!doctype html><html><body></body></html>");
+      await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
+      await stopTransitions(page);
+
+      const markup = [...FOCUS_INTENTS.flatMap(focusControls), '<button class="tooltip-icon">?</button>'];
+
+      await page.evaluate(
+        ([controls, name]) => {
+          document.body.innerHTML = `<button id="before">.</button><div class="${name}" id="plate" style="display: flex; flex-wrap: wrap; gap: 16px; padding: 16px">${controls
+            .map(
+              (control, index) =>
+                `<span data-index="${index}" style="display: inline-flex; padding: 6px">${control}</span>`,
+            )
+            .join("")}</div>`;
+        },
+        [markup, plate] as const,
+      );
+
+      /* The viewport holds the whole plate, so no clip needs a scroll. */
+      await page.setViewportSize({
+        width: 1280,
+        height: Math.ceil(await page.evaluate(() => document.documentElement.scrollHeight)),
+      });
+
+      await page.locator("#before").focus();
+      await page.keyboard.press("Shift");
+
+      /* Every control at rest is one screenshot of the whole plate, decoded
+         once and kept in the page; each focused control is a screenshot of its
+         own clip, compared with the same pixels of the resting plate. A
+         resting screenshot per control doubled the screenshots, and decoding
+         both images per control doubled the decoding, which made this the
+         slowest test in the WebKit run. Clips are whole CSS pixels, so a
+         control's clip lines up with the plate's pixels. */
+      type Clip = { x: number; y: number; width: number; height: number };
+      const { plateClip, controls } = await page.evaluate(() => {
+        const snap = (node: Element): Clip => {
+          const { left, top, right, bottom } = node.getBoundingClientRect();
+          const x = Math.floor(left);
+          const y = Math.floor(top);
+
+          return { x, y, width: Math.ceil(right) - x, height: Math.ceil(bottom) - y };
+        };
+
+        return {
+          plateClip: snap(document.getElementById("plate")!),
+          controls: [...document.querySelectorAll("[data-index]")].map((wrapper) => {
+            const { width, height } = wrapper.firstElementChild!.getBoundingClientRect();
+
+            return { box: { width, height }, clip: snap(wrapper) };
+          }),
+        };
+      });
+      /* A clip of the page rather than an element screenshot, which waits for
+         the element to be stable and scrolled into view: over a second a
+         control in WebKit. */
+      const shoot = (clip: Clip) => page.screenshot({ caret: "hide", clip, scale: "css" });
+
+      await page.evaluate(
+        async (base64) => {
+          const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${base64}`)).blob());
+          const canvas = document.createElement("canvas");
+
+          canvas.width = bitmap.width;
+          canvas.height = bitmap.height;
+          const context = canvas.getContext("2d")!;
+
+          context.drawImage(bitmap, 0, 0);
+          (window as unknown as { resting: ImageData }).resting = context.getImageData(
+            0,
+            0,
+            bitmap.width,
+            bitmap.height,
+          );
+        },
+        (await shoot(plateClip)).toString("base64"),
+      );
+
+      /* Pixels of a focused clip that differ by 3:1 from the resting plate at
+         the clip's offset in it. */
+      const changedPixels = (focused: Buffer, offset: { x: number; y: number }) =>
+        page.evaluate(
+          async ([base64, at]) => {
+            const bitmap = await createImageBitmap(await (await fetch(`data:image/png;base64,${base64}`)).blob());
+            const canvas = document.createElement("canvas");
+
+            canvas.width = bitmap.width;
+            canvas.height = bitmap.height;
+            const context = canvas.getContext("2d")!;
+
+            context.drawImage(bitmap, 0, 0);
+            const after = context.getImageData(0, 0, bitmap.width, bitmap.height).data;
+            const resting = (window as unknown as { resting: ImageData }).resting;
+            const channel = (value: number) => {
+              const unit = value / 255;
+
+              return unit <= 0.040_45 ? unit / 12.92 : ((unit + 0.055) / 1.055) ** 2.4;
+            };
+            const luminance = (data: Uint8ClampedArray, index: number) =>
+              0.2126 * channel(data[index]!) + 0.7152 * channel(data[index + 1]!) + 0.0722 * channel(data[index + 2]!);
+            let count = 0;
+
+            for (let row = 0; row < bitmap.height; row += 1) {
+              for (let column = 0; column < bitmap.width; column += 1) {
+                const before = luminance(resting.data, ((at.y + row) * resting.width + at.x + column) * 4);
+                const now = luminance(after, (row * bitmap.width + column) * 4);
+                const [lighter, darker] = before > now ? [before, now] : [now, before];
+
+                if ((lighter + 0.05) / (darker + 0.05) >= 3) {
+                  count += 1;
+                }
+              }
+            }
+
+            return count;
+          },
+          [focused.toString("base64"), offset] as const,
+        );
+
+      const failures: string[] = [];
+
+      for (const [index, control] of markup.entries()) {
+        const { box, clip } = controls[index]!;
+
+        /* Focus moved by a script after a key press, with no pointer input
+           since, is keyboard focus in every engine. */
+        // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+        const visible = await page
+          .locator(`[data-index="${index}"]`)
+          .locator(":is(input, select, textarea, button)")
+          .evaluate((element: HTMLElement) => {
+            element.focus();
+
+            return element.matches(":focus-visible");
+          });
+        // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+        const focused = await shoot(clip);
+        // oxlint-disable-next-line no-await-in-loop -- one control holds focus at a time.
+        const changed = await changedPixels(focused, { x: clip.x - plateClip.x, y: clip.y - plateClip.y });
+        const perimeter = Math.round(2 * (box.width + box.height));
+
+        if (!visible) {
+          failures.push(`${control}: not :focus-visible in ${browserName}`);
+        } else if (changed < perimeter) {
+          failures.push(`${control}: ${changed} of ${perimeter} pixels changed by 3:1`);
+        }
+      }
+
+      expect(failures).toEqual([]);
+    });
+  }
+}
+
 /* `.interactive` set the pointer at 0-2-0, above the 0-1-1 of `box`'s disabled
    cursor, so a disabled interactive card still invited a click. */
 test("a disabled interactive card does not show the pointer", async ({ page }) => {
@@ -1072,4 +1266,131 @@ test("draws a skeleton's outline in forced colours", async ({ page }) => {
 
   expect(styles.style).toBe("solid");
   expect(styles.width).toBe("1px");
+});
+
+/* The system draws a disabled control in GrayText, at full strength: a
+   disabled checked toggle once kept its Highlight plate and dimmed it to 0.58,
+   which read as a faint enabled one. Checked or not, the line and the mark
+   are GrayText on Canvas, on the classes and on the bare `/native` elements,
+   which take theirs from `native.css`'s own unlayered block, in every
+   spelling of disabled: `/native` read `:disabled` alone, so a bare checkbox
+   with `aria-disabled="true"` dimmed its Highlight plate. */
+test("draws a disabled toggle in GrayText, undimmed, in forced colours", async ({ page }) => {
+  await page.emulateMedia({ forcedColors: "active" });
+
+  for (const [stylesUrl, classed] of [
+    [COMPONENT_STYLES_URL, true],
+    [NATIVE_STYLES_URL, false],
+  ] as const) {
+    /* oxlint-disable no-await-in-loop -- one entrypoint at a time keeps the failure naming it. */
+    await page.setContent("<!doctype html><html><body></body></html>");
+    test.skip(
+      !(await page.evaluate(
+        () => matchMedia("(forced-colors: active)").matches && CSS.supports("forced-color-adjust", "none"),
+      )),
+      "engine cannot emulate forced colors",
+    );
+    await page.addStyleTag({ url: stylesUrl });
+    await page.addStyleTag({ content: "*, *::before, *::after { transition: none !important; }" });
+
+    const drawn = await page.evaluate((isClassed) => {
+      const probe = document.createElement("span");
+      document.body.append(probe);
+      const system = (name: string) => {
+        probe.style.color = name;
+        return getComputedStyle(probe).color;
+      };
+      const colors = { gray: system("GrayText"), canvas: system("Canvas") };
+      const toggles = [
+        ["checkbox", "checkbox", isClassed ? "checkbox" : ""],
+        ["radio", "radio", isClassed ? "radio" : ""],
+        ["switch", "checkbox", "switch"],
+      ] as const;
+      /* `/native` has no switch: a bare checkbox is only ever a checkbox. */
+      const drawnToggles = isClassed ? toggles : toggles.filter(([name]) => name !== "switch");
+
+      return {
+        colors,
+        rows: drawnToggles.flatMap(([name, type, className]) =>
+          ["disabled", "class", "aria-disabled", "data-disabled"].flatMap((spelling) =>
+            [true, false].map((checked) => {
+              const input = document.createElement("input");
+              input.type = type;
+              input.className = className;
+              input.checked = checked;
+              if (spelling === "disabled") {
+                input.disabled = true;
+              } else if (spelling === "class") {
+                input.classList.add("disabled");
+              } else {
+                input.setAttribute(spelling, "true");
+              }
+              document.body.append(input);
+              const styles = getComputedStyle(input);
+              const mark = getComputedStyle(input, "::after");
+              /* The checkbox draws its mark through a mask on `::after`, the
+               radio its dot, the switch its knob. Unchecked, only the knob shows. */
+              return {
+                label: `${name} ${checked ? "checked" : "unchecked"} by ${spelling}`,
+                opacity: styles.opacity,
+                border: styles.borderTopColor,
+                fill: styles.backgroundColor,
+                mark: name === "switch" || checked ? mark.backgroundColor : null,
+              };
+            }),
+          ),
+        ),
+      };
+    }, classed);
+    /* oxlint-enable no-await-in-loop */
+
+    for (const row of drawn.rows) {
+      const label = `${classed ? "class" : "native"} ${row.label}`;
+      expect.soft(row.opacity, `${label} opacity`).toBe("1");
+      expect.soft(row.border, `${label} line`).toBe(drawn.colors.gray);
+      expect.soft(row.fill, `${label} plate`).toBe(drawn.colors.canvas);
+      if (row.mark !== null) {
+        expect.soft(row.mark, `${label} mark`).toBe(drawn.colors.gray);
+      }
+    }
+  }
+});
+
+/* A table wider than its box scrolls in `.table-wrap`, and a keyboard user has
+   to reach that scroll: Safari does not make a scroll container focusable, so
+   the docs give the wrapper `tabindex="0"`, a role, and a name. Focused from
+   the keyboard it draws the package's ring. */
+test("rings a focusable table wrapper from the keyboard", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  await page.setContent(
+    `<!doctype html><html><body><button>before</button>
+       <div class="table-wrap" tabindex="0" role="region" aria-label="API keys">
+         <table class="data-table" style="width: 900px"><tr><td>key</td></tr></table>
+       </div></body></html>`,
+  );
+  await page.addStyleTag({ url: `${ORIGIN}/shared/entry-vanilla.css` });
+  await page.getByRole("button").focus();
+  await page.keyboard.press("Tab");
+
+  const ring = await page.getByRole("region", { name: "API keys" }).evaluate((element) => {
+    const styles = getComputedStyle(element);
+    const probe = document.createElement("span");
+    probe.style.width = "var(--focus-ring-width)";
+    probe.style.display = "block";
+    document.body.append(probe);
+    const width = getComputedStyle(probe).width;
+    probe.remove();
+    return {
+      focused: element.matches(":focus-visible"),
+      scrolls: element.scrollWidth > element.clientWidth,
+      style: styles.outlineStyle,
+      width: styles.outlineWidth,
+      expected: width,
+    };
+  });
+
+  expect(ring.focused).toBe(true);
+  expect(ring.scrolls).toBe(true);
+  expect(ring.style).toBe("solid");
+  expect(ring.width).toBe(ring.expected);
 });

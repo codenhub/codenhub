@@ -2,7 +2,7 @@
 title: Svelte
 description: Cargar la hoja de estilos en una aplicación Svelte / SvelteKit.
 order: 4
-source: 9c8bc0fee69e4b2bf1edd85c784b7df8ff1e883d
+source: 4b0559abded7cb44bf7bb891935ee14a4c5a7535
 ---
 
 # Svelte
@@ -38,7 +38,7 @@ mount(App, { target: document.getElementById("app")! });
 
 ## Forzar un tema
 
-Aplica `.dark` o `.light` en `<html>` (edita `src/app.html` en SvelteKit) para forzar un tema en lugar de seguir la preferencia del sistema; consulta [Temas → Claro y oscuro](../usage/theming.md#claro-y-oscuro).
+Aplica `data-theme="light"` o `data-theme="dark"` en `<html>` (edita `src/app.html` en SvelteKit) para forzar un tema en lugar de seguir la preferencia del sistema; consulta [Temas → Claro y oscuro](../usage/theming.md#claro-y-oscuro).
 
 ## Siguiente paso
 

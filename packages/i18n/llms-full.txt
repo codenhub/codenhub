@@ -19,8 +19,8 @@ pnpm add @codenhub/i18n
 import { createI18n } from "@codenhub/i18n";
 
 const dictionaries = {
-  en: { home: { title: "Welcome", greeting: "Hello, {name}!" }, cart: { items: { one: "{count} item", other: "{count} items" } } },
-  pt: { home: { title: "Bem-vindo", greeting: "Olá, {name}!" }, cart: { items: { one: "{count} item", other: "{count} itens" } } },
+  en: { home: { title: "Welcome", greeting: "Hello, {name}!" }, cart: { items: { one: "{count, number} item", other: "{count, number} items" } } },
+  pt: { home: { title: "Bem-vindo", greeting: "Olá, {name}!" }, cart: { items: { one: "{count, number} item", other: "{count, number} itens" } } },
 } as const;
 
 export const i18n = createI18n({
@@ -67,7 +67,7 @@ Two optional entry points cover what differs by environment:
 - Node.js 26 or newer, or a current Chromium, Firefox, or WebKit browser or Web Worker.
 - No runtime dependencies.
 
-In a Web Worker, the root entry point and `@codenhub/i18n/routing` work as anywhere else. `@codenhub/i18n/browser` works only with `syncDocument: false` and no `root`, since a worker has no page; with the defaults it throws a `TypeError` before starting the manager. See [In a Web Worker](docs/browser.md#in-a-web-worker).
+In a Web Worker, the root entry point and `@codenhub/i18n/routing` work as anywhere else. `@codenhub/i18n/browser` works only with `syncDocument: false` and no `root`, since a worker has no page; with the defaults it rejects with a `TypeError` before starting the manager. See [In a Web Worker](docs/browser.md#in-a-web-worker).
 
 ## Notes
 
@@ -214,7 +214,7 @@ Translations rarely stay complete. The tea shop adds gift wrapping, the English 
 In the second case, the manager also logs a warning, such as `[I18n] Missing key "home.subtitle" in locale "pt".`. How often, and where it goes:
 
 - It warns once for each locale and key pair, across every manager in the process, so a key used on every render, or by a manager per request, doesn't flood the console.
-- It remembers the 1,000 most recent pairs, so a pair that drops off that list can warn again.
+- It remembers the most recent pairs, about 1,000 of them and fewer for long keys, so a pair that drops off that list can warn again.
 - A manager created with `isSilent: true` never logs it.
 - To send misses to your own logger instead, pass `onMissingKey(key, locale)`. It replaces the warning and runs on every miss, not once per pair. If it throws, `t()` throws the same error, so a test can fail on the first missing key; a browser binding translates the rest of the page, then rejects with that error.
 
@@ -288,11 +288,12 @@ The manager has a few properties you can read at any time:
 - A `setLocale()` to the locale already active changes nothing, so it doesn't call the listener.
 - A call that a later one overtook (next section) changes nothing either, so it doesn't call the listener.
 - Calling `init()` again with the same locale does apply, and does call it.
+- Calling `init()` again with another locale calls it once, not once per event.
 
 For code that needs to know what changed, the manager is also an `EventTarget` with two events:
 
 - `ready`, after every applied `init()`. `event.detail.locale` is the locale it started with.
-- `locale-change`, after every applied locale change. `event.detail.locale` is the new locale and `event.detail.previousLocale` the one before it.
+- `locale-change`, after every applied locale change. `event.detail.locale` is the new locale and `event.detail.previousLocale` the one before it. That includes an `init()` that switches a manager that was already ready to another locale, which dispatches `ready` and then `locale-change`. The first `init()` dispatches only `ready`, whatever locale it starts with.
 
 ```ts
 i18n.addEventListener("locale-change", (event) => {
@@ -351,7 +352,7 @@ Norwegian has two codes for Bokmål, `no` and `nb`, and browsers send either, so
 
 A locale in another script never matches, because a page in a script the visitor doesn't read serves them worse than their next language. With `zh`, which is Simplified Chinese, a `zh-TW` visitor who also lists English gets English, and one who lists nothing else gets `undefined`.
 
-A configured locale that `Intl.Locale` rejects, such as one with a private-use subtag over eight characters, has no likely script. It matches by language, and by the script it names when it names one.
+A configured private-use locale, such as `x-pirate`, has no likely subtags, since `Intl.Locale` rejects it, so it matches only a preference that names it exactly.
 
 The rest of its behavior is short:
 
@@ -502,7 +503,7 @@ t("home.title"); // "Bem-vindo", from pt
 A key is looked up in this order:
 
 1. The active locale.
-2. Each configured locale made by dropping its last subtags, such as `zh-Hant` for `zh-Hant-TW`. A parent written in another script is skipped: `zh` is Simplified Chinese, so a `zh-Hant` page falls back to the default rather than mixing scripts.
+2. Each configured locale made by dropping its last subtags, such as `zh-Hant` for `zh-Hant-TW`. A parent written in another script is skipped: `zh` is Simplified Chinese, so a `zh-Hant` page falls back to the default rather than mixing scripts. A deprecated language code counts as the one that replaced it, as `Intl` reads it, so `he-IL` falls back to a configured `iw`, and `iw-IL` to `he`. `no` and `nb` count as one language, as they do in [matching](docs/index.md#turn-outside-input-into-a-locale).
 3. The configured locale named by its language and script, such as `zh-Hant` for `zh-HK`, which is written in Traditional Chinese, or `sr-Latn` for `sr-ME`. So a `zh-HK` dictionary can hold only what Hong Kong says differently.
 4. The default locale.
 
@@ -521,19 +522,19 @@ Write `{name}` where a value goes, and pass the value to `t()`:
 ```
 
 ```ts
-t("order.confirmed", { name: "Ana", orderId: "1042" });
+t("order.confirmed", { name: "Ana", orderId: 1042 });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
-Values can be strings, numbers, or dates. Placeholder names use ASCII letters, digits, and `_`, such as `{firstName}` or `{first_name}`. A name with anything else, such as `{first-name}` or `{nome_ç}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
+Values can be strings, numbers, or dates, and a `select` also takes a boolean. Placeholder names use letters and digits in any script, and `_`, such as `{firstName}`, `{first_name}`, or `{año}`. A name with anything else, such as `{first-name}` or `{price€}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
 
 Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right.
 
 A few details:
 
 - A placeholder with no matching value stays as written, so a missing value shows up as `{name}` on screen rather than disappearing.
-- One `t()` call fills at most 100 arguments, counting those inside plural and select forms, and leaves the rest as written. A UI sentence never gets close; the limit keeps a huge fetched message from costing one formatting step per placeholder.
-- A number in a plain `{name}` is formatted for the reader, as `{name, number}` does: `1234.5` reads "1,234.5" in English and "1.234,5" in Portuguese. Write `{name, number, integer}` or another style, as the next section shows, to format it differently.
+- One `t()` call fills at most 100 arguments, counting those inside plural and select forms and each `#`, and leaves the rest as written, a `#` as `#`. A UI sentence never gets close; the limit keeps a huge fetched message from costing one formatting step per placeholder, or from repeating a long number thousands of times.
+- Numbers in a plain `{name}` are inserted as JavaScript writes them: `1234.5`. Write `{name, number}` to format them for the reader, as the next section shows.
 - Braces and apostrophes are message syntax, so text that shows them literally needs quoting; see [Literal braces and apostrophes](#literal-braces-and-apostrophes).
 
 ### Format numbers and dates in the text
@@ -558,14 +559,14 @@ t("cart.discount", { rate: 0.15 }); // "15% off"
 t("order.shipped", { date: new Date() });
 ```
 
-| Argument                | Styles                                                             | Value                 |
-| ----------------------- | ------------------------------------------------------------------ | --------------------- |
-| `{n, number}`           | none, `integer`, `percent`                                         | number                |
-| `{d, date}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp |
-| `{d, time}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp |
-| `{n, plural, …}`        | see [Plurals](#plurals)                                            | number                |
-| `{n, selectordinal, …}` | ordinal forms, such as `one {#st} two {#nd} few {#rd} other {#th}` | number                |
-| `{v, select, …}`        | any words, plus `other`                                            | string or number      |
+| Argument                | Styles                                                             | Value                      |
+| ----------------------- | ------------------------------------------------------------------ | -------------------------- |
+| `{n, number}`           | none, `integer`, `percent`                                         | number                     |
+| `{d, date}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp      |
+| `{d, time}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp      |
+| `{n, plural, …}`        | see [Plurals](#plurals)                                            | number                     |
+| `{n, selectordinal, …}` | ordinal forms, such as `one {#st} two {#nd} few {#rd} other {#th}` | number                     |
+| `{v, select, …}`        | any words, plus `other`                                            | string, number, or boolean |
 
 Formatting uses the language of the dictionary the text came from, so English text that fills in for a missing Portuguese key is written the English way. An argument whose value has the wrong type, such as a string for `{n, number}`, stays as written.
 
@@ -579,6 +580,8 @@ A `select` picks text by a value, such as a pronoun, and needs an `other` option
 ```json
 { "review": { "replied": "{gender, select, female {She} male {He} other {They}} replied to your review" } }
 ```
+
+A boolean picks the option named `true` or `false`, so `{isAdmin, select, true {Admin} other {Member}}` shows "Admin" for `{ isAdmin: true }`. Only `select` reads a boolean; in a plain `{isAdmin}` it stays as written.
 
 To format a value in code, use the manager's formatters. They follow the active locale:
 
@@ -624,7 +627,7 @@ Inside a plural's forms, `#` stands for the number; write `'#'` for a literal `#
 
 Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`, `x` is not a value `t()` asks for.
 
-Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each text in each locale, among the 1,000 most recent. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
+Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each key, text, and locale among the roughly 1,000 most recent, so an edited text warns again. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message's syntax.
 
 ## Plurals
 
@@ -668,6 +671,27 @@ Three things to watch for:
 - **`count` must be a number.** A string such as `"5"` does not select a form; the group is then treated as a missing key. Convert it where it comes in, such as `Number(params.get("count"))`. The manager doesn't guess, since `"1,5"` is one and a half in Portuguese and not a number at all to JavaScript.
 - **A plain string under the same key wins over forms.** If `cart.items` is a string, `count` only fills `{count}`.
 - **Without `other`, it is not a plural group.** `{ "one": "…", "two": "…" }` works only for counts whose form happens to be there; any other count shows the key. `has()` says such a group is not a key, and typed keys don't offer it. Add `other`.
+
+### Show a formatted count
+
+A plain `{count}` writes the number as JavaScript does, so 1234 items reads "1234 items" rather than "1,234 items", or "1.234 itens" in Portuguese. Write `{count, number}` in the forms instead:
+
+```json
+{
+  "cart": {
+    "items": {
+      "one": "{count, number} item",
+      "other": "{count, number} items"
+    }
+  }
+}
+```
+
+```ts
+t("cart.items", { count: 1234 }); // "1,234 items"
+```
+
+That is a lot of tea, but the comma is right.
 
 ### Plurals inside a sentence
 
@@ -767,12 +791,12 @@ Which values each argument takes:
 
 - `number`, `plural`, and `selectordinal` arguments take a number.
 - `date` and `time` take a `Date` or a timestamp.
-- `select` takes a string or number.
-- A plain `{name}` takes any of these.
+- `select` takes a string, number, or boolean.
+- A plain `{name}` takes a string, number, or `Date`.
 
-Extra values are allowed. When several dictionaries are typed, a key needs the values of every one that has it.
+Only the values the message uses are checked. Any other value may have any type, so `t("home.greeting", user)` takes a whole `User` with an `isAdmin: boolean`, and an object literal may carry extra values too. When several dictionaries are typed, a key needs the values of every one that has it.
 
-A JSON import types every text as `string`, since TypeScript doesn't keep JSON string values, so a JSON dictionary checks keys but accepts any values. To check values, write the default language as `as const` TypeScript and keep the other languages in JSON, typed as the default:
+A JSON import types every text as `string`, since TypeScript doesn't keep JSON string values, so a JSON dictionary checks keys but accepts any values, except that a plural group still needs a number `count`. To check values, write the default language as `as const` TypeScript and keep the other languages in JSON, typed as the default:
 
 ```ts
 import en from "./locales/en";
@@ -787,8 +811,9 @@ The loader's return type is what types `t()`, so a translation must use the same
 Reading a message's arguments happens entirely in the type system, which is clever right up until it can't see the message. In these cases `t()` accepts any values, or none, for that key. Nothing fails to compile; the check is just off:
 
 - **The key is one of several.** In `t(hasFailed ? "checkout.failed" : "checkout.done")`, TypeScript sees a union of two keys and can't know which message's values apply. Call `t()` with each key in its own branch, `hasFailed ? t("checkout.failed", { orderId }) : t("checkout.done")`, and each call is checked.
-- **The message is a plain `string`**, as every text in a JSON dictionary is. Write the default language as `as const` TypeScript, as above.
-- **The message has invalid syntax**, such as an unclosed `{`, a placeholder name that isn't ASCII letters, digits, and `_` (`{first-name}`), `{n, number, currency}`, or a `select` or `plural` without `other`. Some invalid syntax, such as an option written twice, an unknown plural form, or nesting past 10 levels, may still ask for values. Either way, the runtime can't read it either: it logs a warning and shows the text with only valid `{name}` placeholders filled. Fix the message; the [message check](#find-untranslated-keys) finds these.
+- **The message is a plain `string`**, as every text in a JSON dictionary is. A plural group still needs a number `count`, since its shape says so. Write the default language as `as const` TypeScript, as above.
+- **The message has invalid syntax**, such as an unclosed `{`, a placeholder name with a character other than a letter, a digit, or `_` (`{first-name}`), `{n, number, currency}`, or a `select` or `plural` without `other`. Some invalid syntax, such as an option written twice, an unknown plural form, or nesting past 10 levels, may still ask for values. Either way, the runtime can't read it either: it logs a warning and shows the text with only valid `{name}` placeholders filled. Fix the message; the [message check](#find-untranslated-keys) finds these.
+- **A placeholder name has a letter outside ASCII**, such as `{año}`. The runtime reads it, but outside ASCII the types can't tell a letter from a symbol such as `€`, which makes the message invalid, so they leave the message unread rather than ask for a value the runtime never reads. Use an ASCII name where you want the check.
 - **The message is too long for the types to read**: about 900 apostrophes, 450 arguments, or 900 spaces inside one argument's braces, in one text. TypeScript has a limit on how deep a type can go, and the reading stops short of it instead of failing your build. At runtime the message works normally. If you have one of these, it is probably three messages in a trench coat; splitting it brings the checks back.
 - **The manager's type is written by hand without the dictionary.** `I18n<"en" | "pt", Key>` checks keys but not values. Pass the dictionary type as a third type argument, `I18n<"en" | "pt", Key, typeof en>`, to keep them checked.
 
@@ -854,8 +879,9 @@ test("every message is valid", async () => {
     }
   }
 
-  expect(warn.mock.calls.filter(([text]) => String(text).startsWith("[I18n] Invalid message"))).toEqual([]);
+  const invalid = warn.mock.calls.filter(([text]) => String(text).startsWith("[I18n] Invalid message"));
   warn.mockRestore();
+  expect(invalid).toEqual([]);
 });
 ```
 
@@ -928,7 +954,7 @@ With no other options, this:
 2. Sets `<html lang="pt" dir="ltr">` to match, so screen readers pronounce text correctly and [right-to-left languages](docs/index.md#right-to-left-languages) lay out correctly.
 3. Saves the language your app chooses, and reads it back on the visitor's next visit.
 
-It returns a binding. Keep it if your language picker has a "System" entry, as [Offer a "System" choice](#offer-a-system-choice) shows. Its `disconnect()` method is only needed when you tear the app down, as in tests or micro-frontends.
+It returns a binding. Keep it for your language picker, which renders from its `subscribe()`, as [Let visitors switch languages](#let-visitors-switch-languages) shows. Its `disconnect()` method is only needed when you tear the app down, as in tests or micro-frontends.
 
 ### How the locale is chosen
 
@@ -945,31 +971,49 @@ On a localized site, that means every page view saves the language in its URL. U
 
 It also means a visitor who follows one shared Portuguese link to a tea has Portuguese saved from then on, until they read a page in another language, even if their browser asks for English. One link from a Brazilian friend, and the shop speaks Portuguese to them.
 
-If you would rather save only what the visitor picks in your language picker, turn saving off with `persistLocale: false` and store the picker's choice yourself. That option also stops the binding from reading the saved choice, so read your own back and pass it as `locale`. If your picker also has [a "System" entry](#offer-a-system-choice), delete your stored choice when the visitor picks it, and start without `locale` while nothing is stored, so the binding detects again.
+If you would rather save only what the visitor picks in your language picker, turn saving off with `persistLocale: false`, and have the picker save its choice where your redirect reads it, deleting it when the visitor picks [a "System" entry](#offer-a-system-choice). Don't read that choice back and pass it as `locale`: the URL decides the page's language.
+
+To keep the choice somewhere other than `localStorage`, such as a cookie your server reads too, pass `storage` rather than reading the choice yourself and passing it as `locale`. The binding then reads, saves, and forgets the choice through it just as it does in `localStorage`: a saved choice whose dictionary fails to load falls back as the next section describes, where an explicit `locale` would reject, and a "System" entry works unchanged. [Hand the locale to the browser](docs/server-rendering.md#hand-the-locale-to-the-browser) keeps it in a cookie.
 
 #### When a loader fails during start
 
-If your loader fails for a saved locale, the binding warns and tries the locale it detects from the browser, then the default locale, so the visitor still gets a language they read instead of a broken app. A detected locale that fails falls back to the default the same way. The saved choice is kept for next time.
+If your loader fails for a saved locale, whether saved in `localStorage` or in your `storage`, the binding warns and tries the locale it detects from the browser, then the default locale, so the visitor still gets a language they read instead of a broken app. A detected locale that fails falls back to the default the same way. The saved choice is kept for next time.
 
 Two failures still reject:
 
-- A loader failure for a locale you passed explicitly, or for the default locale, since there is nothing sensible to fall back to.
+- A loader failure for a locale you passed explicitly, or for the default locale, since there is nothing sensible to fall back to. A choice you keep yourself, such as in a cookie, falls back like a saved one when you hand it over as `storage`, and rejects when you pass it as `locale`.
 - A dictionary that loads but [breaks the rules](docs/troubleshooting.md#a-dictionary-is-rejected), whatever the locale. That is a bug to fix, not a network hiccup to ride out.
 
 ## Let visitors switch languages
 
-Call `setLocale()` from your language picker. The binding reacts to every change that is applied: it saves the choice and updates `lang` and `dir`.
+Call `setLocale()` from your language picker, and show the language the binding reports. The binding reacts to every change that is applied: it saves the choice and updates `lang` and `dir`.
 
 ```ts
+const binding = await initializeBrowserI18n({ i18n });
 const picker = document.querySelector<HTMLSelectElement>("#language")!;
+const showLanguage = () => {
+  picker.value = i18n.locale;
+};
+let latestPick = 0;
 
-picker.value = i18n.locale;
+showLanguage();
+binding.subscribe(showLanguage);
 picker.addEventListener("change", async () => {
-  await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+  const pick = ++latestPick;
+  try {
+    await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
+  } finally {
+    // A failed pick changes nothing, so show the language in use again, unless a later pick is still loading.
+    if (pick === latestPick) {
+      showLanguage();
+    }
+  }
 });
 ```
 
-A visitor who changes their mind quickly is handled for you. When two switches overlap, the later one wins, and the earlier one resolves without changing anything, as [The latest call wins](docs/index.md#the-latest-call-wins) explains. So read `i18n.locale` after the `await` rather than assuming the picker's value.
+The language can change without the picker: a visitor who never picked one follows their browser's language mid-visit, as [Offer a "System" choice](#offer-a-system-choice) describes. `binding.subscribe()` calls `showLanguage` after every change, so the picker never shows a language the page left.
+
+A visitor who changes their mind quickly is handled for you. When two switches overlap, the later one wins, and the earlier one resolves without changing anything, as [The latest call wins](docs/index.md#the-latest-call-wins) explains. `latestPick` keeps that earlier one from putting the old language back on the picker while the later one is still loading. When a dictionary fails to load, `setLocale()` rejects and the page keeps its language, so the `finally` puts the picker back on it rather than leaving the language that failed selected.
 
 Only choices your app makes are saved: the `locale` option, and every applied `setLocale()` or `init()` after the binding has started. These are not saved:
 
@@ -978,18 +1022,24 @@ Only choices your app makes are saved: the `locale` option, and every applied `s
 
 A visitor who never picked one keeps following their browser settings, including when you add their language later.
 
-The choice is stored in `localStorage` as `{"locale":"pt"}` under the key `"i18n"`. Change the key with `storageKey`, or turn saving off with `persistLocale: false`. If storage is unavailable, as in some private browsing modes, the binding warns and carries on without it.
+The choice is stored in `localStorage` as `{"locale":"pt"}` under the key `"i18n"`. Change the key with `storageKey`, keep the choice elsewhere with `storage`, or turn saving off with `persistLocale: false`. If storage is unavailable, as in some private browsing modes, or your `storage` throws, the binding warns and carries on without it.
 
 ### Offer a "System" choice
 
-Once a visitor picks a language, it sticks, which is the point. A "System" entry in the picker lets them undo that and go back to following their browser. Keep the binding that `initializeBrowserI18n()` returns; this replaces the start and the picker above:
+Once a visitor picks a language, it sticks, which is the point. A "System" entry in the picker lets them undo that and go back to following their browser. This replaces the picker above:
 
 ```ts
 const binding = await initializeBrowserI18n({ i18n });
 const picker = document.querySelector<HTMLSelectElement>("#language")!;
+const showChoice = () => {
+  picker.value = binding.isUsingSystemLocale ? "system" : i18n.locale;
+};
+let latestPick = 0;
 
-picker.value = binding.isUsingSystemLocale ? "system" : i18n.locale;
+showChoice();
+binding.subscribe(showChoice);
 picker.addEventListener("change", async () => {
+  const pick = ++latestPick;
   try {
     if (picker.value === "system") {
       await binding.switchToSystemLocale();
@@ -997,8 +1047,10 @@ picker.addEventListener("change", async () => {
       await i18n.setLocale(picker.value as (typeof i18n.locales)[number]);
     }
   } finally {
-    // Show the visitor's choice, even when the switch failed or a later one overtook it.
-    picker.value = binding.isUsingSystemLocale ? "system" : i18n.locale;
+    // Show the visitor's choice again after a failed switch, unless a later pick is still loading.
+    if (pick === latestPick) {
+      showChoice();
+    }
   }
 });
 ```
@@ -1009,7 +1061,7 @@ picker.addEventListener("change", async () => {
 
 While `isUsingSystemLocale` is `true`, the binding also listens for the browser's `languagechange` event, so a visitor who changes their browser's language mid-visit gets the new one without a reload. A language the visitor just picked and that is still loading is kept, not overtaken.
 
-In a framework, render the picker from `binding.subscribe()` rather than `i18n.subscribe()`. Picking the language already showing, or "System" while the detected language is the one showing, changes the selection without changing the language, so the manager has nothing to report. The binding reports both, and every language change. In React:
+Render the picker from `binding.subscribe()` rather than `i18n.subscribe()`, in a framework too. Picking the language already showing, or "System" while the detected language is the one showing, changes the selection without changing the language, so the manager has nothing to report. The binding reports both, and every language change. `binding.subscribe` works detached from the binding, so it can be passed on as it is. In React:
 
 ```tsx
 import { useState, useSyncExternalStore } from "react";
@@ -1088,9 +1140,9 @@ How each part behaves:
 - **`data-i18n` replaces an element's whole content.** The element must contain only text, with no child elements, so a translation can never remove your markup. Elements with children are skipped with a warning.
 - **Comments are replaced too.** They are not elements, so they don't count as children. Don't put `data-i18n` on an element a framework renders or hydrates, since frameworks keep comment markers there; translate that text with `t()` instead.
 - **`data-i18n-<attribute>` translates one attribute.** Only attributes that hold text for people or screen readers are allowed: `alt`, `title`, `placeholder`, `label`, `aria-label`, `aria-description`, `aria-placeholder`, `aria-roledescription`, and `aria-valuetext`. Others, such as `data-i18n-href` or `data-i18n-onclick`, are ignored, so a translation can never change a link, a style, or an event handler.
-- **The text already in the HTML is the last fallback.** A key a language lacks shows the text of the next locale in its fallback chain, as `t()` does: a configured parent such as `pt` for `pt-BR`, then the default locale. The original text comes back only when no dictionary in the chain has the key.
+- **The text already in the HTML is the last fallback.** A key a language lacks shows the text of the next locale in its fallback chain, as `t()` does: a configured parent such as `pt` for `pt-BR`, then the default locale. The original text comes back only when no dictionary in the chain has the key. An element showing text in another language than the one it already has, from its own `lang` or else its nearest ancestor's, gets that locale's `lang`, such as `<p lang="en">` on a Portuguese page, so a screen reader pronounces it in the right language. With `syncDocument: false`, that is the language your page declares rather than the active locale, and the active locale only where no `lang` is set. The binding restores the element's own `lang` once the text is in that language again, and once your code changes that `lang`, the binding leaves it to your code. An element with content of its own, such as text or children, is marked only by its `data-i18n` text, since `lang` would cover that content too, and an element whose keys show text from different locales, or the HTML's own text after a miss, is not marked.
 - **Text is set as plain text, never as HTML.** The text of `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>`, and `<plaintext>` is never touched, since it runs as code, decides what shows, or is written back unescaped when the page is saved as HTML. Their attributes are translated like any other, so `<iframe data-i18n-title="video.title">` gets a translated accessible name.
-- **Placeholders such as `{name}` are not filled here**, because there is nowhere in the HTML to pass a value from. Render text with values from your code with `t()`.
+- **A message that needs values keeps the HTML text**, with a warning once per key, because there is nowhere in the HTML to pass a value from. That covers `{name}` and any other argument, such as a whole plural, which would otherwise show its ICU syntax to visitors. Render text with values from your code with `t()`.
 - **The page shows its HTML text until the visitor's dictionary has loaded**, then switches in place, which on a slow connection is visible. There are two ways to avoid that:
   - Render a page per language ahead of time, as in [Build a static site](docs/server-rendering.md#build-a-static-site), and pass its `locale`.
   - Keep the root hidden until the binding's promise settles, whether it resolves or rejects, with a deadline on the loader as in [It never fails, it just hangs](docs/troubleshooting.md#it-never-fails-it-just-hangs), so a stalled request can't leave the page blank.
@@ -1112,6 +1164,8 @@ await initializeBrowserI18n({ i18n, root: document.querySelector("#app")!, obser
 
 With `observe`, adding an element, or changing or removing a `data-i18n` key, is handled as it happens. That includes elements other code adds while the binding is translating, such as a custom element that renders children when its attribute changes.
 
+An element's text belongs to its `data-i18n` key, so with `observe` the binding writes the translation back over text your code sets by replacing the element's content, as `textContent` does: a button whose label your code turns into "Placing order…" reads "Place order" again at once, and "Placing order…" never becomes its fallback: a language without the key, or removing the key, shows the HTML text. An edit to an existing text node, such as `button.firstChild.data`, isn't watched, and stays until the next language change. Remove the key before setting the text, which restores the HTML text first, or put the changing text in an element without one.
+
 The binding handles those once per pass. If that code changes a key again in response, as an element that keeps resetting its own `data-i18n-*` attribute would, the second change waits for the next locale change instead of starting an endless loop. Two pieces of code that keep answering each other is a conversation with no end, and the binding politely leaves it.
 
 An element that is added and then moved out of `root` before the binding gets to it is not translated: by then it belongs to another part of the page.
@@ -1120,7 +1174,9 @@ Leave `observe` off when a framework renders the page: the framework already cal
 
 ### Custom elements
 
-The binding does not look inside custom elements, with or without a shadow root, and doesn't warn when it skips one. That covers tags with a dash, such as `<my-widget>`, and built-in elements customized with `is`, such as `<button is="my-button">`.
+The binding does not look inside custom elements and doesn't warn when it skips one. That covers tags with a dash, such as `<my-widget>`, and built-in elements customized with `is`, such as `<button is="my-button">`.
+
+The binding never crosses into a shadow root either, a custom element's or any other's. A shadow root can itself be the `root` you pass, when that is the part of the page the binding translates.
 
 A component has a life of its own: it can render after the page was translated, and it adds and removes text as people use it, which it has to translate itself anyway. So the component translates its own content: call `i18n.t()` when it renders, and render again from `i18n.subscribe()`. The shop's product card does exactly that:
 
@@ -1159,7 +1215,7 @@ A Web Worker has no page, so there is no `<html>` to set `lang` on and nothing t
 await initializeBrowserI18n({ i18n, syncDocument: false });
 ```
 
-Pass `syncDocument: false` and no `root`. With the default `syncDocument: true` and no `document`, `initializeBrowserI18n()` throws `TypeError: [I18n] Document synchronization requires a page document; pass syncDocument: false without one.` before it starts the manager, so the manager is left not started rather than half bound.
+Pass `syncDocument: false` and no `root`. With the default `syncDocument: true` and no `document`, `initializeBrowserI18n()` rejects with `TypeError: [I18n] Document synchronization requires a page document; pass syncDocument: false without one.` before it starts the manager, so the manager is left not started rather than half bound.
 
 A worker has no `localStorage` either, so saving warns and is skipped. Add `persistLocale: false` to start quietly.
 
@@ -1171,6 +1227,7 @@ A worker has no `localStorage` either, so saving warns and is skipped. Add `pers
 | `locale`        | none       | A locale that overrides saved and detected ones. It is saved too while `persistLocale` is on.                |
 | `persistLocale` | `true`     | Read the saved choice, and save the `locale` option and every language change your app makes after start.    |
 | `storageKey`    | `"i18n"`   | The `localStorage` key for the saved choice.                                                                 |
+| `storage`       | none       | Where to keep the saved choice instead of `localStorage`, as `get()`, `set(locale)`, and `remove()`.         |
 | `syncDocument`  | `true`     | Keep `<html lang>` and `dir` in step with the locale. Needs a page `document`; pass `false` in a Web Worker. |
 | `root`          | none       | The part of the page to translate with `data-i18n` attributes.                                               |
 | `observe`       | `false`    | Also translate changes below `root` as they happen. Needs `root`.                                            |
@@ -1178,7 +1235,9 @@ A worker has no `localStorage` either, so saving warns and is skipped. Add `pers
 ## Rules to know
 
 - **One binding per manager.** A second `initializeBrowserI18n()` call for the same manager rejects until the first is disconnected.
-- **Give each binding its own part of the page.** Two bindings, as in micro-frontends, each with its own manager, need `root`s that don't contain each other. Where they overlap, each translates the shared elements in its own language, and whichever runs last wins.
+- **Start the binding once, when the app starts**, as a module's top-level `await` or before mounting the app, not in a component's effect. A start still loading can't be cancelled, so a second start, as React's StrictMode makes by running an effect twice, rejects with `TypeError: [I18n] The manager already has a browser binding.`, with no binding yet to `disconnect()`.
+- **`storage` replaces `storageKey` and needs saving on.** Passing it with `storageKey`, or with `persistLocale: false`, rejects with a `TypeError` before the manager starts, since both say where the choice lives or that it doesn't. Each method runs synchronously: the binding doesn't wait for a promise one returns.
+- **Give each binding its own part of the page.** Two bindings, as in micro-frontends, each with its own manager, need `root`s that don't contain each other. Where they overlap, each translates the shared elements in its own language, and whichever runs last wins. They also share the saved choice and `<html lang>` unless told otherwise: give each extra binding its own `storageKey` or `storage`, so one binding's saved pick doesn't overwrite another's, and `syncDocument: false` to all but the one binding that owns the page.
 - **Let the binding start the manager.** The binding's promise rejects with `Error: [I18n] Browser initialization was superseded before its locale became active.` when, before the binding's locale is active, your code either:
   - calls `i18n.init()`, or
   - calls `i18n.setLocale()` on a manager that was already initialized, even to the locale already showing.
@@ -1359,35 +1418,39 @@ A key that only your default language has does not fail the build; it renders in
 
 When the browser takes over a server-rendered page, it must start in the language the server used, or the text changes as the page loads. On a localized site, the URL says which: read it with `routing.parse()`, as [Localized URLs](docs/localized-urls.md#read-the-locale-on-the-client) shows.
 
-Without a locale in the URL, the server's `Accept-Language` match is a guess, not a choice. Don't pass it to the binding as `locale`: the binding saves an explicit locale as the visitor's choice, as [How the locale is chosen](docs/browser.md#how-the-locale-is-chosen) explains, so a visitor who picked Portuguese would have English saved over it on every page load. Keep the visitor's choice in a cookie instead, which the server can read too:
+Without a locale in the URL, the server's `Accept-Language` match is a guess, not a choice. Don't pass it to the binding as `locale`: the binding saves an explicit locale as the visitor's choice, as [How the locale is chosen](docs/browser.md#how-the-locale-is-chosen) explains, so a visitor who picked Portuguese would have English saved over it on every page load. Keep the visitor's choice in a cookie instead, which the server can read too, and give the binding that cookie as its `storage`:
 
 ```ts
 // src/render.ts
 export async function renderPage(request: Request) {
   const i18n = createAppI18n();
-  const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(request.headers.get("cookie") ?? "")?.[1];
-  await i18n.init({ locale: i18n.resolveLocale(chosen ?? "") ?? pickLocale(i18n, request) });
+  const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(request.headers.get("cookie") ?? "")?.[1] ?? "";
+  // `matchLocale()` reads a choice you no longer list exactly, such as `pt-BR` once you list only `pt`.
+  await i18n.init({ locale: i18n.resolveLocale(chosen) ?? i18n.matchLocale([chosen]) ?? pickLocale(i18n, request) });
   // ...
 }
 ```
 
 ```ts
 // In the browser
-const chosen = /(?:^|;\s*)locale=([^;]*)/.exec(document.cookie)?.[1];
 const binding = await initializeBrowserI18n({
   i18n,
-  // The cookie holds the choice, so the binding neither saves nor reads its own.
-  persistLocale: false,
-  locale: i18n.resolveLocale(chosen ?? ""),
-});
-binding.subscribe(() => {
-  document.cookie = binding.isUsingSystemLocale ? "locale=; path=/; max-age=0" : `locale=${i18n.locale}; path=/; max-age=31536000; samesite=lax`;
+  // The binding reads, saves, and forgets the visitor's choice in the cookie instead of localStorage.
+  storage: {
+    get: () => /(?:^|;\s*)locale=([^;]*)/.exec(document.cookie)?.[1],
+    set: (locale) => {
+      document.cookie = `locale=${locale}; path=/; max-age=31536000; samesite=lax`;
+    },
+    remove: () => {
+      document.cookie = "locale=; path=/; max-age=0";
+    },
+  },
 });
 ```
 
-- **A visitor who picked a language** gets it from the server, and the browser starts in it.
+- **A visitor who picked a language** gets it from the server, and the browser starts in it. The binding matches the cookie as the server does, so a choice you no longer list exactly is matched on both sides. If the browser can't load that language, the binding warns and falls back to the detected language, then the default, as [When a loader fails during start](docs/browser.md#when-a-loader-fails-during-start) describes, and the cookie keeps the choice for next time.
 - **A visitor who never picked one, or picked "System"**, has no cookie. The server matches `Accept-Language`, and the binding detects from `navigator.languages` with the same rules, saving nothing, so `isUsingSystemLocale` stays `true` and the page follows the browser's language. Browsers build both lists from the same settings. One that sends fewer languages in the header than `navigator.languages` lists can disagree when the visitor's first language is one you don't support, and the text then changes as the page loads.
-- **A picker** calls `i18n.setLocale()` or `binding.switchToSystemLocale()`, as in [Offer a "System" choice](docs/browser.md#offer-a-system-choice), and `subscribe()` writes or deletes the cookie.
+- **A picker** calls `i18n.setLocale()` or `binding.switchToSystemLocale()`, as in [Offer a "System" choice](docs/browser.md#offer-a-system-choice), and the binding writes or deletes the cookie through `storage`. A language the binding detects is never written, so the cookie only ever holds a choice.
 
 ## Next
 
@@ -1407,11 +1470,10 @@ The examples continue the tea shop's `en` and `pt` app from the earlier pages. S
 // src/routing.ts
 import { createLocaleRouting } from "@codenhub/i18n/routing";
 
-export const routing = createLocaleRouting({
-  locales: ["en", "pt"] as const,
-  defaultLocale: "en",
-  localePrefix: "except-default",
-});
+export const locales = ["en", "pt"] as const;
+export const defaultLocale = "en";
+
+export const routing = createLocaleRouting({ locales, defaultLocale, localePrefix: "except-default" });
 ```
 
 `localePrefix` decides which paths start with their locale. It is required and has no default, because each choice gives your site different URLs, and URLs are hard to change once people have bookmarked them. Leaving it out throws `TypeError: [I18n] Invalid locale routing configuration: localePrefix: Expected "always", "except-default", or "when-ambiguous", received undefined`.
@@ -1428,7 +1490,7 @@ How to choose:
 - `"always"` makes every URL name its language, so `/about` is not a page, which suits a site that redirects `/` to the visitor's language.
 - `"when-ambiguous"` drops the prefix from translated paths that can only belong to one language, and is worth reading about before you pick it.
 
-Use the same `locales` and `defaultLocale` as your manager. Routing is separate from the manager, so it also works where no translation happens, such as in a server's redirect logic.
+Use the same `locales` and `defaultLocale` as your manager, by importing these constants where you create it. Routing is separate from the manager, so it also works where no translation happens, such as in a server's redirect logic.
 
 If you keep the configuration in a variable before passing it in, put `as const` after the whole object: `const config = { … } as const`. Without it, TypeScript widens `localePrefix` to `string`, and `createLocaleRouting` rejects it at compile time. `as const` on `localePrefix` alone compiles, but types every locale as `string`, so `localize("/about", "fr")` compiles too.
 
@@ -1477,7 +1539,7 @@ With `localePrefix: "always"`, a path without a locale returns `undefined` too, 
 
 ```ts
 // A file, such as `/favicon.ico`, is not a page; see Redirect to the canonical URL below.
-const isFile = /\.[a-z0-9]+$/i.test(url.pathname);
+const isFile = staticFiles.has(url.pathname);
 const route = isFile ? undefined : routing.parse(url.pathname);
 if (route === undefined && !isFile) {
   const locale = pickLocale(i18n, request);
@@ -1515,10 +1577,10 @@ Run this redirect, and the one for a missing prefix above, only for page routes,
 - With `trailingSlash: "always"`, this redirect sends `/favicon.ico` to `/favicon.ico/`.
 - With `localePrefix: "always"`, the one above sends it to `/en/favicon.ico`.
 
-Neither has a file. If the redirects have to run first, skip paths that end in a file extension, as both examples do:
+Neither has a file. If the redirects have to run first, skip the paths you serve as files, as both examples do. `staticFiles` is a `Set` of them, such as every file in your build's output directory, each written as a pathname like `/favicon.ico`. Testing for a file extension instead turns a page such as `/blog/node.js` or `/users/john.doe` into a file, which skips both redirects and leaves the page unrouted:
 
 ```ts
-const isFile = /\.[a-z0-9]+$/i.test(url.pathname);
+const isFile = staticFiles.has(url.pathname);
 const route = isFile ? undefined : routing.parse(url.pathname);
 if (route !== undefined) {
   const canonical = routing.localize(route.pathname, route.locale);
@@ -1539,7 +1601,11 @@ routing.localize("/about", "pt"); // "/pt/about"
 routing.localize("/about", "en"); // "/about"
 ```
 
-A canonical path never starts with a locale, so `localize()` throws a `RangeError` for one, such as `/pt/about`. That is a URL; pass `parse("/pt/about").pathname` instead. It throws for a page of your own whose path starts with a locale code, too: with Burmese, `my`, configured, an English page at `/my/orders` has no URL, since `/my/orders` is the Burmese `/orders`. Give such a page another path.
+A path that already starts with a locale is read as that locale's URL, so the prefix is replaced:
+
+```ts
+routing.localize("/pt/about", "en"); // "/about"
+```
 
 On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. So the shop's language picker reads the current page with `parse()`, takes its path in the new language from `alternates`, keeps the query string and fragment, and lets your router go there:
 
@@ -1558,17 +1624,29 @@ Going through `parse()` matters once paths are translated: `/sobre` is a Portugu
 Use the same list for the `<link rel="alternate" hreflang>` tags that tell search engines about each language. Add an `x-default` tag for readers whose language you don't offer, pointing at the default locale's page, when it has one:
 
 ```ts
-const defaultLocale = "en"; // the defaultLocale you configured
+import { defaultLocale, routing } from "./routing";
+
+// Your framework's own escaping does the same.
+const escapeHtml = (text: string) => text.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("'", "&#39;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
 const link = (hreflang: string, pathname: string) => `<link rel="alternate" hreflang="${escapeHtml(hreflang)}" href="${escapeHtml(new URL(pathname, "https://example.com").href)}">`;
 
-const tags = route.alternates.map((page) => link(page.locale, page.pathname));
-const fallback = route.alternates.find((page) => page.locale === defaultLocale);
-if (fallback !== undefined) {
-  tags.push(link("x-default", fallback.pathname));
+// The tags for a request's `url.pathname`, or none for a path that is no page.
+export function alternateLinks(pathname: string): string[] {
+  const route = routing.parse(pathname);
+  if (route === undefined) {
+    return [];
+  }
+  const tags = route.alternates.map((page) => link(page.locale, page.pathname));
+  const fallback = route.alternates.find((page) => page.locale === defaultLocale);
+  if (fallback !== undefined) {
+    tags.push(link("x-default", fallback.pathname));
+  }
+  return tags;
 }
 ```
 
-Escape both values as you would any text in HTML, or let your framework create the tags. A path can contain characters, such as `"` or `&`, that are allowed in a URL but not raw inside an attribute.
+Escape both values as you would any text in HTML, or let your framework create the tags. A path can contain characters, such as `&` or `'`, that are allowed in a URL but not raw inside an attribute.
 
 ## Translate paths
 
@@ -1604,7 +1682,7 @@ How the table reads:
 - **Anything the table doesn't list keeps its words.** `/blog` is `/pt/blog`, and `/products/42` in Spanish is `/es/products/42`, since only Portuguese translates it.
 - **Fixed segments match case-sensitively**, as URLs do, so `/pt/Sobre` is not the about page. Only the locale prefix ignores case.
 - **Prefer plain letters in paths.** Routing doesn't change your words, so `/servicos` is what you get only if you write `/servicos`. Most sites drop accents from URLs, because an accented path is shown percent-encoded wherever it gets copied as text, such as `/servi%C3%A7os`. Accents work too: `"/serviços"` matches the `/servi%C3%A7os` that browsers send, and `localize()` returns the encoded form, as it does for every segment, such as a product slug, and as `parse()` returns its `pathname`. So a static build that writes a folder for that path has to decode it first, as in [Build a static site](docs/server-rendering.md#build-a-static-site).
-- **A page comes back in one spelling.** `parse()` writes every segment, listed or not, as RFC 3986 normalizes a URL: an escaped letter, digit, or `-._~` is decoded, every other escape is written in upper case, and a character a URL encodes, such as `é`, is encoded. So `/%61bout` and `/pt/%73obre`, odd spellings of `/about` and `/pt/sobre`, both give `pathname: "/about"`, and `/products/caf%c3%a9` gives `/products/caf%C3%A9`. An escaped reserved character stays escaped, so `/products/c%2B%2B` and `/products/c++` are two pages, since a server may read `%2B` differently from `+`. So pass the pathname as the URL writes it, such as `new URL(request.url).pathname`, not one your framework decoded: decoded, `/100%25` becomes `/100%`, which `parse()` refuses.
+- **A page comes back in one spelling.** `parse()` writes every segment, listed or not, as RFC 3986 normalizes a URL: an escaped letter, digit, or `-._~` is decoded, every other escape is written in upper case, and a character a URL encodes, such as `é`, is encoded. So `/%61bout` and `/pt/%73obre`, odd spellings of `/about` and `/pt/sobre`, both give `pathname: "/about"`, and `/products/caf%c3%a9` gives `/products/caf%C3%A9`. An escaped reserved character stays escaped, so `/products/c%2B%2B` and `/products/c++` are two pages, since a server may read `%2B` differently from `+`. So pass the pathname as the URL writes it, such as `new URL(request.url).pathname`, not one your framework decoded: decoded, `/products/c%2B%2B` becomes `/products/c++`, another page.
 - **A fixed segment beats a parameter, and a parameter beats a catch-all.** With both `/products/new` and `/products/:id` listed, `/products/new` is the new-product page, whichever order the table lists them in. With `/help/contact` and `/help/:path*`, `/help/contact` is the contact page and every other `/help/…` path goes to the catch-all.
 - **The default locale can be translated too.** A Portuguese-first site with English code can use `defaultLocale: "pt"` and `{ "/about": { pt: "/sobre" } }`, so `/sobre` is the Portuguese page and `/en/about` the English one.
 
@@ -1650,7 +1728,7 @@ for (const { locale, pathname } of routing.localizeAll("/products/:id")) {
 
 `@codenhub/router` takes the first route that matches, in the order you register them. When two of a locale's paths can match the same URL, such as `/pt/produtos/novo` and `/pt/produtos/:id`, register the one with fixed words first.
 
-`localizeAll()` writes a catch-all as `:name*`. Translate that into your framework's own syntax when you register it, such as `[...path]` in a file-based router. `@codenhub/router` has no catch-all, so with it, route such paths by rewriting to the canonical path instead.
+A pattern that ends in `:name*` is translated through the table's catch-all, never through a parameter: with `/help/:id` and `/help/:path*` both listed, `localizeAll("/help/:path*")` gives the Portuguese `/pt/ajuda/:path*`, not the one-segment `/pt/ajuda/artigo/:path*`. `localizeAll()` writes a catch-all as `:name*`. Translate that into your framework's own syntax when you register it, such as `[...path]` in a file-based router. `@codenhub/router` has no catch-all, so with it, route such paths by rewriting to the canonical path instead.
 
 ## Drop the prefix
 
@@ -1729,9 +1807,14 @@ const config = {
   locales,
   // `zh-TW` is `zh-Hant`: a language and its likely script, as `matchLocale()` compares them, with Norwegian `no` as `nb`.
   languages: Object.fromEntries(
-    locales.map((locale) => {
-      const { language, script } = new Intl.Locale(locale).maximize();
-      return [`${language === "no" ? "nb" : language}-${script}`, locale];
+    locales.flatMap((locale) => {
+      let likely;
+      try {
+        likely = new Intl.Locale(locale).maximize();
+      } catch {
+        return []; // A private-use locale, such as `x-pirate`, has no language to match; only a saved choice selects it.
+      }
+      return [[`${likely.language === "no" ? "nb" : likely.language}-${likely.script}`, locale]];
     }),
   ),
   targets: Object.fromEntries(locales.filter((locale) => locale !== defaultLocale).map((locale) => [locale, routing.localize(pathname, locale)])),
@@ -1816,14 +1899,17 @@ This is the boring part of the page. It is also the part that decides whether a 
 - **A malformed escape**, a `%` not followed by two hex digits, as in `/50%off`. Write `%25` for a literal `%`… which is also refused, per the previous rule, so take the `%` out of the path.
 - **More than 8,192 characters or 100 segments**, or a path whose canonical path would be longer than that, as a short translated path can be when its table entry is long. Servers and proxies cut off URLs around this length anyway, and no page is 100 folders deep; a request of thousands of one-letter segments would otherwise cost work in every locale.
 
-A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError`, such as `TypeError: [I18n] pathname must not contain dot segments`, and you fix the path in your code.
+A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError` that quotes the path and names the rule, such as `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, and you fix the path in your code.
 
-Every method, `parse()` included, throws `TypeError: [I18n] pathname must be a valid absolute application pathname` for a value that is not a URL's pathname at all:
+Every method, `parse()` included, throws a `TypeError` for a value that is not a URL's pathname at all:
 
-- One that does not start with `/`, such as a full URL `https://…`.
-- One that contains `?` or `#`, such as Node's `request.url` with its query string.
+- One that does not start with `/`, such as a full URL: `TypeError: [I18n] pathname must start with /; pass url.pathname`.
+- One that contains `?` or `#`, such as Node's `request.url` with its query string: `TypeError: [I18n] pathname "/search?…" must not contain ?, which starts a query; pass url.pathname`. The error names whichever of the two comes first.
+- One that is not a string: `TypeError: [I18n] pathname must be a string, received undefined`.
 
 That is a mistake in the calling code, not a request to answer, so it fails loudly instead of answering 404 to every URL with a query.
+
+No routing error quotes a query or a fragment, which can hold a token: a path with `?` or `#` is quoted only up to it. A value that doesn't start with `/`, such as a full URL, whose user info can hold a credential, isn't quoted at all.
 
 Ordinary escapes, such as `%20` and `%C3%A7`, are fine, and a trailing slash is kept: `/pt/sobre/` parses to `/about/`.
 
@@ -1931,12 +2017,12 @@ An empty dictionary is accepted.
 
 The configuration is invalid. Most messages have the form `[I18n] Invalid configuration: <option>: <problem>`, so the option to fix is the first thing after the colon. Check that:
 
-- `locales` is a non-empty list with no duplicates, ignoring case, and each locale is ASCII letters and digits separated by hyphens, such as `pt-BR`.
+- `locales` is a non-empty list with no duplicates, ignoring case, and each locale is a language tag `Intl` accepts, such as `pt-BR`, or a private-use tag, such as `x-pirate`. A typo such as `en-US-US` fails with `Must be a language tag Intl accepts`.
 - `defaultLocale` is one of `locales`.
 - `loadLocale` is a function.
 - `timeZone`, when set, is one `Intl` knows. A typo gives `timeZone: Must be a time zone Intl supports, such as "America/Sao_Paulo" or "UTC"`.
 - `dictionaryLimits` names only known limits, each a positive whole number. `maxKeys` gives `dictionaryLimits.maxKeys: Is not a recognized limit`, and `maxDepth: 0` gives `dictionaryLimits.maxDepth: Must be a positive whole number`. [Size limits](docs/translations.md#size-limits) lists the names.
-- `isSilent`, when set, is a boolean. `isSilent: "true"` gives `isSilent: Expected boolean, received string`.
+- `isSilent`, when set, is a boolean. `isSilent: "true"` gives `isSilent: Expected boolean, received "true"`.
 - `getLocaleDirection` and `onMissingKey`, when set, are functions, or the message says `getLocaleDirection: Must be a function` or `onMissingKey: Must be a function`.
 - The configuration is a plain object. A class instance, or an object that inherits its options, is rejected so that inherited values can't slip in.
 
@@ -1958,12 +2044,12 @@ The same goes for `localePrefix` in a routing configuration kept in a variable, 
 
 ## A message shows its raw text
 
-You see `{count, plural, one {# item} other {# items}` or `{first-name}` on screen, and the console warns about an invalid message. The text isn't valid message syntax, so it is shown as written, with only its plain `{name}` placeholders filled, rather than half formatted. The warning appears once per text and locale.
+You see `{count, plural, one {# item} other {# items}` or `{first-name}` on screen, and the console warns about an invalid message. The text isn't valid message syntax, so it is shown as written, with only its plain `{name}` placeholders filled, rather than half formatted. The warning appears once per text and locale in each process, however many managers show it.
 
 Common causes:
 
 - **A brace is missing or extra.** Count them; every `{` needs its `}`.
-- **A placeholder name has other characters.** Names are ASCII letters, digits, and underscores, so `{first-name}` and `{nome_ç}` are shown as written. Use `{firstName}` or `{nome}`.
+- **A placeholder name has other characters.** Names are letters, digits, and underscores, in any script, so `{first-name}` and `{price€}` are shown as written. Use `{firstName}` or `{price}`.
 - **A format this package doesn't support**, such as `{n, number, currency}` or a `::` skeleton. Format the value with `formatNumber()` and pass the result as a plain placeholder.
 - **Nesting deeper than 10 levels**, or the same `=1` option twice. Simplify the message.
 
@@ -1973,7 +2059,7 @@ Common causes:
 
 From `parse()`, the value is not a URL's pathname: it doesn't start with `/`, or it contains `?` or `#`. Pass `url.pathname` rather than the full URL or a path with its query string, such as Node's `request.url`. A path that is a pathname but contains something routing refuses, such as `//` or a dot segment, makes `parse()` return `undefined` instead, so a visitor's odd URL becomes a 404 rather than a crash.
 
-From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. [Paths it accepts](docs/localized-urls.md#paths-it-accepts) has the full list, with the fix for each.
+From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. The message names the rule the path breaks and quotes the path, such as `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, except a query or a fragment, which can hold a token: a path with `?` or `#` is quoted only up to it. [Paths it accepts](docs/localized-urls.md#paths-it-accepts) has the full list, with the fix for each.
 
 ## `localize()` throws `RangeError`: "would be read as"
 
@@ -1984,7 +2070,7 @@ The path `localize()` would build opens a different page, or the same page in an
 
 ## `localize()` throws `RangeError`: "would be longer than 8,192 characters or 100 segments"
 
-The path you passed is valid, but the locale prefix or the translated words make the result longer than `parse()` accepts. Shorten the path; a link that long is also likely to be cut off by servers and proxies long before anyone reads it.
+The path you passed is valid, but the locale prefix or the translated words make the result longer than `parse()` accepts. The message ends with the length the URL would have, such as `its URL there would have 8,198 characters in 2 segments`. Shorten the path; a link that long is also likely to be cut off by servers and proxies long before anyone reads it.
 
 ## A placeholder shows as written and nothing warns
 
@@ -1992,20 +2078,21 @@ You see `Ouvrir l{app}` where you expected `Ouvrir l'éditeur`, and the console 
 
 ## The browser binding warns or rejects
 
-- **"Document synchronization requires a page document"**: `initializeBrowserI18n()` ran without a `document`, as in a Web Worker, and threw `TypeError: [I18n] Document synchronization requires a page document; pass syncDocument: false without one.` before starting the manager. Pass `syncDocument: false` and no `root`; see [In a Web Worker](docs/browser.md#in-a-web-worker).
+- **"Document synchronization requires a page document"**: `initializeBrowserI18n()` ran without a `document`, as in a Web Worker, and rejected with `TypeError: [I18n] Document synchronization requires a page document; pass syncDocument: false without one.` before starting the manager. Pass `syncDocument: false` and no `root`; see [In a Web Worker](docs/browser.md#in-a-web-worker).
 - **"The manager already has a browser binding"**: you called `initializeBrowserI18n()` twice for the same manager. Call `disconnect()` on the first binding, or keep one.
 - **"Browser initialization was superseded before its locale became active"**: your code called `i18n.init()` while the binding was starting the manager, or `i18n.setLocale()` on a manager that was already initialized, even to the locale already showing. The manager keeps your call's result and the binding is not connected. Let the binding start the manager, and switch languages after its promise resolves.
 - **"Browser observation requires a root"**: `observe: true` needs a `root` to watch.
-- **"root must be an element, a document, or a shadow root, such as document.body."**: `root` was something else, usually the `null` that `document.querySelector("#app")` returns on a page without `#app`. The binding throws before starting the manager. Check that the element exists on every page that runs the script, or pass `document`.
-- **`onMissingKey` threw**: the binding still translates every other element, then rejects with the first error on the first initialization, or reports it as an uncaught error after a later language switch. Only the text or attribute whose key was missing keeps its value. A first initialization that rejects this way leaves the manager started but the binding disconnected, so later language switches don't translate the page; fix the callback and call `initializeBrowserI18n()` again.
-- **"Could not read persisted locale", "Could not persist locale", or "Could not forget persisted locale"**: `localStorage` is unavailable, as in some private browsing modes or a Web Worker. The visitor's choice is not saved, or after `switchToSystemLocale()`, not forgotten; everything else works. Pass `persistLocale: false` where there is no storage to start quietly.
+- **"root must be an element, a document, or a shadow root, such as document.body."**: `root` was something else, usually the `null` that `document.querySelector("#app")` returns on a page without `#app`. The binding rejects before starting the manager. Check that the element exists on every page that runs the script, or pass `document`.
+- **`onMissingKey` threw**: the binding still translates every other element, then rejects with the first error on the first initialization, or reports it as an uncaught error after a later language switch. The text or attribute whose key was missing shows the HTML's value, as a missing key does. A first initialization that rejects this way leaves the manager started but the binding disconnected, so later language switches don't translate the page; fix the callback and call `initializeBrowserI18n()` again.
+- **"Could not read persisted locale", "Could not persist locale", or "Could not forget persisted locale"**: `localStorage` is unavailable, as in some private browsing modes or a Web Worker, or a method of your [`storage`](docs/server-rendering.md#hand-the-locale-to-the-browser) threw. The visitor's choice is not saved, or after `switchToSystemLocale()`, not forgotten; everything else works. Pass `persistLocale: false` where there is no storage to start quietly, or fix the `storage` method that threw.
+- **"storage replaces storageKey", "storage requires persistLocale", or "storage must be an object with get(), set(), and remove() methods"**: `initializeBrowserI18n()` rejected with a `TypeError` before starting the manager. Pass `storage` alone, with saving left on, and give it all three methods.
 - **"Could not switch to the detected locale"**: the browser's language changed while the binding [followed the system](docs/browser.md#offer-a-system-choice), and the loader failed for the newly detected locale. The page keeps its current language. Fix the loader.
 - **"switchToSystemLocale() requires a connected browser binding"**: you called `switchToSystemLocale()` after `disconnect()`. Call it on the binding that is connected.
 - **`Could not load locale "pt"; using "es".`** or **`Could not load locale "pt"; using the default locale.`**: the loader failed for a saved or detected locale other than the default, so the visitor got the next one instead: the locale detected from the browser after a saved one, then the default. Fix the loader; the saved choice is kept for next time. If the default locale itself fails to load, there is nothing left to fall back to, and initialization rejects with `Failed to load translations for locale "en".`
 - **"Skipping translation on <p> because translated elements must be leaves"**: the element with `data-i18n` has child elements. Put the key on an element that contains only text, or translate it with `t()`.
 - **"Skipping translation on <style> because the element can run, hide, or reparse its text as HTML"**: a `data-i18n` key is on a `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>`, or `<plaintext>` element, whose text runs as code, decides what shows, or is written back unescaped when the page is saved as HTML. The warning names the key and passes the element, so the console points to it. Move the key to an ordinary element. Its `data-i18n-<attribute>` keys, such as an `<iframe>`'s `data-i18n-title`, are still translated.
-- **"Skipping translation because data-i18n contains an invalid key"**, or the same for a `data-i18n-<attribute>`: the key is blank, longer than 1,000 characters, or contains an ASCII control character, so no dictionary can hold it. The element keeps its current text. Fix the key in the HTML.
-- **`data-i18n` text shows `{name}`**: HTML translation can't fill placeholders. Render that text with `t()` and pass the values.
+- **"Skipping translation because data-i18n contains an invalid key"**, or the same for a `data-i18n-<attribute>`: the key is blank, longer than 1,000 characters, or contains an ASCII control character, so no dictionary can hold it. The element shows its HTML text, as for a key no dictionary has, including after a key it showed a translation for changes to an invalid one. Fix the key in the HTML.
+- **"Skipping translation because data-i18n names a message that needs values"**: the message has a placeholder, a plural, or a select, and HTML translation has no values to fill them. The element keeps its HTML text, and the warning appears once per key. Render that text with `t()` and pass the values.
 - **A `data-i18n-href` attribute does nothing**: only text attributes can be translated. See [Translate HTML without a framework](docs/browser.md#translate-html-without-a-framework).
 
 The browser warnings are silenced along with the rest when the manager has `isSilent: true`.
@@ -2024,180 +2111,72 @@ The [reference](docs/reference/index.md) documents every export, option, and the
 - **`binding.isUsingSystemLocale`** says whether to show "System" selected: `true` after a start with nothing chosen and after `switchToSystemLocale()`, `false` once your app applies a locale with `setLocale()` or `init()`.
 - **`binding.subscribe()`** calls your function once after each change to what a picker shows, the language or `isUsingSystemLocale`, including a pick of the language already showing, which `i18n.subscribe()` doesn't report. Render a framework picker from it, as the [React example](docs/browser.md#offer-a-system-choice) does.
 - **`parse()` returns `alternates`**, the page's URL in every language that has one, for language switchers and `hreflang` tags. A language whose URL would open another page is left out, where `localize()` throws, so an English product `/products/novo` next to a translated `/products/new` no longer makes the guide's switcher answer 500. See [Link to another language](docs/localized-urls.md#link-to-another-language).
-- If your code implements `BrowserI18nBinding` or `LocaleRouting`, or builds `parse()` results, as a test double might, add the new members, or build the double from the real thing. A test that compares a `parse()` result with `toEqual({ locale, pathname })` now needs `alternates` too, or `toMatchObject`.
+- **`select` takes a boolean**, picking the option named `true` or `false`, or `other`: `{isAdmin, select, true {Admin} other {Member}}` shows "Admin" for `{ isAdmin: true }`, where it showed the message's source. The types accept a boolean for `select` only; in a plain `{isAdmin}` it stays as written.
+- **`initializeBrowserI18n`'s `storage` option** saves the visitor's choice somewhere other than `localStorage`, such as a cookie your server reads, through `get()`, `set(locale)`, and `remove()`. A choice read from it is matched and falls back when its dictionary fails to load, as a saved one does, which a choice passed as `locale` can't. A value that isn't a configured locale counts as nothing saved, and a method that throws warns. Passing it with `storageKey` or `persistLocale: false` rejects with a `TypeError`. See [Hand the locale to the browser](docs/server-rendering.md#hand-the-locale-to-the-browser).
+- If your code implements `I18n`, `BrowserI18nBinding`, or `LocaleRouting`, or builds `parse()` results, as a test double might, add the new members, or build the double from the real thing. A test that compares a `parse()` result with `toEqual({ locale, pathname })` now needs `alternates` too, or `toMatchObject`.
 
 ## Changed
 
-- **`localize()` reads every path as canonical, and throws a `RangeError` for one that starts with a locale.** A prefixed path was read as that locale's URL, so with Burmese, `my`, configured, `localize("/my/orders", "en")` linked to the Burmese `/orders`. To switch a URL's language, pass `parse(url).pathname`, as the guide does; a page whose path starts with a locale code needs another path, since no URL leads to it. See [Link to another language](docs/localized-urls.md#link-to-another-language).
-- **Every segment is written as a URL's pathname writes it**, parameters and unlisted segments included. `localize("/products/café", "en")` returns `/products/caf%C3%A9`, where it wrote a raw `é` into the link, and `parse("/pt/produtos/café").pathname` is `/products/caf%C3%A9` too, so two spellings of one page give one `pathname`. A segment is normalized as RFC 3986 says: an escaped unreserved character such as `%61` is decoded, other escapes are written in upper case, and an escaped reserved character stays escaped, so `c%2B%2B` and `c++` stay two pages. A lone surrogate, which is not text, is written as `%EF%BF%BD`, as a URL writes it. A canonical redirect that compares the request with `localize(route.pathname, …)` now redirects a hand-typed `/café` once, to the encoded form. Code that compares `parse().pathname` with a path of its own needs that path in the same encoded form, as `localize()` returns it; decoding `pathname` with `decodeURI()` instead fails for a segment such as `%3F` or `%2B`, which it leaves encoded.
+- **Every segment is normalized as RFC 3986 says**, parameters and unlisted segments included. `localize("/products/café", "en")` returns `/products/caf%C3%A9`, where it wrote a raw `é` into the link, and `parse("/pt/produtos/café").pathname` is `/products/caf%C3%A9` too, so two spellings of one page give one `pathname`. A segment is normalized as RFC 3986 says: an escaped unreserved character such as `%61` is decoded, other escapes are written in upper case, and an escaped reserved character stays escaped, so `c%2B%2B` and `c++` stay two pages. That also encodes `[`, `]`, `|`, and `^`, which a URL's pathname can leave raw, depending on the runtime. A lone surrogate, which is not text, is written as `%EF%BF%BD`, as a URL writes it. A canonical redirect that compares the request with `localize(route.pathname, …)` now redirects a hand-typed `/café` once, to the encoded form. Code that compares `parse().pathname` with a path of its own needs that path in the same encoded form, as `localize()` returns it; decoding `pathname` with `decodeURI()` instead fails for a segment such as `%3F` or `%2B`, which it leaves encoded.
 - **A regional locale falls back to the configured locale of its likely script** after its parents: `zh-HK` reads `zh-Hant`, and `sr-ME` reads `sr-Latn`, where both fell back to the default. The fallback locale loads with it.
 - **`matchLocale()` reads `_` as `-`**, so `pt_BR` and `zh_Hant_TW`, as an OS or a database writes them, match `pt-BR` and `zh-Hant-TW`, where they matched nothing.
 - **`resolveLocale()` reads `_` as `-`** too, so `pt_BR` from a cookie or a back end resolves to `pt-BR`, where it returned `undefined`.
 - **The default missing-key warning is logged once per process for each locale and key**, shared by every manager, where each manager kept its own record. A server with a manager per request logged one missing word once for every visitor. A test that expects each new manager to warn again passes `onMissingKey` instead.
+- **An invalid message warns once per process for each locale, key, and text**, shared by every manager, as a missing key does, so an edited text warns again. Both records keep a bounded amount of memory, about 1,000 typical keys, and remember a message by a hash of its text, not the text itself.
+- **Names in a message take letters and digits in any script**: an argument such as `{año}` and a select option such as `niño {…}`, where only ASCII letters, digits, and `_` were read: such a message was invalid syntax. The types check values only for ASCII names; a message with another name accepts any values.
+- **`data-i18n` and `data-i18n-<attribute>` keep the HTML's value for a message that needs values**, one with a placeholder, a plural, or a select, and warns once per key, where it wrote the message as written, such as `Hello {name}`, without a warning. Render that text with `t()`.
+- **`data-i18n` and `data-i18n-<attribute>` set `lang` on text from a fallback locale's dictionary**, so a screen reader reads an English fallback on a French page in English. The locale is compared with the language the element has without the mark, its own `lang` or its nearest ancestor's, so a French text in a widget under `<html lang="en">` is marked `fr` with `syncDocument: false` too. An element is marked only when every key it shows comes from that one locale, so a button with French text and an English `title` isn't. The binding restores the element's own `lang` when the text is translated again, unless your code has changed that `lang`, which then stays yours to update.
+- **A configuration error quotes a received string**, so `localePrefix: "as-needed"` reads `Expected …, received "as-needed"`, where it read `received string`.
+- **`createI18n()` and `createLocaleRouting()` reject a locale that `Intl` rejects**, such as `en-US-US` or `en-GB-oed`, with `locales[1]: Must be a language tag Intl accepts, …`, where it was accepted, and in routing became a URL prefix, so a typo served `/en-US-US/…` without an error. A private-use tag, such as `x-pirate`, is still accepted, and matches only exactly, where a locale `Intl` rejected matched by its language subtag. A configuration that throws now fixes the tag, or uses `x-` for a locale of its own.
 - **`matchLocale()` skips a preference longer than 255 characters**, as it skips one that isn't a string. A 16 KB `Accept-Language` entry cost about 25 ms a match.
 - **`data-i18n` skips `iframe`, `noembed`, `noframes`, `plaintext`, and `xmp`**, as it skips `script` and `style`, with a warning. Serializing the page writes their text without escaping, so a translation in one of them could become markup in server-rendered or prerendered HTML.
-- **Only the text of those elements is skipped.** Their `data-i18n-<attribute>` keys are translated, so an `<iframe>`'s `data-i18n-title`, the name a screen reader gives an embedded video or map, follows the language. That includes `<template>` and `<noscript>`, whose attributes 0.4.0 left untranslated.
-- **`initializeBrowserI18n()` throws a `TypeError` when there is no global event target**, before touching the manager, where it initialized the manager and then rejected.
-- **`t()` takes values typed by an interface or a class**, such as a `User`, where only object literals and index-signature types compiled. `t()` has a second type parameter for the values; a call that passes the key's type argument, `t<"cart.title">(…)`, is unaffected.
-- **A visitor who never chose a language follows the browser mid-visit.** While `isUsingSystemLocale` is `true`, a `languagechange` event switches to the newly detected locale without saving it, where the page kept its language until a reload. A visitor's pick still loading when the event arrives is kept. A load that fails warns, "Could not switch to the detected locale", and keeps the current language. You need do nothing; a visitor who chose a language, or a start with an explicit `locale`, is not affected.
+- **Only the content of those elements is skipped.** Their own `data-i18n-<attribute>` keys are translated, so an `<iframe>`'s `data-i18n-title`, the name a screen reader gives an embedded video or map, follows the language. That includes `<template>` and `<noscript>`, whose attributes 0.4.0 left untranslated.
+- **`initializeBrowserI18n()` rejects with a `TypeError` when there is no global event target**, before touching the manager, where it initialized the manager and then rejected.
+- **`t()` takes values typed by an interface or a class**, such as a `User`, where only object literals and index-signature types compiled, and checks only the values the message uses. Any other value may have any type, in an interface or an object literal, so a `User` with an `isAdmin: boolean` is taken whole; a missing or wrongly typed value the message uses still fails to compile. `t()` has a second type parameter for the values; a call that passes the key's type argument, `t<"cart.title">(…)`, is unaffected.
+- **A visitor who never chose a language follows the browser mid-visit.** While `isUsingSystemLocale` is `true`, a `languagechange` event switches to the newly detected locale without saving it, where the page kept its language until a reload. A visitor's pick still loading when the event arrives is kept, and if it fails, the page follows the event. A load that fails warns, "Could not switch to the detected locale", and keeps the current language. A picker that sets its value only after its own switches keeps showing the old language; render it from `binding.subscribe()`, as [Let visitors switch languages](docs/browser.md#let-visitors-switch-languages) does. A visitor who chose a language, or a start with an explicit `locale`, is not affected.
 - **A `setLocale()` to the language already showing is saved**, like any other choice, where nothing was saved. A visitor who picks English while English was detected has chosen it, and keeps it after changing their browser's language.
 - `disconnect()` also stops following the browser's language and calling `binding.subscribe()` listeners, and drops a switch to a detected locale still loading. A `setLocale()` still loading still applies.
-- **The guide's language switcher and `hreflang` tags read `route.alternates`** instead of calling `localize()` on a path from the request. Do the same in yours. The `x-default` tag is left out when the default locale has no URL for the page. A static build still uses `localizeAll()`, which throws on a clash, so the build finds it.
+- **The guide's language switcher and `hreflang` tags read `route.alternates`** instead of calling `localize()` on a path from the request. Do the same in yours. The `x-default` tag is left out when the default locale has no URL for the page, and its default locale comes from the constants the guide's routing module exports, not a second copy that drifts when the default changes. A static build still uses `localizeAll()`, which throws on a clash, so the build finds it.
+- **A JSON dictionary's plural group needs a numeric `count` in `t()`.** With forms typed `string`, as from a JSON import, `t("cart.items")` compiled and then showed `cart.items`.
+- **Routing errors quote the value and name the rule it breaks**, such as `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..` and `[I18n] Unsupported locale "fr".`, as the manager's errors do. They replace "must be a valid absolute application pathname" and "must not contain dot segments". A configuration error for a table entry reads `Must start with /` and similar. A value that doesn't start with `/`, such as a full URL, whose user info can carry a credential, isn't quoted, and one with a query or fragment, which can carry a token, is quoted up to the first `?` or `#`, which the message names. An unsupported locale passed to `localize()` or to the manager is cut at `?` or `#` the same way.
 - **`localize()`'s "would be read as" `RangeError` names the URL it would build**, such as `"/pt/produtos/novo"`, and no longer tells you to pass `parse().pathname` when that is what you passed. Code that matches the text after the `;` needs updating.
-- **Paths have at most 100 segments.** `parse()` returns `undefined` for a longer one, and `localize()` throws a `TypeError` for one, or a `RangeError` when its prefix or translated words take it past 100, as for 8,192 characters. A request made of thousands of one-letter segments, such as `/a/a/a/…`, cost about 40 ms a `parse()` with 20 locales, so anyone could keep a server busy with it. The `RangeError` reads "would be longer than 8,192 characters or 100 segments".
-- **A number in a plain `{name}` is formatted for the reader**, as `{name, number}` does and as ICU MessageFormat does, so `"{count} items"` with `1234` reads "1,234 items", or "1.234 itens" in Portuguese, where it read "1234 items" in every language. A message that wants the digits as written, such as an order number, takes a string: `t("order", { id: String(id) })`. A number in a message that is not valid ICU syntax is formatted too.
+- **Paths have at most 100 segments.** `parse()` returns `undefined` for a longer one, and `localize()` throws a `TypeError` for one, or a `RangeError` when its prefix or translated words take it past 100, as for 8,192 characters. A request made of thousands of one-letter segments, such as `/a/a/a/…`, costs work for each segment in every locale, so anyone could keep a server busy with it. The `RangeError` reads "would be longer than 8,192 characters or 100 segments", and gives the length the URL would have.
 - **`loadLocale` must accept every configured locale.** A loader typed for fewer, such as `(locale: keyof typeof dictionaries)` before every dictionary exists, no longer compiles, where `init()` rejected at runtime.
 - **`initializeBrowserI18n`'s `locale` must be a configured locale.** `initializeBrowserI18n({ i18n, locale: "fr" })` on a manager without `fr` no longer compiles, where it rejected at runtime.
 - **`t()` accepts any values for a message it prints as written**: one with an unknown style, such as `{n, number, currency}`, a `plural` or `select` without `other`, or `'#` quoting a brace inside a plural. The types required values the runtime never filled in.
 - **`t()` takes any key when the loader returns `Record<string, unknown>`**, where no key compiled.
+- **An `init()` that switches a ready manager to another locale also dispatches `locale-change`**, after `ready`, with `previousLocale`, where it dispatched only `ready`, so a `locale-change` listener missed the switch. `subscribe()` listeners are still called once for it, and a bound page is translated once. The first `init()` dispatches only `ready`, and an `init()` with the locale already active dispatches no `locale-change`.
 - **`t(key, values)` throws a `TypeError` when `values` is `null` or a primitive.** `null` failed with a native error from inside the package, and a string was ignored.
-- **Errors that name a dictionary key, a locale, a path, or a configuration property quote it**, with line breaks escaped, and cut it after 100 characters. A test that matches such a message for an unusual key or locale may need updating; ordinary ones read the same.
+- **Errors that name a dictionary key, a locale, a path, or a configuration property quote it**, with line breaks escaped, and cut it after 100 characters. A test that matches such a message for an unusual key or locale may need updating; ordinary ones read the same. Routing errors do the same for a pathname, and so do the warnings for invalid syntax, which name an unknown type, style, plural form, or repeated option.
 - **The `data-i18n` warnings name the key and the element.** "Skipping translation because data-i18n contains an invalid key", "translated elements must be leaves", and "the element can run, hide, or reparse its text as HTML" now quote the key, and pass the element after the message, so the browser console points to it. The message is the second argument, after a `"%s"` format, so a key such as `%o` is shown as written. A test that expects the exact message, or one argument, needs updating.
+- **`i18n.subscribe` and `binding.subscribe` are typed as function properties**, not methods, so a lint rule against unbound methods, such as `@typescript-eslint/unbound-method`, accepts `useSyncExternalStore(binding.subscribe, …)`. Both were already bound at runtime. A test double that implements one as a method with a narrower listener type no longer compiles.
+- **A `data-i18n` or `data-i18n-<attribute>` whose `onMissingKey` throws shows the HTML's value**, where it kept the translation of the earlier key or locale. The error is still reported.
 - **`formatRelativeTime()` and `formatList()` reuse their `Intl` formatters**, several times faster in a list of "3 days ago" labels.
-- **Creating a manager and `matchLocale()` are about 5 times faster with many locales**, since locale data is computed once per process.
+- **`matchLocale()` takes a few microseconds whatever the number of locales**, where it took about 160 µs a call with 20 locales and 770 µs with 100, since each locale's forms are computed once per manager, and likely subtags and canonical tags once per process. **Creating a manager is about 3 times faster** with 20 to 100 locales: about 55 µs with 20 and 240 µs with 100, where it took 160 µs and 780 µs. Measured on Node.js 26.13 with three preferences that match by likely subtags.
 - **`parse()` stops at the first route that matches**, where it tried every route of the path's shape: a table of 2,000 deep routes reads a path in about half the time.
 
 ## Fixed
 
-- **The server-rendering guide no longer overwrites a visitor's choice.** It passed the server's `Accept-Language` match to the binding as `locale`, which the binding saves, so on a site without a locale in the URL a visitor who picked Portuguese got English saved over it on every page load. The guide now keeps the choice in a cookie that the server reads and `binding.subscribe()` writes, and starts the binding without `locale` when there is none. If you followed it, see [Hand the locale to the browser](docs/server-rendering.md#hand-the-locale-to-the-browser).
+- **The server-rendering guide no longer overwrites a visitor's choice.** It passed the server's `Accept-Language` match to the binding as `locale`, which the binding saves, so on a site without a locale in the URL a visitor who picked Portuguese got English saved over it on every page load. The guide now keeps the choice in a cookie that the server reads and the binding reads, writes, and deletes through its new `storage` option, so a cookie choice that fails to load falls back as a saved one does, and a language the binding detects is never written. The server reads a choice you no longer list exactly, such as `pt-BR` once you list only `pt`, with `matchLocale()` after `resolveLocale()`, and the binding matches it the same way, so it isn't lost to the `Accept-Language` guess. If you followed it, see [Hand the locale to the browser](docs/server-rendering.md#hand-the-locale-to-the-browser).
+- **Each `#` counts toward the 100 arguments one call fills**, and past them a `#` is written as `#`. A plural form of 99,970 `#` with `1e308` made one `t()` return 41 million characters, since only arguments were counted, so a fetched message could make a server allocate tens of megabytes per request.
+- **The default direction is `rtl` for variants of a right-to-left script**: `Aran` (Arabic Nastaliq), `Syre`, `Syrj`, and `Syrn` (Syriac), and `Phlv` (Book Pahlavi), so `ur-Aran` is `rtl`, where it was `ltr`.
 - **Two bindings whose roots overlap no longer hang the page.** Each rewrote the other's text, forever. A binding now skips text it wrote itself; the guide says to keep roots apart.
-- **A loader type made of `Partial<typeof en>` checks values again**, where it accepted any values for every key.
-- **A visitor following the system follows a `languagechange` that arrived while their own pick was loading**, once that pick fails, where the page kept the old language until the next event.
+- **A loader type made of `Partial<typeof en>` checks values**, where it accepted any values for every key.
 - **The shared message cache counts what each message keeps in memory**, not only its length, so a dictionary of messages full of placeholders or `#` can no longer keep hundreds of megabytes alive on a server.
 - **`matchLocale()` ignores a preference's extensions**, so `es-u-hc-h23`, which a browser may send, matches `es-ES` as `es` does, where it matched the first Spanish locale listed, such as `es-419`.
 - **A language with no likely script matches and falls back to its parent**, so `nah-MX` matches and falls back to `nah`, where it matched nothing and fell back to the default.
+- **A locale falls back to a parent written under another code for its language**, such as a configured `iw` for `he-IL`, `he` for `iw-IL`, `in` for `id-ID`, or `no` for `nb-NO`, where it fell back to the default. Deprecated codes are read as `Intl` canonicalizes them, and `no` and `nb` count as one language, as in `matchLocale()`.
 - **`t()` leaves a date or time as written for a timestamp past what a `Date` holds**, such as `1e16`, where it threw a `RangeError`, and formats a `Date` from another realm, such as an iframe, where it left it as written.
 - **`parse()` and `localize()` read a percent-encoded locale prefix**, so `/%70t/sobre` is Portuguese, as `/pt/sobre` is, and `/pt/%65n/about` is refused, as `/pt/en/about` is.
-- **A `binding.subscribe()` listener that calls `disconnect()` stops the listeners after it**, and `disconnect()` releases every listener.
 - **A key over 10,000 characters is refused before it is trimmed**, as documented, with an error that names that limit.
-- **A key with surrounding whitespace is no longer refused** by `t()`, `has()`, or `data-i18n` when it is within 1,000 characters once trimmed.
+- **A key with spaces around it is no longer refused** by `t()`, `has()`, or `data-i18n` when it is within 1,000 characters once trimmed. Spaces are trimmed, Unicode ones such as the no-break space included, and so are the byte order mark and the Unicode line and paragraph separators. A tab, a line feed, a carriage return, or any other ASCII control is still refused wherever it is in the key.
 - **Creating a routing with `localePrefix: "when-ambiguous"` takes linear time** in tables whose translated paths start with a parameter: 20,000 such routes took about 17 s and take about 0.4 s. Which paths drop the prefix is unchanged.
+- **`localizeAll("/help/:path*")` translates through the table's catch-all.** With `/help/:id` also listed, it returned the parameter route's form, such as `/pt/ajuda/artigo/:path*`, and a router registered it for the wrong pages.
+- **A `data-i18n` or `data-i18n-<attribute>` key changed to an invalid one shows the HTML's value**, as a missing key does, where the element kept the translation of its earlier key. A blank key, one over the length limit, and one with an ASCII control are invalid, and the HTML's value comes back whether a later binding, an observed change, a language change, or moving the element back in reads the key.
+- **With `observe`, text other code writes over a keyed element no longer becomes its fallback.** The binding writes the translation back, and the HTML's text stays the one shown for a language without the key.
 - The docs say that a plural group `has()` finds needs `count` in `t()`.
-
-<!-- Source: docs/changelog/0.4.0.md -->
-
-# 0.4.0
-
-## Added
-
-- The README and guides are available in Brazilian Portuguese and Spanish.
-
-## Changed
-
-- **Breaking.** Node.js 26 or newer is required, up from 24. Installing on Node.js 24 or 25 makes npm and pnpm warn, or fail with `engine-strict` on; upgrade Node.js to 26. Browsers and Web Workers are unaffected.
-- **One `t()` call fills at most 100 arguments**, counting those inside plural and select forms, and leaves the rest as written. A UI sentence never comes close; the limit keeps a huge fetched message from costing one formatting step per placeholder on every render. A plural form's `#` is formatted once however often the form repeats it.
-- **An overtaken `init()` or `setLocale()` resolves when its loading fails**, as it does when its loading succeeds. Only the latest call's failure rejects, so a language picker clicked twice no longer reports an error for a locale the visitor already left.
-- **The browser binding matches a saved locale you no longer configure**, such as `pt-PT` once only `pt-BR` remains, like a browser preference, where it ignored it and detected again. The saved value is left as it was.
-- **`matchLocale()` skips `und`**, the undetermined language, with any subtags, where likely subtags made it match English.
-- **The browser binding skips customized built-in elements**, such as `<button is="cart-button">`, and their content, as it skips elements whose tag has a dash: the component owns that text.
-- The guides are rewritten around one running example. The canonical-redirect examples skip static files, and the static-site redirect script matches a saved locale and skips `und` as `matchLocale()` does.
-- The manifest lists npm keywords, and the README links the license.
-
-## Fixed
-
-- Parsed messages could exhaust a server's memory: every manager in a process shares the parse cache, which held up to 10,000 messages of any length, and the parser kept about 30 bytes per character of each. On Node.js 26, 400 cached messages of 100,000 characters held 1.3 GB, and 2,000 exhausted the heap. The cache is now also bounded at 5,000,000 characters, and 2,000 such messages hold about 4 MB.
-- The warnings for a missing key and for an invalid message wrote line and paragraph separators in the key as they are, so a key from outside input could break a log line. They are now escaped.
-
-<!-- Source: docs/changelog/0.3.0.md -->
-
-# 0.3.0
-
-## Added
-
-- **`trailingSlash`** on `createLocaleRouting` picks whether built paths end with `/`: `"preserve"`, the default and the old behavior, `"always"`, such as `/pt/` for a host that serves `pt/index.html`, or `"never"`. `parse()` still accepts both spellings. See [Trailing slashes](docs/localized-urls.md#trailing-slashes).
-- **`no` and `nb` match each other**, since both mean Norwegian Bokmål, after an exact match. A site configured with `no` no longer serves its default locale to a browser sending `nb`, or the other way round. Nynorsk, `nn`, stays apart.
-- **Every optional option accepts an explicit `undefined`** under `exactOptionalPropertyTypes`, as in `initializeBrowserI18n({ i18n, locale: route?.locale })`, which the runtime always read as omitted.
-
-## Changed
-
-- **Breaking.** **`matchLocale()` never matches a locale in another script.** With `en` and `zh`, a `zh-TW` visitor who also lists English now gets English rather than Simplified Chinese. A preference that only matched across scripts now matches nothing; add a locale in that script to serve it.
-- **Breaking.** **`#` is the number only in a plural's own forms.** In `{n, plural, other {{v, select, other {# x}}}}`, the nested `select` now shows `# x`, as ICU does, rather than `5 x`. Write `{n}` there to show the number.
-- **Breaking, types only.** **Plural keys whose forms take no arguments are type-checked.** A group such as `{ one: "One item", other: "Many items" }` now requires `count`, and each argument another form or locale uses. Code that passed wrong or missing values to such keys no longer compiles; pass the values the messages use.
-- **Breaking, types only.** **`getLocaleDirection` and `onMissingKey` are typed as function properties**, so their parameters are checked strictly. A callback whose locale parameter is narrower than the configured locales no longer compiles; type it with every configured locale.
-- **The browser binding tries the detected locale when a saved one fails to load**, before the default, so a visitor with a saved `fr` and a `pt-BR` browser gets Portuguese rather than the default.
-- **The browser binding checks `root` before starting the manager.** A `root` that is not a DOM node, such as the `null` of a `querySelector()` that found nothing, throws `TypeError: [I18n] root must be an element, a document, or a shadow root, such as document.body.` before anything is initialized or saved, where it failed with a null dereference afterwards.
-- **`initializeBrowserI18n()` throws a `TypeError` without a page document** while `syncDocument` is on, as in a Web Worker, before touching the manager, where it rejected with a `ReferenceError` after initializing it.
-- The default text direction comes from a locale's likely script, so `pa-PK`, `az-IR`, `uz-AF`, `arz`, `prs`, and `ji` are now `rtl`, and `sd-IN` is `ltr`.
-- `parse()` returns a listed page's fixed words in one spelling, so `/%61bout` and `/about` give the same `pathname`, and it returns `undefined` when the canonical path, not only the request, would be longer than 8,192 characters.
-- Dictionary errors name the locale and quote the key, and the load-failure message tells the visitor to try again.
-
-## Fixed
-
-- With `onMissingKey` throwing, the browser binding stopped at that element and left the rest of the page in the old language. It now translates every other text and attribute, then throws the first error.
-- A binding started after another's `disconnect()` took the earlier translations for the page's text.
-- An element that a custom element or `onMissingKey` added while the binding translated stayed untranslated.
-- A stored or detected locale that failed to load after a later `init()` started was retried over that call's locale.
-- Route precedence depended on table order in one case: with `/blog/:slug`, `/blog`, and `/blog/archive`, the archive page was read as a slug.
-- A pattern of about 4,000 segments next to an overlapping catch-all made `createLocaleRouting` overflow the call stack. Large translated-path tables are now matched through an index rather than one by one.
-- With `trailingSlash: "always"`, `parse()` could accept a path whose canonical URL `localize()` then refused as too long.
-- Formatter options inherited from a prototype, or a string option containing `\0`, could share a cached formatter with other options, so one `formatNumber()` call changed later ones in every manager.
-- `formatDate(value, "long")` and other primitive options lost the configured time zone.
-- `=1.0` and `=01` never matched in a plural; they now select 1, as in ICU.
-- A `Date` in a message with invalid syntax was left as `{when}` instead of formatted.
-- `has()` counted a plural group without an `other` form as a key in some locales, and narrowed a typed key to `never` when it returned `false`.
-- Long or deeply nested `as const` messages hit TypeScript's recursion limit; they now fall back to loose values. A name written with a no-break space inside its braces is read as the runtime reads it.
-- A loader returning `import("./en.json")` without `.default` failed with an unrelated message; it now says to return the module's default export.
-- A rejected dictionary key containing DEL, C1 controls, U+2028, or U+2029 is escaped in the error, so it can't break a log line.
-- A message read on every lookup is no longer evicted from the parse cache after 10,000 others.
-
-<!-- Source: docs/changelog/0.2.1.md -->
-
-# 0.2.1
-
-## Added
-
-- A guide to [detecting the visitor's language on a static site](docs/localized-urls.md#detect-the-language-on-a-static-site), where no server sees `Accept-Language`: an inline redirect that runs before first paint, honors the language the browser binding saved, and never redirects a prefixed URL or a link from your own site that sends its referrer.
-
-## Changed
-
-- `parse()` returns `undefined` for a path routing refuses, such as `//wp-login.php`, a dot segment, an encoded slash, or one longer than 8,192 characters, where it threw a `TypeError`. A request can carry any of these, and the guide's handlers, which call `parse(url.pathname)` without a catch, answered them with a 500; they now get the 404 every other path that is no page gets. `parse()` still throws for a value that is not a URL's pathname, such as a full URL or a path with its query string, and `localize()` and `localizeAll()` still throw for every refused path. A `try` around `parse()` that answered 400 can go, or stay: it now only catches mistakes in the calling code.
-- `has()` returns `false` for a string no dictionary can hold, such as one with a line break or longer than 1,000 characters, where it threw a `TypeError`, so ``has(`errors.${code}`)`` is safe with a `code` from a response or a query string. It still throws for a non-string, and `t()` still throws for an invalid key.
-- A text with a stray `}` and no `{` or `'`, such as `a } b`, now logs the invalid-syntax warning that `it's a } b` already logged. The text shown is unchanged. Quote a literal brace as `'}'`.
-- The package's npm homepage is its page on codenhub.dev.
-
-## Fixed
-
-- `formatDate(value, { timeZone: undefined })`, as options forwarded from a property often are, used the runtime's time zone instead of the manager's `timeZone`, so a server could show its own calendar day. A `timeZone` the options inherit, as from a class instance's defaults, no longer reuses a formatter made for another zone.
-
-<!-- Source: docs/changelog/0.2.0.md -->
-
-# 0.2.0
-
-## Added
-
-- **ICU messages.** `t("welcome", { name: "Ana" })` fills `{name}` in the text, and a text can format its values: `{amount, number}`, `{when, date, long}`, `{count, plural, =0 {…} one {# item} other {# items}}`, `{n, selectordinal, …}`, and `{gender, select, …}`. Formatting follows the language of the text. An argument without a value is left as written. See [Put values into text](docs/translations.md#put-values-into-text).
-- **Formatters.** `formatNumber`, `formatDate`, `formatRelativeTime`, and `formatList` format values for the active locale with `Intl`.
-- **`timeZone`** on `createI18n` sets the time zone of dates and times in messages and `formatDate`'s default, so a server renders the reader's day rather than its own. See [Time zones](docs/translations.md#time-zones).
-- **`has(key)`** tells whether a key exists, without calling `onMissingKey` or warning, and narrows a key built at runtime to one `t()` accepts. See [Typed keys](docs/translations.md#typed-keys).
-- **Regional fallback.** A key missing from `pt-BR` comes from `pt` before the default locale, when both are configured. See [Regional variants](docs/translations.md#regional-variants).
-- **Plurals.** A key can hold CLDR plural forms, such as `{ one: "{count} item", other: "{count} items" }`, and `t(key, { count })` picks the right one for the language with `Intl.PluralRules`. See [Plurals](docs/translations.md#plurals).
-- **Typed keys.** Keys are inferred from what `loadLocale` returns, so a misspelled key fails to compile. `TranslationKey<typeof en>` names the key type for your own helpers. With an `as const` dictionary, `t()` also requires each message's values with the type its format needs. See [Typed values](docs/translations.md#typed-values).
-- **`t`**, a short alias of `translate`, and every manager method keeps working when pulled off the manager, as in `export const { t } = i18n`.
-- **`matchLocale(preferences)`** picks the best supported locale for a list of language tags, such as `pt` for `pt-BR`. Servers can now resolve `Accept-Language` the way the browser binding resolves `navigator.languages`.
-- **`subscribe(listener)`** calls `listener` after every language change and returns a function that stops it, for framework stores such as React's `useSyncExternalStore`.
-- **`onMissingKey(key, locale)`** receives every key missing from all dictionaries, in place of the default warning. Throw from it to fail tests on missing keys.
-- **Translated paths.** `pathnames` on `createLocaleRouting` gives each locale its own words, so the about page can be `/pt/sobre`: `{ "/about": { pt: "/sobre" }, "/products/:id": { pt: "/produtos/:id" } }`. `parse()` reads a translated path back to the canonical path your app routes on, and `localize()` builds it. Mistakes in the table, such as two pages with the same path in one language, throw when routing is created. A last `:name*` segment matches the rest of the path, such as `/docs/:path*`. See [Translate paths](docs/localized-urls.md#translate-paths).
-- **`localePrefix: "when-ambiguous"`** drops the locale prefix from a translated path whose words belong to one language only, so the about page can be just `/sobre`, while `/pt` and `/pt/blog` keep theirs. `localize()` throws a `RangeError` when the path it builds would open another page, such as an English page the table doesn't list at `/sobre`. See [Drop the prefix](docs/localized-urls.md#drop-the-prefix).
-- **A default text direction.** `getLocaleDirection` is now optional; without it, Arabic, Hebrew, Persian, Urdu, and other right-to-left languages and scripts get `rtl`.
-- Guides for writing translations, browser apps, server rendering and static builds, localized URLs, and troubleshooting, and a generated API reference.
-
-## Changed
-
-- **Breaking.** `t()` and `translate()` return a `string`, never `undefined`. A key missing from every dictionary returns the key, trimmed, such as `"home.subtitle"`, so the gap is visible on screen.
-- **Breaking.** `init()` resolves `void` instead of `true` or `false`, like `setLocale()`. Read `i18n.locale` or `i18n.isReady` to see what was applied.
-- **Breaking, types only.** When `loadLocale` returns a typed dictionary, `t()` accepts only its keys, so a key built at runtime, such as ``t(`errors.${code}`)``, no longer compiles.
-- **Breaking, types only.** Only `locales` sets the locale type; `defaultLocale` and a callback parameter typed `string`, such as `loadLocale: (locale: string) => …`, no longer widen it. A configuration kept in a variable without `as const` on `defaultLocale` is now a compile error, where before it silently accepted any string as a locale.
-- **Breaking.** `createLocaleRouting` takes `localePrefix` instead of `prefixDefaultLocale`: `"always"` for `true`, `"except-default"` for `false`, or the new `"when-ambiguous"`.
-- **Breaking.** `localize()` and `localizeAll()` throw a `RangeError` when the path they build would be longer than 8,192 characters, where they returned a path that `parse()` rejects.
-- **Breaking.** `parse()` returns `undefined` for a path no link leads to, such as `/pt/en/about`, so it can answer 404 and `localize(parse(path).pathname, …)` never throws.
-- **Breaking.** An apostrophe before `{` or `}`, and `''`, now quote text, as ICU does, and a text with invalid ICU syntax, such as an unclosed `{`, logs a warning. A literal brace is written `'{'`.
-
-## Migrating from 0.1.0
-
-1. **Remove the fallbacks after `t()`.** `t(key) ?? ""` and `t(key) ?? key` still work but are no longer needed. Code that checked `t(key) === undefined` to detect a missing key never matches now; use `onMissingKey` instead.
-2. **Stop reading `init()`'s result.** Replace `if (await i18n.init()) { … }` with `await i18n.init(); if (i18n.isReady) { … }`. A stale `init()`, superseded by a later call, resolves without applying, so compare `i18n.locale` when the outcome matters.
-3. **Check or cast keys built at runtime.** Where TypeScript now rejects a computed key, check it with `i18n.has(key)`, or, when you know it exists, cast it with `as TranslationKey<typeof en>`, as in [Typed keys](docs/translations.md#typed-keys).
-4. **Mark a separate configuration's default locale `as const`.** Fix `Type 'string' is not assignable to type '"en" | "pt"'` at `createI18n(config)` or `createLocaleRouting(config)` with `defaultLocale: "en" as const`.
-5. **Replace `prefixDefaultLocale`.** In `createLocaleRouting`, `prefixDefaultLocale: true` becomes `localePrefix: "always"`, and `false` becomes `localePrefix: "except-default"`. In a configuration kept in a variable, add `as const`.
-6. **Quote literal braces.** A text that shows `{` or `}` without meaning a value, such as a code sample, needs `'{'` and `'}'`. Run the message check in [Find untranslated keys](docs/translations.md#find-untranslated-keys) to find them.
-7. **Optionally, drop `getLocaleDirection: () => "ltr"`.** The default gets right-to-left languages right; keep the option only to override it.
+- The docs say that the binding never enters a shadow root, a custom element's or a plain element's.
+- The browser guide's language picker shows the language in use after a switch fails, where it kept the language that failed to load selected. It also renders from `binding.subscribe()`, so it follows a language the binding switches to, and keeps the latest of several quick picks selected while it loads.
+- The docs say that the second `initializeBrowserI18n()` rejects with a `TypeError`, and that a start in a Web Worker without `syncDocument: false` rejects rather than throws.
+- The translations guide says its test checks every message's syntax, where it said it checks every message.
+- The localized-URL guide skips the paths you serve as files, where it skipped every path ending in an extension, such as the page `/blog/node.js`, and its static-site redirect builder skips a private-use locale, such as `x-pirate`, where it threw.

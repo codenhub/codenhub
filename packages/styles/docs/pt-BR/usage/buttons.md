@@ -2,7 +2,7 @@
 title: Botões
 description: Ações destrutivas e secundárias, botões de ícone, tamanhos, links com cara de botão, estados desabilitados e como carregar ícones.
 order: 1
-source: 54f7c8a1eee5a0f696dc60b9f60f42026d49c5d5
+source: c4127c479567dd763b978f6e2b78f486206ad700
 ---
 
 # Botões
@@ -60,6 +60,8 @@ Quando um botão preenchido tem o foco do teclado, uma linha de 2px da cor da p�
 | `.p-lg`   | Padding espaçoso (1.5rem nas laterais, 0.75rem em cima e embaixo).                                                                                                         |
 
 Uma classe de tamanho e uma de padding podem ser combinadas. Só o `.p-xs` remove a altura mínima de um botão com rótulo; todas as outras combinações a mantêm. Num botão de ícone, qualquer classe `.p-*` remove o tamanho mínimo, e o botão passa a ter o tamanho do ícone mais esse padding: 0.125rem, 0.25rem ou 0.75rem ao redor.
+
+Um rótulo fica numa linha enquanto couber. Quando o contêiner do botão é mais estreito que o rótulo, o rótulo quebra dentro do botão, com as linhas equilibradas, e o botão fica mais alto, então um rótulo longo não faz uma tela estreita rolar para o lado. Um rótulo só quebra entre palavras: uma única palavra mais larga que o contêiner, como um composto longo em alemão, continua passando da borda do botão. Para quebrar essa palavra também, adicione `overflow-wrap: anywhere` ao botão; numa fileira isso também deixa o botão encolher abaixo da sua palavra mais longa, então um rótulo curto pode quebrar no meio da palavra quando a fileira está apertada. Um botão numa fileira com outros itens, como uma barra de ferramentas, encolhe como qualquer item flex quando falta espaço na fileira, então o rótulo pode quebrar em duas linhas em vez de empurrar os vizinhos para fora da fileira e fazê-la rolar para o lado. Um botão de ícone não tem rótulo para quebrar, então mantém o formato quadrado e não encolhe. Para manter um rótulo numa linha mesmo assim, adicione `white-space: nowrap` ao botão: aí ele não encolhe abaixo da largura do rótulo.
 
 O visual base desenha cantos que acompanham o tamanho: um botão `.sm` ou `.p-sm` tem cantos um pouco menores que o padrão, e um `.lg`, um pouco maiores.
 
@@ -121,10 +123,10 @@ Qualquer um destes deixa um botão com aparência de desabilitado: o atributo `d
 ```html
 <button class="btn primary" type="submit" disabled>Save changes</button>
 
-<a class="btn ghost" aria-disabled="true">Download invoice</a>
+<a class="btn ghost" role="link" aria-disabled="true" tabindex="0">Download invoice</a>
 ```
 
-Só o atributo `disabled` impede o botão de funcionar. `.disabled`, `aria-disabled` e `data-disabled` mudam apenas a aparência: um clique ou a tecla Enter ainda o acionam, então o seu código precisa ignorá-lo. `aria-disabled` é a escolha certa quando o botão deve continuar focável, por exemplo para que um tooltip explique por que ele está desabilitado. Um link não tem atributo `disabled`, então remova também o `href` dele quando ele não deve navegar.
+Só o atributo `disabled` impede o botão de funcionar. `.disabled`, `aria-disabled` e `data-disabled` mudam apenas a aparência: um clique ou a tecla Enter ainda o acionam, então o seu código precisa ignorá-lo. `aria-disabled` é a escolha certa quando o botão deve continuar focável, por exemplo para que um tooltip explique por que ele está desabilitado. Um link não tem atributo `disabled`, então remova o `href` dele quando ele não deve navegar. Sem um `href`, um `<a>` deixa de ser um link: ele perde a role de link e sai da ordem de tabulação, então quem usa leitor de tela nunca ouve que ele está desabilitado. Devolva `role="link"` e `tabindex="0"` a ele, como no exemplo, para que continue sendo anunciado como um link desabilitado e continue alcançável.
 
 ## Estado de carregamento
 

@@ -1,8 +1,13 @@
 import { expect, test } from "@playwright/test";
 
+import type { initializeBrowserI18n } from "../../src/browser";
+import type { createI18n } from "../../src/index";
+
 declare global {
   interface Window {
     i18nTest: {
+      createI18n: typeof createI18n;
+      initializeBrowserI18n: typeof initializeBrowserI18n;
       disconnect(): void;
       setLocale(locale: "en" | "fr"): Promise<void>;
     };

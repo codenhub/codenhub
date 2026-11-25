@@ -160,6 +160,58 @@ for (const theme of ["light", "dark"] as const) {
   });
 }
 
+/* docs/usage/theming.md's recipe for giving a custom intent the strong
+   border the six built-in ones take under more contrast, as written there:
+   the badge draws what one handed its strong tone as its border draws. */
+test("a custom intent takes its strong border with the theming recipe", async ({ page }) => {
+  const RECIPE = `
+    .beta {
+      --intent-color: #7c3aed;
+      --intent-contrast: #ffffff;
+      --intent-hover: #6d28d9;
+      --intent-strong: light-dark(#5b21b6, #c4b5fd);
+      --intent-subtle: light-dark(#ede9fe, #4c1d95);
+      --intent-border: light-dark(#7c3aed, #a78bfa);
+      --intent-fill-max: 100%;
+    }
+    @media (prefers-contrast: more) {
+      .beta:not(:where(:root[data-contrast="standard"] *)) {
+        --intent-border: var(--intent-strong);
+      }
+    }
+    :root[data-contrast="more"] .beta {
+      --intent-border: var(--intent-strong);
+    }`;
+  const read = async (contrast: "more" | "no-preference", attributes = "") => {
+    await page.emulateMedia({ contrast });
+    await page.setContent(
+      `<!doctype html><html data-theme="light" ${attributes}><body>
+        <span data-testid="beta" class="badge soft edged beta">Beta</span>
+        <span data-testid="strong" class="badge soft edged beta" style="--intent-border: var(--intent-strong)">Beta</span>
+      </body></html>`,
+    );
+    await page.addStyleTag({ content: await built("index.css") });
+    await page.addStyleTag({ content: RECIPE });
+
+    return page.evaluate(async () => {
+      await Promise.allSettled(document.getAnimations().map((animation) => animation.finished));
+
+      return {
+        border: getComputedStyle(document.querySelector('[data-testid="beta"]')!).borderTopColor,
+        strong: getComputedStyle(document.querySelector('[data-testid="strong"]')!).borderTopColor,
+      };
+    });
+  };
+
+  const standard = await read("no-preference");
+  const more = await read("more");
+
+  expect(more.border).toBe(more.strong);
+  expect(standard.border).not.toBe(more.border);
+  expect(await read("no-preference", 'data-contrast="more"')).toEqual(more);
+  expect(await read("more", 'data-contrast="standard"')).toEqual(standard);
+});
+
 test.describe("data-motion", () => {
   for (const sheet of ["components.css", "native.css"] as const) {
     test(`data-motion="reduce" moves as prefers-reduced-motion: reduce does, ${sheet}`, async ({ page }) => {
@@ -291,32 +343,339 @@ test.describe("data-motion", () => {
     });
 
     /* A popover or dialog fades out by keeping `display` and `overlay` for the
-       length of the fade; without them in the list it vanishes at once. They
-       follow `opacity`, where such a transition names them. */
-    test(`under ${label}, a popover still fades out`, async ({ page }) => {
+       length of the fade; without them in the list it vanishes at once. The
+       reset gives both `allow-discrete` itself, since the behaviour the author
+       wrote for them sits at whatever position they named them in: MDN's
+       recipe names `transform` second, where the reset puts `display`. */
+    for (const transition of [
+      "opacity 1s, display 1s allow-discrete, overlay 1s allow-discrete",
+      "opacity 1s, transform 1s, overlay 1s allow-discrete, display 1s allow-discrete",
+    ]) {
+      test(`under ${label}, a popover still fades out, with ${transition}`, async ({ page }) => {
+        const read = async (motion: "reduce" | "no-preference", html: string) => {
+          await page.emulateMedia({ reducedMotion: motion });
+          await page.setContent(
+            `<!doctype html><html ${html}><body><style>
+          [popover] { opacity: 0; transform: scale(0.9); transition: ${transition}; }
+          [popover]:popover-open { opacity: 1; transform: none; }
+          @starting-style { [popover]:popover-open { opacity: 0; transform: scale(0.9); } }
+        </style><div popover data-testid="pop">Saved</div></body></html>`,
+          );
+          await page.addStyleTag({ content: await built("index.css") });
+
+          return page.getByTestId("pop").evaluate(async (element: HTMLElement) => {
+            element.showPopover();
+            await Promise.allSettled(element.getAnimations().map((animation) => animation.finished));
+            element.hidePopover();
+            await new Promise(requestAnimationFrame);
+
+            return getComputedStyle(element).display;
+          });
+        };
+
+        // An engine that cannot animate `display` closes the popover at once with no preference too.
+        expect(await read(reducedMotion, attributes)).toBe(await read("no-preference", ""));
+      });
+    }
+
+    /* A dialog fades out the same way, and keeps `allow-discrete` for the same
+       reason: it is one of the elements written to leave the top layer. */
+    test(`under ${label}, a dialog still fades out`, async ({ page }) => {
       const read = async (motion: "reduce" | "no-preference", html: string) => {
         await page.emulateMedia({ reducedMotion: motion });
         await page.setContent(
           `<!doctype html><html ${html}><body><style>
-          [popover] { opacity: 0; transition: opacity 1s, display 1s allow-discrete, overlay 1s allow-discrete; }
-          [popover]:popover-open { opacity: 1; }
-          @starting-style { [popover]:popover-open { opacity: 0; } }
-        </style><div popover data-testid="pop">Saved</div></body></html>`,
+          dialog { opacity: 0; transition: opacity 1s, transform 1s, overlay 1s allow-discrete, display 1s allow-discrete; }
+          dialog[open] { opacity: 1; }
+          @starting-style { dialog[open] { opacity: 0; } }
+        </style><dialog data-testid="dialog">Saved</dialog></body></html>`,
         );
         await page.addStyleTag({ content: await built("index.css") });
 
-        return page.getByTestId("pop").evaluate(async (element: HTMLElement) => {
-          element.showPopover();
+        return page.getByTestId("dialog").evaluate(async (element: HTMLDialogElement) => {
+          element.showModal();
           await Promise.allSettled(element.getAnimations().map((animation) => animation.finished));
-          element.hidePopover();
+          element.close();
           await new Promise(requestAnimationFrame);
 
           return getComputedStyle(element).display;
         });
       };
 
-      // An engine that cannot animate `display` closes the popover at once with no preference too.
+      // An engine that cannot animate `display` closes the dialog at once with no preference too.
       expect(await read(reducedMotion, attributes)).toBe(await read("no-preference", ""));
     });
+
+    /* Anything else keeps the behaviour its author wrote. Forced on every
+       element, `allow-discrete` paired `display` with the duration of a
+       `transform` transition, so a panel hidden with `display: none` stayed
+       on screen, and took clicks, for that long where full motion hides it at
+       once. */
+    test(`under ${label}, an element hidden with display: none hides at once`, async ({ page }) => {
+      await page.emulateMedia({ reducedMotion });
+      await page.setContent(
+        `<!doctype html><html ${attributes}><body><div data-testid="panel" style="transition: transform 300ms">Panel</div></body></html>`,
+      );
+      await page.addStyleTag({ content: await built("index.css") });
+
+      const display = await page.getByTestId("panel").evaluate(async (element) => {
+        // Settles the style before the change, with the reset in it, so a transition the reset allows would start.
+        void getComputedStyle(element).display;
+        element.style.display = "none";
+        await new Promise(requestAnimationFrame);
+
+        return getComputedStyle(element).display;
+      });
+
+      expect(display).toBe("none");
+    });
+
+    /* The reset pairs its own properties with the author's durations and
+       delays by position, as docs/accessibility.md says, so what survives is
+       a hide that puts `opacity` first or gives every property one duration
+       and no delay. Pinned so a change to the reset's order or to delays
+       shows here. */
+    for (const transition of ["opacity 1s, visibility 0s 1s", "visibility 1s, opacity 1s"]) {
+      test(`under ${label}, ${transition} still fades before it hides`, async ({ page }) => {
+        await page.emulateMedia({ reducedMotion });
+        await page.setContent(
+          `<!doctype html><html ${attributes}><body><style>
+          #m { transition: ${transition}; } #m.off { opacity: 0; visibility: hidden; }
+        </style><div id="m" data-testid="m">Saved</div></body></html>`,
+        );
+        await page.addStyleTag({ content: await built("index.css") });
+
+        const running = await page.getByTestId("m").evaluate((element) => {
+          // Settles the style before the change, with the reset in it, so the transitions start from it.
+          void getComputedStyle(element).opacity;
+          element.classList.add("off");
+
+          return Object.fromEntries(
+            element.getAnimations().map((animation) => {
+              const timing = animation.effect!.getTiming();
+
+              return [(animation as CSSTransition).transitionProperty, [Number(timing.duration), timing.delay ?? 0]];
+            }),
+          ) as Record<string, [number, number] | undefined>;
+        });
+        const [visibilityDuration = Number.NaN, visibilityDelay = Number.NaN] = running.visibility ?? [];
+
+        expect(running.opacity, "opacity fades for its own duration, at once").toEqual([1000, 0]);
+        expect(visibilityDuration + visibilityDelay, "visibility holds until the fade ends").toBe(1000);
+      });
+    }
   }
 });
+/* The reset reaches the pseudo-elements a page animates outside the element
+   tree: a dialog's `::backdrop`, and the view transition's tree on `:root`.
+   Under reduced motion a view transition's group stops gliding between the
+   two positions; under `none` everything ends at once. */
+for (const [label, attributes, reducedMotion] of [
+  ["the system's reduced motion", "", "reduce"],
+  ['data-motion="reduce"', 'data-motion="reduce"', "no-preference"],
+  ['data-motion="none"', 'data-motion="none"', "no-preference"],
+] as const) {
+  test.describe(`under ${label}`, () => {
+    /* A scroll-driven animation runs on the scroll position, not on time, so a
+       near-zero duration alone left it following the page as it scrolled. */
+    test("a scroll-driven animation does not follow the scroll", async ({ page }) => {
+      await page.emulateMedia({ reducedMotion });
+      /* The sheet in the head, before the animation exists, as a page loads
+         it. Added after, WebKit 26 at times left the running animation on the
+         scroll timeline its `animation-timeline` no longer named. */
+      await page.setContent(
+        `<!doctype html><html ${attributes}><head><style>${await built("index.css")}</style></head><body style="margin: 0"><style>
+        @keyframes slide { to { translate: 300px; } }
+        #a { animation: slide linear both; animation-timeline: scroll(root); width: 10px; height: 10px; }
+      </style><div id="a" data-testid="a"></div><div style="height: 4000px"></div></body></html>`,
+      );
+
+      const supported = await page.evaluate(() => CSS.supports("animation-timeline: scroll()"));
+
+      test.skip(!supported, "the engine has no scroll-driven animations");
+
+      const read = () => page.getByTestId("a").evaluate((element) => getComputedStyle(element).translate);
+
+      /* Polled, not read after a fixed number of frames: WebKit can take a
+         few more to move the animation onto the document's timeline, and
+         until then its backwards fill shows the first keyframe. An animation
+         still following the scroll stays there at the top and never ends. */
+      await expect.poll(read, { message: "it ends where its keyframes end" }).toBe("300px");
+
+      await page.evaluate(() => window.scrollTo(0, 1800));
+      await page.evaluate(async () => {
+        await new Promise(requestAnimationFrame);
+        await new Promise(requestAnimationFrame);
+      });
+
+      expect(await read(), "the scroll moves nothing").toBe("300px");
+    });
+
+    /* Each pseudo-element in a rule of its own in the reset, since an engine
+       that does not know one drops the whole rule. Read where the engine
+       knows the pseudo-element; the others are skipped. */
+    for (const [pseudo, markup, selector] of [
+      ["::file-selector-button", '<input type="file" data-testid="target" />', "#t::file-selector-button"],
+      [
+        "::details-content",
+        '<details data-testid="target" open><summary>More</summary><p>Body</p></details>',
+        "#t::details-content",
+      ],
+      [
+        "::picker(select)",
+        '<select data-testid="target"><option>a</option><option>b</option></select>',
+        "#t::picker(select)",
+      ],
+    ] as const) {
+      test(`${pseudo} stops moving`, async ({ page }) => {
+        await page.emulateMedia({ reducedMotion });
+        await page.setContent(
+          `<!doctype html><html ${attributes}><body><style>
+          @keyframes spin { to { rotate: 1turn; } }
+          ${pseudo === "::picker(select)" ? "#t, #t::picker(select) { appearance: base-select; }" : ""}
+          ${selector} { transition: transform 400ms, block-size 400ms; animation: spin 1s infinite; }
+        </style>${markup.replace('data-testid="target"', 'id="t" data-testid="target"')}</body></html>`,
+        );
+        await page.addStyleTag({ content: await built("index.css") });
+
+        const styles = await page.getByTestId("target").evaluate((element, name) => {
+          if (!CSS.supports(`selector(${name})`)) {
+            return null;
+          }
+
+          const style = getComputedStyle(element, name);
+
+          return {
+            property: style.transitionProperty,
+            duration: style.transitionDuration,
+            animation: style.animationDuration,
+            iterations: style.animationIterationCount,
+          };
+        }, pseudo);
+
+        test.skip(styles === null || styles.animation === "", `the engine has no ${pseudo}`);
+        expect(Number.parseFloat(styles!.animation), "the animation ends at once").toBeLessThan(0.001);
+        expect(styles!.iterations).toBe("1");
+        if (attributes.includes("none")) {
+          for (const duration of styles!.duration.split(",")) {
+            expect(Number.parseFloat(duration)).toBeLessThan(0.001);
+          }
+        } else {
+          expect(styles!.property, "a move or a size lands at once").not.toMatch(/\b(transform|block-size)\b/);
+        }
+      });
+    }
+
+    test("a backdrop's animation ends at once", async ({ page }) => {
+      await page.emulateMedia({ reducedMotion });
+      await page.setContent(
+        `<!doctype html><html ${attributes}><body><style>
+        @keyframes fade { from { opacity: 0; } }
+        dialog::backdrop { animation: fade 1s forwards; }
+      </style><dialog data-testid="dialog">Saved</dialog></body></html>`,
+      );
+      await page.addStyleTag({ content: await built("index.css") });
+
+      /* Read from the computed style: WebKit lists no animation on a
+         `::backdrop` in `getAnimations()`. */
+      const duration = await page.getByTestId("dialog").evaluate((element: HTMLDialogElement) => {
+        element.showModal();
+
+        return getComputedStyle(element, "::backdrop").animationDuration;
+      });
+
+      expect(Number.parseFloat(duration)).toBeLessThan(0.001);
+    });
+
+    test("a view transition does not move", async ({ page }) => {
+      await page.emulateMedia({ reducedMotion });
+      await page.setContent(
+        `<!doctype html><html ${attributes}><body><style>
+        #box { view-transition-name: box; width: 50px; height: 50px; background: red; }
+      </style><div id="box" data-testid="box"></div></body></html>`,
+      );
+      await page.addStyleTag({ content: await built("index.css") });
+
+      const durations = await page.getByTestId("box").evaluate(async (element) => {
+        if (!("startViewTransition" in document)) {
+          return null;
+        }
+
+        const transition = document.startViewTransition(() => {
+          element.style.marginLeft = "300px";
+        });
+
+        await transition.ready;
+
+        return Object.fromEntries(
+          document
+            .getAnimations()
+            .map((animation) => [
+              (animation.effect as KeyframeEffect).pseudoElement,
+              animation.effect!.getComputedTiming().duration,
+            ])
+            .filter(([pseudo]) => String(pseudo).startsWith("::view-transition")),
+        );
+      });
+
+      test.skip(durations === null, "the engine has no view transitions");
+      expect(Object.keys(durations!).length, "the group and its two images animate").toBeGreaterThanOrEqual(3);
+      for (const [pseudo, duration] of Object.entries(durations!)) {
+        expect(Number(duration), pseudo).toBeLessThan(1);
+      }
+    });
+
+    /* A page may animate the transition's root and image pair too, which the
+       browser leaves still, and loop an image: an endless one never let the
+       transition finish. */
+    test("a view transition the page animates itself ends at once", async ({ page }) => {
+      await page.emulateMedia({ reducedMotion });
+      await page.setContent(
+        `<!doctype html><html ${attributes}><body><style>
+        @keyframes dim { to { opacity: 0.5; } }
+        #box { view-transition-name: box; width: 50px; height: 50px; background: red; }
+        ::view-transition { animation: dim 1s; }
+        ::view-transition-image-pair(box) { animation: dim 1s; }
+        ::view-transition-old(box) { animation: dim 1s infinite; }
+      </style><div id="box" data-testid="box"></div></body></html>`,
+      );
+      await page.addStyleTag({ content: await built("index.css") });
+
+      const timings = await page.getByTestId("box").evaluate(async (element) => {
+        if (!("startViewTransition" in document)) {
+          return null;
+        }
+
+        const transition = document.startViewTransition(() => {
+          element.style.marginLeft = "300px";
+        });
+
+        await transition.ready;
+
+        return Object.fromEntries(
+          document
+            .getAnimations()
+            .map((animation) => {
+              const timing = animation.effect!.getComputedTiming();
+
+              return [(animation.effect as KeyframeEffect).pseudoElement, [Number(timing.duration), timing.iterations]];
+            })
+            .filter(([pseudo]) => String(pseudo).startsWith("::view-transition")),
+        ) as Record<string, [number, number]>;
+      });
+
+      test.skip(timings === null, "the engine has no view transitions");
+      expect(Object.keys(timings!), "the root and image pair animate").toEqual(
+        expect.arrayContaining([
+          "::view-transition",
+          "::view-transition-image-pair(box)",
+          "::view-transition-old(box)",
+        ]),
+      );
+      for (const [pseudo, [duration, iterations]] of Object.entries(timings!)) {
+        expect(duration, pseudo).toBeLessThan(1);
+        expect(iterations, pseudo).toBe(1);
+      }
+    });
+  });
+}

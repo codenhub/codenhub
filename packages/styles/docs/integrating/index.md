@@ -16,7 +16,7 @@ Every stack does the same two imports, from the same kind of place — a root la
 1. One [entrypoint](../setup.md#all-entrypoints) — the compiled `@codenhub/styles` for any build, or `@codenhub/styles/tw` when the project already runs Tailwind CSS v4.
 2. `@codenhub/styles/aesthetics` (or `/aesthetics/tw`), only if the project uses an [aesthetic](../usage/aesthetics.md). It can come before or after the entrypoint, because every entrypoint declares the [cascade layers](../setup.md#cascade-layers) before using one.
 
-Importing from one place matters for two reasons. Some frameworks only _allow_ global CSS from a designated root file and fail the build otherwise — Next.js's Pages Router is one, see [Next.js → Troubleshooting](./nextjs.md#troubleshooting). Where a framework allows it more broadly, as Next.js's App Router does, importing from the root remains the recommended choice for predictable CSS ordering — and importing per-component instead would load the same reset and token rules once per component rather than once per app.
+Importing from one place matters for two reasons. Some frameworks only _allow_ your own global CSS files from a designated root file and fail the build otherwise — Next.js's Pages Router is one, and the CSS file that holds `/tw` is one of yours; see [Next.js → Troubleshooting](./nextjs.md#troubleshooting). Where a framework allows it more broadly, importing from the root remains the recommended choice, because the order the stylesheets load in then does not depend on which page or component the reader opened first.
 
 ## Which guide to follow
 
@@ -58,6 +58,25 @@ Then import the package with Parcel's `npm:` prefix, which tells it the name is 
 ```
 
 The other compiled entrypoints work the same way, such as `@codenhub/styles/dist/aesthetics/neobrutalism.css`.
+
+### Test runners
+
+A component test that imports a file which imports `@codenhub/styles` loads the stylesheet too. Vitest needs nothing: it resolves the package's `exports` map to the `.css` file and, by default, processes no CSS in tests. Jest does not process CSS at all, and the usual `moduleNameMapper` line for `.css` files misses this import, since `@codenhub/styles` and `@codenhub/styles/aesthetics/pixel` have no extension; Jest then reads the stylesheet as JavaScript and fails with `SyntaxError: Invalid or unexpected token`. Map the package's specifiers to the same empty module:
+
+```js
+// jest.config.js
+module.exports = {
+  moduleNameMapper: {
+    "^@codenhub/styles(/.*)?$": "<rootDir>/styleMock.js",
+    "\\.css$": "<rootDir>/styleMock.js",
+  },
+};
+```
+
+```js
+// styleMock.js
+module.exports = {};
+```
 
 ## Verifying it worked
 

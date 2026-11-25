@@ -2,7 +2,7 @@
 title: Conteúdo e layout
 description: Consulta de todos os helpers de layout com os seus espaçamentos, a escala tipográfica com os seus tamanhos, cards e painéis com o seu padding, tabelas, citações, código e teclas.
 order: 10
-source: 160ae54be3321154eca2f1ce22b843aa6b87314c
+source: 7029232dde1180e32de10f9abc61339f4a0ebe98
 ---
 
 # Conteúdo e layout
@@ -48,7 +48,9 @@ Os dois maiores tamanhos crescem no breakpoint `md` do Tailwind, 48rem por padr�
 
 `.text-body` tem 0.875rem, menor que o texto de 1rem da página; use-o para texto secundário ou denso, não para o texto principal da página. O `/native` é a exceção: ele aplica `.text-body` ao `body`, então lá ele é o texto da página, e parágrafos e itens de lista o herdam do elemento em que estiverem. Veja [HTML sem classes](../setup.md#html-sem-classes).
 
-`.selection-contrast` num elemento troca as cores do texto selecionado dentro dele para `--color-primary` sobre `--color-primary-contrast`. Use-o numa área `.solid.primary`, onde a cor de seleção padrão seria igual ao fundo.
+O espaçamento da tabela é `normal` num idioma cuja escrita une as letras: árabe, persa, urdu, pashto, sindi, uigur, curdo sorani, caxemira, siríaco, n'ko, mongol na sua própria escrita (`mn-Mong`), adlam (`ff-Adlm`) e idiomas regionais em escrita árabe: árabe egípcio e marroquino (`arz`, `ary`), panjabi ocidental (`pnb`), dari (`prs`), azeri do sul (`azb`), saraiki (`skr`), balúchi (`bal`, `bcc`, `bgn`), mazandarani (`mzn`), gilaki (`glk`), luri (`lrc`, `luz`), curdo do sul (`sdh`), bakhtiari (`bqi`), hindko (`hno`), khowar (`khw`) e brahui (`brh`), e rohingya (`rhg`), em hanifi rohingya. Afastar as letras quebra as ligações entre elas e uma ligadura como "الله". Também é `normal` num idioma escrito numa escrita que pendura as letras numa linha superior, devanágari, bengali ou gurmukhi: hindi, marati, nepali, sânscrito, maithili, bhojpuri, concani, dogri, bodo, newari, bengali, assamês e panjabi. Ali o espaçamento corta em pedaços a linha que corre no alto de uma palavra, e pode separar um sinal de vogal da sua letra. O mesmo vale para o espaçamento de `.label` e `.hint` num campo, e para o espaçamento de rótulos que uma estética dá a botões e badges, incluindo a classe solo do chunky tile. O idioma vem de `lang`, no elemento ou num que o contenha, então defina-o: no `<html>` para uma página nesse idioma, e num trecho nesse idioma dentro de uma página em outro. Um idioma escrito numa dessas escritas só às vezes precisa da subtag de escrita, e o pacote nomeia as comuns: `ku-Arab`, `ms-Arab`, `kk-Arab`, `az-Arab`, `uz-Arab`, `tg-Arab`, `sat-Deva` e `mni-Beng`. Um idioma ou uma subtag que ele não nomeia, como `ha-Arab`, mantém o espaçamento; dê `tracking-normal` a esse texto. Com `/native`, esse trecho também não recebe o espaçamento da página ao redor. A sua própria utility `tracking-*` continua valendo.
+
+O texto selecionado é `--color-primary-contrast` sobre `--color-primary`. Sobre uma placa sólida, como um botão `.solid.primary` ou um card `.solid` e o texto dentro dele, a seleção inverte a placa: a cor do texto da placa como destaque e a cor da placa como texto, então ela se destaca em todas as intenções.
 
 ## Superfícies
 
@@ -111,7 +113,7 @@ Um card `.interactive` ou `.pressable` desabilitado mostra o cursor de não perm
 A tela de configurações lista as chaves de API numa tabela:
 
 ```html
-<div class="table-wrap">
+<div class="table-wrap" tabindex="0" role="region" aria-label="API keys">
   <table class="data-table">
     <caption class="visually-hidden">
       API keys
@@ -196,6 +198,8 @@ Uma tabela recebe o canto de superfície, como um card ao lado dela. As células
 - Sombras, como a de uma tabela `.raised`, não ganham espaço e são cortadas.
 
 Mantenha o wrapper em qualquer tabela que possa ficar mais larga que o seu contêiner; sem ele, uma tabela larga alarga a página inteira.
+
+Deixe o wrapper focável com `tabindex="0"` e nomeie-o como uma região com `role="region"` e um `aria-label`, como faz o exemplo. Quem usa o teclado rola uma tabela larga dando foco ao wrapper e usando as setas; o Firefox, e o Chrome a partir da versão 130, deixam a pessoa dar foco a um elemento com rolagem por conta própria, mas o Safari e versões mais antigas do Chrome não, então, sem `tabindex`, quem usa o teclado nesses navegadores não consegue chegar às colunas cortadas. O nome diz a quem usa leitor de tela o que a região focada contém. Um wrapper focado desenha o anel de foco que todo elemento desenha.
 
 ## Citações, código e teclas
 

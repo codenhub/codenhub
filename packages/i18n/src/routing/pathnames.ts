@@ -1,8 +1,10 @@
 import { type CheckedPathnameEntry, fail } from "../locale/config-validators";
 import { formatReportedKey } from "../locale/dictionary";
-import { findPathnameProblem, normalizeSegment, splitPathname } from "./path";
+import { describePathnameRule, findPathnameProblem, normalizeSegment, splitPathname } from "./path";
 
 const PARAMETER_NAME_PATTERN = /^[A-Za-z0-9_]+$/;
+// A segment written as a catch-all, as a route pattern passed to `localize` ends.
+const REST_KEY_PATTERN = /^:[A-Za-z0-9_]+\*$/;
 const RESERVED_PARAMETER_NAMES = new Set(["__proto__", "constructor", "prototype"]);
 
 /** A fixed segment, a `:name` parameter, or a last `:name*` catch-all matching one or more segments. */
@@ -33,7 +35,11 @@ export interface Route<TLocale extends string> {
  * @internal
  */
 export interface ShapeIndex<T> {
-  /** The first item whose pattern matches the normalized segments `keys`, with its parameters read from `segments`. */
+  /**
+   * The first item whose pattern matches the normalized segments `keys`, with its parameters read from `segments`. A
+   * last key written as a catch-all, such as `:path*`, matches only a catch-all, so a route pattern such as
+   * `/help/:path*` is read as the catch-all route it names, not as a parameter route of one segment.
+   */
   find(
     keys: readonly string[],
     segments: readonly string[],
@@ -55,21 +61,24 @@ export interface Pathnames<TLocale extends string> {
   }>;
 }
 
-/** The values matched by a pattern's parameters, as written in the path; a catch-all's segments are joined by `/`. @internal */
-export type Parameters = ReadonlyMap<string, string>;
+/**
+ * The segments matched by each of a pattern's parameters, as written in the path: one for a parameter, one or more for
+ * a catch-all. They are kept as segments rather than joined, so a long catch-all is not joined and split again. @internal
+ */
+export type Parameters = ReadonlyMap<string, readonly string[]>;
 
 /**
- * Reads the raw text of each parameter of the pattern that the index found for these segments; the index already
+ * Reads the segments of each parameter of the pattern that the index found for these segments; the index already
  * matched the segment count and every fixed segment.
  */
 const readParameters = (pattern: Pattern, segments: readonly string[]): Parameters => {
-  const parameters = new Map<string, string>();
+  const parameters = new Map<string, readonly string[]>();
 
   for (const [index, segment] of pattern.segments.entries()) {
     if (segment.kind === "param") {
-      parameters.set(segment.name, segments[index]!);
+      parameters.set(segment.name, [segments[index]!]);
     } else if (segment.kind === "rest") {
-      parameters.set(segment.name, segments.slice(index).join("/"));
+      parameters.set(segment.name, segments.slice(index));
     }
   }
 
@@ -78,13 +87,7 @@ const readParameters = (pattern: Pattern, segments: readonly string[]): Paramete
 
 /** @internal */
 export const buildPattern = (pattern: Pattern, parameters: Parameters): string[] =>
-  pattern.segments.flatMap((segment) => {
-    if (segment.kind === "static") {
-      return [segment.value];
-    }
-    const value = parameters.get(segment.name)!;
-    return segment.kind === "rest" ? value.split("/") : [value];
-  });
+  pattern.segments.flatMap((segment) => (segment.kind === "static" ? [segment.value] : parameters.get(segment.name)!));
 
 interface IndexEntry<T> {
   readonly item: T;
@@ -130,6 +133,7 @@ const indexByShape = <T>(items: readonly T[], patternOf: (item: T) => Pattern): 
   // one node match the same paths, so only the first of them can be found.
   return {
     find(keys, segments) {
+      const restDepth = REST_KEY_PATTERN.test(keys.at(-1) ?? "") ? keys.length - 1 : undefined;
       const pending: ({ readonly node: ShapeNode<T>; readonly depth: number } | IndexEntry<T>)[] = [
         { node: root, depth: 0 },
       ];
@@ -149,6 +153,9 @@ const indexByShape = <T>(items: readonly T[], patternOf: (item: T) => Pattern): 
         const rest = node.rests[0];
         if (rest !== undefined) {
           pending.push(rest);
+        }
+        if (depth === restDepth) {
+          continue;
         }
         if (node.param !== undefined) {
           pending.push({ node: node.param, depth: depth + 1 });
@@ -316,10 +323,7 @@ const parsePattern = (pathname: string, path: string, isLocale: (segment: string
   const problem = findPathnameProblem(pathname);
 
   if (problem !== undefined) {
-    fail(
-      path,
-      problem === "invalid" ? "Must be a valid absolute application pathname" : "Must not contain dot segments",
-    );
+    fail(path, `Must ${describePathnameRule(problem)}`);
   }
 
   const names = new Set<string>();

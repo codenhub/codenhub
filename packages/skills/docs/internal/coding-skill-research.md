@@ -1,6 +1,6 @@
 ---
 status: DRAFT
-last_updated: 2026-11-16
+last_updated: 2026-11-21
 scope: Evidence for a coding skill: what agents got wrong when first writing code in this repository.
 ---
 
@@ -295,6 +295,24 @@ Nothing below has run against a model; run the [held-out scenarios](coding-skill
 - Asking before a refactor is required only for one beyond the change or one that changes behavior, so S5 runs may not stop to ask; S5.2 passes either way.
 - Three TypeScript items have no recorded occurrence here: `sort()` without a comparator, `noUncheckedIndexedAccess`, and `Promise.all` failing fast. Remove them if an eval shows they cost more than they catch.
 - Rejected review finding: ASCII whitespace does not include vertical tab. The WHATWG definition is tab, LF, FF, CR, and space.
+
+## Fix-class rounds
+
+The [fix-class scenarios](coding-skill-eval.md#fix-class-scenarios) came from a review of the i18n package's merged pull requests: most findings in each re-audit traced to the previous round's fixes. Each fix covered the reported example but not its class (`//` but not `/\`, the raw-text elements but not `textarea` and `title`), copied a flawed pattern (a process-wide record keyed by full message text), or claimed more in the changelog than its test showed. The baseline is the merged history, which failed all five scenarios.
+
+The skills gained, in `coding`: two more kinds of sibling in rule 5 (inputs the next reader treats the same, built by asking the reader, and the same pattern elsewhere), a Verify step that holds each added docs sentence to every input it names, a Siblings line in the report, and memory bounds for long-lived state in the edges reference. In `audit`: check earlier fixes first, a Class line on every finding, `from <commit>` in the tag line, the share of findings from earlier fixes in the report, and fixing the whole class after it.
+
+Results by revision of rule 5. Revision 1 said to derive the check from the next reader's rules. Revision 2 said to follow the value through every reader. Revision 3 named `textarea` and `title`, and said that copying an instance copies its flaw. Revision 4 said to build the class by feeding candidates to the reader in the runtime.
+
+| Scenario | opus                                                                                         | sonnet                                                                                                                     |
+| -------- | -------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| C1       | pass, pass (rev. 1)                                                                          | partial (rev. 1), fail (rev. 3), pass, fail (rev. 4); each failure checked for two slashes in a row, so `/` tab `/` leaked |
+| C2       | pass, fail (rev. 1), pass (rev. 2), pass (rev. 4: fed about 150 element names to the parser) | fail (rev. 1), fail (rev. 2), fail (rev. 3), pass, fail (rev. 4); each failure missed `textarea` and `title`               |
+| C3       | pass, pass (rev. 1), pass (rev. 2)                                                           | fail (rev. 1), fail (rev. 2), pass with a hash (rev. 3), fail (rev. 4); each failure kept the full-text key                |
+| C4       | pass, pass (rev. 1)                                                                          | pass (rev. 1)                                                                                                              |
+| A1       | pass, partial: followed the process but ruled `/\` out as unrealistic                        | pass                                                                                                                       |
+
+opus has two consecutive passes on every C scenario; C1, C3, and C4 were not rerun after revisions that added to the wording they passed under. A1's second run did not pass. sonnet passes each C scenario at least once but never twice in a row: when it fails, it lists the reader's rules from memory instead of running the reader, or copies the existing record unchanged, though the skill names both. As with luna in round 9, more text seems unlikely to fix this; prefer opus for security and long-lived-state fixes, or review the fix with the audit skill.
 
 ## Adding a language reference
 

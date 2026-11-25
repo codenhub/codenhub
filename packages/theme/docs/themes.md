@@ -121,13 +121,13 @@ The active theme is now `ocean-light` or `ocean-dark`, whichever has the operati
 
 The theme menu needs to show which entry is selected. The manager answers five questions:
 
-| Member                | Answers                                                                                                                                 |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `theme.name`          | Which theme is active, such as `"dim"`.                                                                                                 |
-| `theme.get()`         | Everything about the active theme: `name`, `colorScheme`, `tokens`, and `pairedTheme`.                                                  |
-| `theme.preference`    | Which theme the user saved, or `null` when nothing is saved, storage cannot be read, or the saved name is no longer one of your themes. |
-| `theme.followsSystem` | Whether the saved choice follows the operating system within its pair, as `set(name, { followSystem: true })` saves it.                 |
-| `theme.system`        | Which theme the operating system's setting maps to right now, whether or not it is shown.                                               |
+| Member                | Answers                                                                                                                                                                                                   |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme.name`          | Which theme is active, such as `"dim"`.                                                                                                                                                                   |
+| `theme.get()`         | Everything about the active theme: `name`, `colorScheme`, `tokens`, and `pairedTheme`.                                                                                                                    |
+| `theme.preference`    | Which theme the user chose: the saved one, or the one picked on this page when storage could not save it. `null` when there is neither; a saved name that is no longer one of your themes counts as none. |
+| `theme.followsSystem` | Whether that choice follows the operating system within its pair, as `set(name, { followSystem: true })` makes it.                                                                                        |
+| `theme.system`        | Which theme the operating system's setting maps to right now, whether or not it is shown.                                                                                                                 |
 
 `preference` is what makes the "Auto" entry possible: the menu shows "Auto" as selected while it is `null`. Run that on every change too, so the menu keeps up when the toggle or another tab changes the theme behind its back:
 
@@ -142,7 +142,7 @@ showSelection();
 theme.subscribe(showSelection);
 ```
 
-`preference` reads what is actually saved. While the browser blocks `localStorage`, it stays `null` even after the user picks a theme, although the choice is still applied for as long as the page runs; [Saving and syncing](persistence-and-sync.md#when-storage-fails) covers that case.
+`preference` reads what is actually saved. While the browser blocks `localStorage`, it reports the choice the user made on this page instead, which applies for as long as the page runs, so the menu still marks it; [Saving and syncing](persistence-and-sync.md#when-storage-fails) covers that case.
 
 `get()` returns an `ActiveTheme`: a frozen object, and the same object until the theme next changes. That makes it safe to hand to a UI framework as a store snapshot, which [Frameworks](frameworks.md#react) relies on.
 
@@ -165,7 +165,7 @@ A few of these deserve a word:
 
 - **`storageKey`**: Every app on the same domain shares one `localStorage`. If two apps on one domain both use this package, give each its own key, such as `"my-app-theme"`, or they will take turns overwriting each other's choice.
 - **`attribute`**: Any valid HTML attribute name works, one without spaces, quotes, `/`, `>`, or `=`, except `class` and `style`, because writing the theme name there would erase the classes and inline styles your page put on `<html>`. Use `className` to get a class.
-- **`className`**: A function, typed `ThemeClassResolver`, receives the theme, including its static tokens, and returns one class name with no spaces. `className: (theme) => theme.name` gives classes like `dark` and `dim` instead of `theme-dark`. The package asks the function for every theme's class at once, the first time one is needed, usually in `init()` or `getPrePaintScript()`. A function that returns an empty or space-containing name for any theme makes that call throw, even when the theme it rejects is not the one being applied.
+- **`className`**: A function, typed `ThemeClassResolver`, receives the theme, including its static tokens, and returns one class name with no spaces. `className: (theme) => theme.name` gives classes like `dark` and `dim` instead of `theme-dark`. The package asks the function for every theme's class at once, the first time one is needed, usually in `init()` or `getPrePaintScript()`. A function that returns an empty or space-containing name for any theme makes that call throw, even when the theme it rejects is not the one being applied. Whatever `className` is, `false` included, the `theme-light` or `theme-dark` class that follows the theme's `colorScheme` is added too, as the [overview](index.md#what-it-does-and-what-it-leaves-to-you) describes.
 
 ## When the configuration is wrong
 

@@ -5,17 +5,27 @@
  * @internal
  */
 
-/** A value a message argument accepts. @internal */
-export type MessageValue = string | number | Date;
+import { formatReportedKey } from "../locale/dictionary";
 
-/** Values for a message's arguments, read from own properties. @internal */
-export type MessageValues = Readonly<Record<string, MessageValue>>;
+/** Values for a message's arguments, read from own properties; a value of another type is left as written. @internal */
+export type MessageValues = object;
+
+/** The value of an argument, read from an own property only, so `toString` or a prototype's field is never one. @internal */
+export const readValue = (values: MessageValues, name: string): unknown =>
+  Object.hasOwn(values, name) ? Reflect.get(values, name) : undefined;
 
 const NUMBER_STYLES = ["integer", "percent"] as const;
 const DATE_STYLES = ["short", "medium", "long", "full"] as const;
 const PLURAL_KEYWORDS = new Set(["zero", "one", "two", "few", "many", "other"]);
-const NAME_PATTERN = /[A-Za-z0-9_]/;
-const SELECT_KEY_PATTERN = /[A-Za-z0-9_-]/;
+/**
+ * A character of a name, an argument's or a select key's: a letter, a combining mark, a decimal digit, in any script, or
+ * `_`. Marks are included since a Devanagari or Thai word writes its vowels with them. A select key also takes `-`.
+ *
+ * @internal
+ */
+export const NAME_CHARACTER = String.raw`[\p{L}\p{M}\p{Nd}_]`;
+const NAME_PATTERN = new RegExp(NAME_CHARACTER, "u");
+const SELECT_KEY_PATTERN = new RegExp(String.raw`[\p{L}\p{M}\p{Nd}_-]`, "u");
 const EXACT_VALUE_PATTERN = /^=-?[0-9]+(\.[0-9]+)?$/;
 const MAX_NESTING = 10;
 // What a parsed message keeps, in characters of its text, which V8 keeps at about 2 bytes each. Measured on Node.js
@@ -102,10 +112,15 @@ class Parser {
     this.index += 1;
   }
 
+  /** Reads code points while they match, so a letter outside the BMP, a surrogate pair, is one character. */
   private readWhile(pattern: RegExp): string {
     const start = this.index;
-    while (pattern.test(this.peek() ?? "")) {
-      this.index += 1;
+    while (this.index < this.message.length) {
+      const character = String.fromCodePoint(this.message.codePointAt(this.index)!);
+      if (!pattern.test(character)) {
+        break;
+      }
+      this.index += character.length;
     }
     return this.message.slice(start, this.index);
   }
@@ -138,7 +153,13 @@ class Parser {
 
       if (character === "'") {
         endRun();
-        parts.push(this.readApostrophe(isInPlural));
+        if (this.startsQuote(isInPlural)) {
+          parts.push(this.readQuoted());
+        } else {
+          // `''`, or a lone `'` before any other character, is one apostrophe.
+          parts.push("'");
+          this.index += this.peek(1) === "'" ? 2 : 1;
+        }
       } else if (character === "{") {
         endRun();
         flush();
@@ -163,19 +184,14 @@ class Parser {
     return nodes;
   }
 
-  /** ICU quoting: `''` is one apostrophe, and `'` before a special character quotes until the next lone `'`. */
-  private readApostrophe(isInPlural: boolean): string {
+  /** ICU quoting: `'` before `{`, `}`, or, in a plural, `#` quotes until the next lone `'`. */
+  private startsQuote(isInPlural: boolean): boolean {
     const next = this.peek(1);
+    return next === "{" || next === "}" || (next === "#" && isInPlural);
+  }
 
-    if (next === "'") {
-      this.index += 2;
-      return "'";
-    }
-    if (next !== "{" && next !== "}" && !(next === "#" && isInPlural)) {
-      this.index += 1;
-      return "'";
-    }
-
+  /** Reads quoted text from its opening `'` to the next lone `'`, where `''` is one apostrophe. */
+  private readQuoted(): string {
     this.index += 1;
     const parts: string[] = [];
     let runStart = this.index;
@@ -244,7 +260,7 @@ class Parser {
         }
         const options = this.parseOptions(depth, true, (key) => {
           if (key.startsWith("=") ? !EXACT_VALUE_PATTERN.test(key) : !PLURAL_KEYWORDS.has(key)) {
-            this.fail(`Unknown plural form ${key}`);
+            this.fail(`Unknown plural form ${formatReportedKey(key)}`);
           }
           // ICU compares exact values as numbers, so `=1.0` and `=01` select 1, as the value's own spelling does.
           return key.startsWith("=") ? `=${Number(key.slice(1))}` : key;
@@ -265,7 +281,7 @@ class Parser {
         return { kind: "select", name, options, source: this.message.slice(start, this.index) };
       }
       default:
-        return this.fail(`Unknown argument type ${JSON.stringify(type)}`);
+        return this.fail(`Unknown argument type ${formatReportedKey(type)}`);
     }
   }
 
@@ -279,7 +295,7 @@ class Parser {
     this.skipSpace();
     const style = this.readWhile(/[a-z]/);
     if (!(styles as readonly string[]).includes(style)) {
-      this.fail(`Unknown style ${JSON.stringify(style)}`);
+      this.fail(`Unknown style ${formatReportedKey(style)}`);
     }
     this.expect("}");
     return style as TStyle;
@@ -313,7 +329,7 @@ class Parser {
       }
       const key = readKey(written);
       if (options.has(key)) {
-        this.fail(`Repeated option ${written}`);
+        this.fail(`Repeated option ${formatReportedKey(written)}`);
       }
       this.expect("{");
       options.set(key, this.parseNodes(depth + 1, isInPlural));
@@ -418,6 +434,11 @@ export const isPlainMessage = (message: string): boolean =>
   !message.includes("{") && !message.includes("}") && !message.includes("'");
 
 const MAX_CACHED_FORMATTERS = 500;
+// Keys longer than this are not cached, so the cache holds at most 500 keys of this length. Every number option set at
+// once, with long values, keys 687 characters and every date option 505, while `Intl` reads a number option or
+// `hour12` from a string of any length, such as `{ minimumFractionDigits: " ".repeat(1e6) + "2" }`, which a cache bound
+// by count alone kept 500 of.
+const MAX_FORMATTER_KEY_LENGTH = 1_000;
 type CachedFormatter =
   | Intl.NumberFormat
   | Intl.DateTimeFormat
@@ -517,7 +538,7 @@ export const copyDateTimeFormatOptions = (options: Intl.DateTimeFormatOptions = 
   copyOptions(options, DATE_TIME_FORMAT_OPTIONS);
 
 const cachedFormatter = <T extends CachedFormatter>(key: string | undefined, create: () => T): T => {
-  if (key === undefined) {
+  if (key === undefined || key.length > MAX_FORMATTER_KEY_LENGTH) {
     return create();
   }
   let formatter = formatters.get(key) as T | undefined;
@@ -635,17 +656,14 @@ const readTime = (value: unknown): number | undefined => {
 };
 
 /**
- * Formats the value of a plain `{name}` as ICU does: text as written, a number as `{name, number}`, a valid `Date` as a
- * medium date, and anything else as `undefined`, for the argument to stay as written.
+ * Formats the value of a plain `{name}`: text and numbers as written, a valid `Date` as a medium date, and anything else
+ * as `undefined`, for the argument to stay as written.
  *
  * @internal
  */
 export const formatPlainValue = (value: unknown, locale: string, timeZone: string | undefined): string | undefined => {
-  if (typeof value === "string") {
-    return value;
-  }
-  if (typeof value === "number") {
-    return getNumberFormat(locale).format(value);
+  if (typeof value === "string" || typeof value === "number") {
+    return String(value);
   }
   const time = readDateTime(value);
   return time !== undefined && Math.abs(time) <= MAX_TIME
@@ -654,8 +672,8 @@ export const formatPlainValue = (value: unknown, locale: string, timeZone: strin
 };
 
 /**
- * How many arguments one call fills. Past it, an argument stays as written, so a message that repeats `{a}` can't turn
- * one value into hundreds of megabytes.
+ * How many arguments one call fills, each `#` counted as one. Past it, an argument stays as written, and `#` as `#`, so a
+ * message that repeats `{a}` or `#` can't turn one value into hundreds of megabytes.
  *
  * @internal
  */
@@ -671,7 +689,7 @@ interface FormatState {
 const formatNodes = (nodes: Message, state: FormatState, pound: number | undefined): string => {
   const { values, locale, timeZone } = state;
   let result = "";
-  // Formatted once, so a form that repeats `#` costs no formatting step per `#`, which the argument limit doesn't count.
+  // Formatted once, so a form that repeats `#` costs one formatting step, however many `#` the limit lets it fill.
   let poundText: string | undefined;
 
   for (const node of nodes) {
@@ -679,18 +697,17 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | undefin
       result += node.text;
       continue;
     }
+    if (state.filledArguments >= MAX_FILLED_ARGUMENTS) {
+      result += node.kind === "pound" ? "#" : node.source;
+      continue;
+    }
+    state.filledArguments += 1;
     if (node.kind === "pound") {
       poundText ??= pound === undefined ? "#" : getNumberFormat(locale).format(pound);
       result += poundText;
       continue;
     }
-
-    if (state.filledArguments >= MAX_FILLED_ARGUMENTS) {
-      result += node.source;
-      continue;
-    }
-    state.filledArguments += 1;
-    const value: unknown = Object.hasOwn(values, node.name) ? values[node.name] : undefined;
+    const value = readValue(values, node.name);
 
     switch (node.kind) {
       case "argument":
@@ -730,22 +747,24 @@ const formatNodes = (nodes: Message, state: FormatState, pound: number | undefin
         // A locale Intl rejects uses `other`, as plural groups do, rather than the root locale's English-like rules.
         const category =
           intlLocale(locale) === "und" ? "other" : getPluralRules(locale, node.isOrdinal).select(value - node.offset);
-        const option = exact ?? node.options.get(category) ?? node.options.get("other")!;
-        result += formatNodes(option, state, value - node.offset);
+        result += formatNodes(
+          exact ?? node.options.get(category) ?? node.options.get("other")!,
+          state,
+          value - node.offset,
+        );
         break;
       }
       case "select": {
-        if (typeof value !== "string" && typeof value !== "number") {
+        // A boolean picks the option named `true` or `false`, as `String(value)` spells it.
+        if (typeof value !== "string" && typeof value !== "number" && typeof value !== "boolean") {
           result += node.source;
           break;
         }
-        const option = node.options.get(String(value)) ?? node.options.get("other")!;
-        result += formatNodes(option, state, pound);
+        result += formatNodes(node.options.get(String(value)) ?? node.options.get("other")!, state, pound);
         break;
       }
     }
   }
-
   return result;
 };
 

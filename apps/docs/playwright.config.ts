@@ -32,8 +32,9 @@ export default defineConfig({
     env: { NODE_ENV: "test" },
     // The site root is a redirect only the Cloudflare host serves, so preview answers it with 404.
     url: "http://127.0.0.1:5195/oidc/reference/provider/",
-    // A build of every package's docs takes about a minute on a developer machine.
-    timeout: 240_000,
+    // A build of every package's docs takes about a minute on a developer machine, but
+    // over four minutes in a CI engine job that runs it beside the other browser suites.
+    timeout: 480_000,
     // Always build this checkout; an existing server may serve stale or released docs.
     reuseExistingServer: false,
   },

@@ -87,8 +87,32 @@
     --ui-halo-ink: initial;
     /* `--ui-bg-alpha` multiplies the fill, and a surface's default fill is 0%:
        without a translucent ground the blur ends up behind an opaque background
-       and nothing shows through. */
-    --ui-surface-ground: color-mix(in srgb, var(--color-background) 45%, transparent);
+       and nothing shows through.
+
+       59% is the thinnest ground that holds body text at 4.5:1 over a black
+       or a white backdrop in both themes, the worst a page can put behind it:
+       58% printed dark-theme text at 4.48:1 over white, and the 45% it
+       replaced 3.67:1 in light over black. `contrast.spec.ts` measures it. A
+       blur or a saturation leaves a flat backdrop's colour as it was, so the
+       two extremes bound every backdrop of one colour; a busy one blurs to
+       something between them. */
+    --ui-surface-ground: color-mix(in srgb, var(--color-background) 59%, transparent);
+    /* A pane's ground under a control placed straight in the region, with
+       no pane around it: a ghost button rested on the page itself, and over
+       a black backdrop a light page's label printed at 1.17:1. Unblurred,
+       for the reason controls stay solid above. Thicker than a pane's, since
+       a control tints it: on 59% a default badge printed at 3.99:1 and a
+       `.solid` field at 3.48:1 in dark over white, an unchecked `.solid`
+       checkbox's edge at 2.71:1. 69% is the thinnest ground that holds every
+       presentation's text at 4.5:1 and a toggle's edge at 3:1 over a black
+       or a white backdrop; 68% left that field at 4.48:1. The same under
+       liquid: a control is not a pane, and liquid's clearer ground is a
+       pane's trade-off. `box` lays it under the outermost box only, and
+       `contrast.spec.ts` measures it. */
+    --_glass-ground: color-mix(in srgb, var(--color-background) 69%, transparent);
+    /* Named apart from the region's, so a glass region nested inside a box
+       can take it back after the box clears what it holds; see below. */
+    --_region-ground: var(--_glass-ground);
 
     /* Two layers pulling in with negative spread, so the shadow tucks under the
        surface instead of haloing onto the backdrop. It is the one shipped aesthetic
@@ -139,9 +163,11 @@
     font-family: var(--font-default, ui-sans-serif, system-ui, sans-serif);
   }
 
-  /* A region of another aesthetic nested in glass draws its own line. */
+  /* A region of another aesthetic nested in glass draws its own line, and
+     rests its controls on nothing: its panes are opaque. */
   :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) {
     --_unfilled-ink: initial;
+    --_region-ground: initial;
   }
 
   /* Transparency is the whole aesthetic, so the honest degradation is an opaque
@@ -155,6 +181,7 @@
     .glass {
       --ui-backdrop: none;
       --ui-surface-ground: var(--color-background);
+      --_glass-ground: var(--color-background);
     }
   }
 
@@ -162,12 +189,14 @@
     .glass:not(:where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)) {
       --ui-backdrop: none;
       --ui-surface-ground: var(--color-background);
+      --_glass-ground: var(--color-background);
     }
   }
 
   .glass:where(:root[data-contrast="more"], :root[data-contrast="more"] *) {
     --ui-backdrop: none;
     --ui-surface-ground: var(--color-background);
+    --_glass-ground: var(--color-background);
   }
 
   /* More contrast also takes the ground whole, above, and then the white
@@ -254,15 +283,24 @@
   }
 
   /* The glass material the modifier changes, where glass is in scope: on the
-     same element, or on a surface inside a glass region.
+     same element, or on a surface whose nearest aesthetic region is glass.
+     The second selector of each pair takes back a glass region re-entered
+     inside another aesthetic nested in glass; a region nested deeper than
+     that is not told apart. Matched on `.glass *` alone, a liquid card in a
+     pixel region nested in glass took liquid's ground and rim.
 
      The backdrop is liquid's lighter blur, for whatever frosts under glass and
      takes no layers below: a bare `<table>` under `/native`. With the backdrop
      cleared here it kept the clearer ground with nothing blurred behind it. A
      host of the layers clears its own. */
   .glass.glass-liquid:not(.glass-solo),
-  .glass .glass-liquid:not(.glass-solo) {
+  .glass .glass-liquid:not(.glass-solo):not(:where(.glass :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *)),
+  .glass :where(:is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) .glass) .glass-liquid:not(.glass-solo) {
     --ui-ink: light-dark(rgb(255 255 255 / 0.45), rgb(255 255 255 / 0.16));
+    /* Clearer than glass's, and below the text rule by design: body text fell
+       to 1.86:1 over a white backdrop in dark and 2.06:1 over black in light.
+       `contrast.spec.ts` holds it at that floor and docs/usage/aesthetics.md
+       says where it is safe. */
     --ui-surface-ground: color-mix(in srgb, var(--color-background) 30%, transparent);
     --ui-surface-image: initial;
     --ui-backdrop: var(--_glass-liquid-blur);
@@ -270,7 +308,9 @@
 
   @media (prefers-reduced-transparency: reduce), (forced-colors: active) {
     .glass.glass-liquid:not(.glass-solo),
-    .glass .glass-liquid:not(.glass-solo) {
+    .glass
+      .glass-liquid:not(.glass-solo):not(:where(.glass :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *)),
+    .glass :where(:is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) .glass) .glass-liquid:not(.glass-solo) {
       --ui-surface-ground: var(--color-background);
     }
 
@@ -286,6 +326,11 @@
         :where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)
       ),
     .glass
+      .glass-liquid:not(.glass-solo):not(
+        :where(.glass :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *)
+      ):not(:where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)),
+    .glass
+      :where(:is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) .glass)
       .glass-liquid:not(.glass-solo):not(:where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)) {
       --ui-surface-ground: var(--color-background);
     }
@@ -298,7 +343,13 @@
   }
 
   .glass.glass-liquid:not(.glass-solo):where(:root[data-contrast="more"], :root[data-contrast="more"] *),
-  .glass .glass-liquid:not(.glass-solo):where(:root[data-contrast="more"], :root[data-contrast="more"] *) {
+  .glass
+    .glass-liquid:not(.glass-solo):not(
+      :where(.glass :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *)
+    ):where(:root[data-contrast="more"], :root[data-contrast="more"] *),
+  .glass
+    :where(:is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) .glass)
+    .glass-liquid:not(.glass-solo):where(:root[data-contrast="more"], :root[data-contrast="more"] *) {
     --ui-surface-ground: var(--color-background);
   }
 
@@ -313,13 +364,24 @@
         :where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)
       ),
     .glass
+      .glass-liquid:not(.glass-solo):not(
+        :where(.glass :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *)
+      ):not(:where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)),
+    .glass
+      :where(:is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) .glass)
       .glass-liquid:not(.glass-solo):not(:where(:root[data-contrast="standard"], :root[data-contrast="standard"] *)) {
       --ui-ink: var(--color-control-border);
     }
   }
 
   .glass.glass-liquid:not(.glass-solo):where(:root[data-contrast="more"], :root[data-contrast="more"] *),
-  .glass .glass-liquid:not(.glass-solo):where(:root[data-contrast="more"], :root[data-contrast="more"] *) {
+  .glass
+    .glass-liquid:not(.glass-solo):not(
+      :where(.glass :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) *)
+    ):where(:root[data-contrast="more"], :root[data-contrast="more"] *),
+  .glass
+    :where(:is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) .glass)
+    .glass-liquid:not(.glass-solo):where(:root[data-contrast="more"], :root[data-contrast="more"] *) {
     --ui-ink: var(--color-control-border);
   }
 
@@ -365,11 +427,16 @@
      `.edgeless`. Its fill is still presentation's: `.solid` stays an opaque
      plate under the rim, and `.soft` and `.ghost` are the clear panes. A
      disabled one is dimmed by `opacity`, which makes it a backdrop root, so it
-     keeps the ground and the rim and bends nothing. */
+     keeps the ground and the rim and bends nothing.
+
+     The element's own `.glass-liquid` turns the flag on only where glass is
+     the nearest region, which `--_surface-stacks` says: glass sets it on and
+     every other aesthetic off, below. Turned on outright, a liquid button in a
+     pixel region nested in glass matched `.glass *` and kept both layers. */
   .glass-liquid:not(.glass-solo):is(.glass, .glass *) {
     /* A space toggle: empty is on, and `initial` makes every declaration
        reading it invalid at computed-value time, which is off. */
-    --_glass-liquid-on: ;
+    --_glass-liquid-on: var(--_surface-stacks);
     --_glass-liquid-backdrop: initial;
   }
 
@@ -377,6 +444,19 @@
   :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) {
     --_glass-liquid-on: initial;
     --_glass-liquid-backdrop: var(--ui-backdrop);
+  }
+
+  /* Glass's blur, and liquid's isolation, make every surface a stacking
+     context, so a surface holding an open tooltip has to step above the next
+     one for the bubble to show. A space toggle `surface` and the table read;
+     the other aesthetics draw no surface as a stacking context and set it off,
+     so the nearest region decides. See `surface.rules.css`. */
+  .glass {
+    --_surface-stacks: ;
+  }
+
+  :is(.neobrutalism, .pixel, .chunky-tile, .cyber, .sketch) {
+    --_surface-stacks: initial;
   }
 
   :is(.glass-liquid:not(.glass-solo), .glass-liquid:not(.glass-solo) *):is(.glass, .glass *):is(
@@ -412,10 +492,17 @@
     }
   }
 
-  /* A button's lens is the control one. Swapped as the value the layer reads
-     rather than on the layer: the list above outranks any selector that names
-     the button's `::after` alone. */
-  .btn.glass-liquid:is(.glass, .glass *) {
+  /* A button's lens is the control one, and so is an alert's and a tooltip
+     bubble's. Swapped as the value the layer reads rather than on the layer:
+     the list above outranks any selector that names the button's `::after`
+     alone. An alert or a bubble is a line or two tall, and the pane's ramps,
+     18px from each edge, met in its middle and bent the backdrop behind the
+     text; `aesthetics.spec.ts` measures it. A card has
+     no height of its own to go by, and a filter cannot read the box's, so a
+     card keeps the pane's lens. On a solo pane too, which reads the same value. */
+  .btn.glass-liquid:is(.glass, .glass *),
+  .alert:is(.glass, .glass *, .glass-liquid),
+  .tooltip-bubble:is(.glass, .glass *, .glass-liquid) {
     --_glass-liquid-lens: var(--_glass-liquid-lens-control);
   }
 }
@@ -430,8 +517,31 @@
    writes only a private nothing a consumer sets. See
    docs/internal/model.md#cascade-layers. */
 @layer utilities {
+  /* Every box clears the region's ground on its children, from `utilities`
+     (`.card > *`, `.btn > *`, one rule per component), so the ground stops at
+     the first box. A glass region that is one of those children is a region
+     again, and states its ground back here: a control in a glass region
+     inside a card rests on the pane like one placed straight in the page's.
+     The class is doubled to outrank those resets on specificity rather than
+     on which stylesheet loads last. */
+  .glass.glass {
+    --_region-ground: var(--_glass-ground);
+  }
+
+  /* Except inside a `.solid` box, at any depth, which this rule wins on
+     coming later: the plate is opaque, so no backdrop shows through it to
+     guard against, and a control inside it prints the plate's ink -- a ghost
+     button's white label on `.card.solid.info` read at about 1.7:1 over the
+     pane's page colour. A box clears the ground on its children only, so a
+     region wrapped in a plain element inside the plate is cleared here. */
+  .glass:is(.solid *) {
+    --_region-ground: initial;
+  }
+
   .btn.glass-liquid:is(.glass, .glass *) {
-    --_d-ground: var(--ui-surface-ground, transparent);
+    /* Only where the layers are on, so the nearest region decides here too. */
+    --_glass-liquid-ground: var(--_glass-liquid-on) var(--ui-surface-ground, transparent);
+    --_d-ground: var(--_glass-liquid-ground, transparent);
   }
 }
 
@@ -491,9 +601,10 @@
   --_solo-fg: color-mix(in oklab, var(--_solo-contrast) var(--_solo-on-fill), var(--_solo-strong));
   /* The line with no intent on the element: this aesthetic's own ink. */
   --_solo-ink: var(--_solo-intent-border, light-dark(rgb(255 255 255 / 0.65), rgb(255 255 255 / 0.22)));
+  /* The surface ground's 59%, for the reason given there. */
   --_solo-ground: color-mix(
     in srgb,
-    var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0))) 45%,
+    var(--color-background, light-dark(oklch(98.5% 0 0), oklch(14.5% 0 0))) 59%,
     transparent
   );
   /* The plate runs under the border, so the line fades to nothing, as `box`'s

@@ -109,8 +109,17 @@
        zero fill over the page colour and paint an opaque slab where it asked for
        no fill, and the slab would stay while the card tints on hover. An own
        declaration beats the inherited one at any specificity; `surface`, `kbd`,
-       `code`, `pre` and the tooltip each restate theirs after `@apply box`. */
-    --_d-ground: transparent;
+       `code`, `pre` and the tooltip each restate theirs after `@apply box`.
+
+       The one ground a box takes unasked is its region's: an aesthetic whose
+       panes show the page behind them names one in `--_region-ground`, so a
+       control placed straight in the region rests on a pane rather than on
+       whatever the page put there -- glass's, without the blur, so its text
+       is legible over any backdrop (accessible by default). Only the
+       outermost box takes it. Every box clears it for what it holds, below:
+       what it holds already rests on a ground, and a field in an input group
+       or a badge in a button would lay the pane twice. */
+    --_d-ground: var(--_region-ground, transparent);
     /* The ground, made the page background wherever `--_plate` says the cap
        stopped the fill -- over a component's own ground too, so a capped
        `.solid` surface under glass is opaque like every other `.solid`. */
@@ -138,8 +147,14 @@
        A component that rests on a ground of its own restates all three after
        `@apply box`. See docs/internal/model.md#the-ink-of-the-plate-beneath. */
     --_held-ink: var(--_holds-ink, var(--_d-holds-ink)) var(--_fg-own);
+    /* The plate, as the page would show it: the capped fill over the page
+       ground. Opaque, so the selected text it colours reads on the ink, where
+       `--_bg` thinned by an aesthetic's alpha would not. */
+    --_held-plate: var(--_holds-ink, var(--_d-holds-ink))
+      color-mix(in oklab, var(--intent-color) var(--_capped), var(--color-background));
     --_held-on: var(--_holds-ink, var(--_d-holds-ink)) 100%;
     --_own-hold: var(--_holds-ink, var(--_d-holds-ink)) 100%;
+    --_on-plate: var(--_holds-ink, var(--_d-holds-ink)) 100%;
     --_through: min(
       var(--_held-on),
       calc(100% - var(--_own-hold)),
@@ -302,11 +317,27 @@
        A neutral box on a plate takes the plate's ink instead: there the ring is
        drawn over a fill of its own colour, or close to it, so a ghost button
        focused in a `.card.solid.primary` showed no ring at all, and the ink is
-       what reads against that fill. */
+       what reads against that fill. A box that holds its own ink, a plate
+       itself, draws the line in that ink: on a plate the ring can be the plate's
+       colour and the page colour the box's own, so a neutral `.btn.solid` in a
+       `.card.solid.primary` changed nothing but a one-pixel grey edge on focus,
+       and its ink is the one colour certain to read on its fill. */
+    /* The ring a control draws for itself, as against the one `reset.css`
+       outlines: on a solid surface it takes the surface's ink, as the reset's
+       does, since the primary colour at 64% drew over a fill of its own colour
+       or close to it. A toggle's ring and an input group's outline read it. */
+    --_plate-ring: var(
+      --focus-ring,
+      color-mix(in srgb, var(--_held-ink) var(--_held-on), color-mix(in srgb, var(--color-primary) 64%, transparent))
+    );
     --_focus-gap: color-mix(
       in oklab,
-      var(--_held-ink) var(--_through),
-      color-mix(in oklab, var(--color-background) clamp(0%, calc((var(--_capped) - 50%) * 1000), 100%), transparent)
+      var(--_fg-own) var(--_own-hold),
+      color-mix(
+        in oklab,
+        var(--_held-ink) var(--_through),
+        color-mix(in oklab, var(--color-background) clamp(0%, calc((var(--_capped) - 50%) * 1000), 100%), transparent)
+      )
     );
 
     /* Every box sizes itself as `min-height`/`min-width: var(--control-height)`
@@ -328,7 +359,8 @@
        1, which is how `.cut-diagonal` and a bevelling aesthetic's diagonal draw
        two corners and leave two square. An explicit `--ui-radius` still wins,
        taken as written. */
-    --_corner: calc(var(--ui-corner, var(--radius-control)) * var(--_scale));
+    /* Pixel's notch, where it is drawn, replaces the length: see `pixel.css`. */
+    --_corner: var(--_notch, calc(var(--ui-corner, var(--radius-control)) * var(--_scale)));
     border-radius: var(
       --ui-radius,
       calc(var(--_corner) * var(--ui-corner-tl, 1)) calc(var(--_corner) * var(--ui-corner-tr, 1))
@@ -340,7 +372,7 @@
        `corner-shape` drops the line at parse time. A component that overrides the
        radius after `@apply box` keeps this, so it bevels by the same amount it
        rounds. See model.md#material-tokens. */
-    corner-shape: var(--ui-corner-shape, round);
+    corner-shape: var(--_notch-shape, var(--ui-corner-shape, round));
     box-shadow: var(--_shadow);
     clip-path: var(--ui-clip, none);
     /* The press travel `box-active` writes; `none` at rest, because any other
@@ -394,6 +426,13 @@
        lose its shadow rather than keep it. */
     &:focus-visible {
       box-shadow: var(--_focus-stack, var(--_shadow), inset 0 0 0 2px var(--_focus-gap));
+    }
+
+    /* The region's ground stops at the first box; see `--_d-ground`. Cleared
+       on the children, so it reaches the rest by inheritance, and a region
+       nested deeper, which states its own, takes the ground back. */
+    & > * {
+      --_region-ground: initial;
     }
 
     &:disabled,

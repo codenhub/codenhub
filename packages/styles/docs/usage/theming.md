@@ -20,21 +20,25 @@ To let the user choose, put a theme selector on the root element:
 </html>
 ```
 
-| Theme | Equivalent selectors                             |
-| ----- | ------------------------------------------------ |
-| Light | `.light`, `.theme-light`, `[data-theme="light"]` |
-| Dark  | `.dark`, `.theme-dark`, `[data-theme="dark"]`    |
+| Theme | Equivalent selectors                                          |
+| ----- | ------------------------------------------------------------- |
+| Light | `.theme-light`, `[data-theme="light"]`                        |
+| Dark  | `.theme-dark`, `[data-theme="dark"]`, and `.dark` on `<html>` |
+
+`.dark` themes only the root element, where Tailwind's convention puts it, and there is no `.light`. Both are words a class name often holds for other reasons: a `<span class="light">` for a lighter weight would otherwise switch its text to the light theme's near-black on a dark page. To theme a region, use `.theme-*` or `data-theme`.
 
 A settings screen with a "System / Light / Dark" choice removes the attribute for System and sets it for the other two.
+
+A theme with a name of its own still needs one of these selectors. The tokens and components follow `color-scheme` alone, but the [`dark:` variant](#the-dark-variant) and the [generated palette](./customizing.md#generated-palette) match only the selectors above, so `<html data-theme="paper">` for a light theme called `paper` is not light to them: on a dark system, every `dark:` utility applies over it, and `/palette` gives its dark values. `@codenhub/theme` adds `.theme-light` or `.theme-dark` for every theme from 0.4.0; with an earlier version, or a script of your own, add the matching class yourself when you apply a theme and remove the other one, since a root that carries both is dark; for System, remove both.
 
 Contrast and motion settings work the same way, through `data-contrast` and `data-motion` on `<html>`; see [Accessibility → App settings](../accessibility.md#app-settings).
 
 How it resolves:
 
 - A theme selector sets the CSS `color-scheme` property, and the element's text color to `--color-text`. Every color token holds its light and its dark value at once, through `light-dark()`, and the element's `color-scheme` picks one.
-- `color-scheme` inherits, so a selector themes everything inside it. A selector on any element themes that part of the page: a dark sidebar on a light page is `<aside class="dark">`, and the text inside it takes the dark theme's text color.
+- `color-scheme` inherits, so a selector themes everything inside it. A selector on any element themes that part of the page: a dark sidebar on a light page is `<aside class="theme-dark">`, and the text inside it takes the dark theme's text color.
 - A selector sets no background. Give the region its ground yourself, such as `background: var(--color-background)`. Any utility or component class on the same element overrides the selector's text color.
-- The nearest selector wins, at any depth. A `.light` card inside a `.dark` page is light.
+- The nearest selector wins, at any depth. A `.theme-light` card inside a dark page is light.
 - With no selector, the root has `color-scheme: light dark`, which follows the system.
 - Put one theme on an element. If an element carries both a light and a dark selector, dark wins, but do not rely on that.
 - Setting `color-scheme` yourself on an element themes the tokens the same way, because it is the only thing the palette reads. It also themes native parts such as scrollbars and the inside of form controls. Plain text inside keeps the color it inherited until you also set `color: var(--color-text)`.
@@ -46,6 +50,8 @@ Every component color comes from a token or from `currentColor`, so components f
 ### Printing
 
 A page prints in the light theme, whatever theme it shows on screen. Under `@media print`, the root and every dark selector set `color-scheme: light`, so every token resolves to its light value, a forced-dark sidebar's included. Paper is light, and dark text on it costs less ink than a printed dark page.
+
+The root's rule is `!important`, so it also wins over a `color-scheme` you set on `<html>` yourself: inline, as `@codenhub/theme` writes it, in your own unlayered CSS, or with Tailwind's `scheme-dark`. A `color-scheme` you set on an element inside the page is yours to reset for print, such as with `print:scheme-light` beside a `scheme-dark` utility. An inline `style="color-scheme: dark"` wins over that utility, so reset it with a `@media print` rule of your own that sets `color-scheme: light !important`.
 
 Filled components print their background. A browser drops backgrounds from a printed page by default, which leaves a solid button's contrast text on nothing, so every component sets `print-color-adjust: exact`. The property inherits, so the content inside a component keeps its colors too.
 
@@ -59,14 +65,14 @@ With the Tailwind source entrypoints (`/tw`), the package replaces Tailwind's `d
 <html>
   <body>
     <p class="dark:text-white">Follows the system preference</p>
-    <div class="light">
+    <div class="theme-light">
       <p class="dark:text-white">Stays light: this part of the page chose a theme</p>
     </div>
   </body>
 </html>
 ```
 
-It differs from the tokens in one case: an explicit theme nested inside the opposite one. A `.light` element inside a `.dark` one has light tokens, because the nearest `color-scheme` wins. But `dark:` matches by selector, and `.dark *` matches every element inside `.dark`, so a `dark:` utility inside that `.light` element still applies. If a page uses both tokens and `dark:` utilities, do not nest opposite themes.
+It differs from the tokens in one case: an explicit theme nested inside the opposite one. A `.theme-light` element inside a `.theme-dark` one has light tokens, because the nearest `color-scheme` wins. But `dark:` matches by selector, and `.theme-dark *` matches every element inside `.theme-dark`, so a `dark:` utility inside that `.theme-light` element still applies. If a page uses both tokens and `dark:` utilities, do not nest opposite themes.
 
 The compiled entrypoints do not define a `dark:` variant; they have no Tailwind build to define it in. The [`chs build` command](../integrating/without-a-bundler.md#variants) does offer `dark:`, with the same selectors, on the intent, presentation, and modifier classes only.
 
@@ -135,11 +141,26 @@ The class works on everything that takes an intent: buttons, badges, fields and 
 - **Solo classes.** A [solo class](./solo.md) such as `.neobrutalism-solo` takes an intent only from the six built-in classes, so `.neobrutalism-solo.beta` is drawn neutral.
 - **Hint text.** A [`.hint`](./forms.md#show-a-validation-error) prints in an intent's readable tone only for the six built-in classes, so `.hint.beta` stays secondary-colored.
 - **Table rows.** A body row recolors its text, line, and hover only for the built-in intent classes. `<tr class="beta">` looks like the rest of its table.
+- **More contrast.** Under `prefers-contrast: more` or `data-contrast="more"`, a built-in intent's border takes its strong tone, so `.edged` on a `.soft` component meets 3:1; see [Accessibility → Increased contrast](../accessibility.md#increased-contrast). `.beta` keeps its `--intent-border`, which can measure below 3:1 against its tint.
 
 If you need those, there are two ways:
 
 - **Retheme a built-in intent instead.** Set the `--color-info` family (or another one) to your colors, as in [Change the brand color](#change-the-brand-color), and write `.info`. Everything, including the cases above, then works. The cost is that the change reaches every `.info` inside the element you set it on, so set it on the narrowest element that works, and do not do it with an intent the page already uses for its own meaning.
 - **Paint it yourself.** Write your own CSS for that one component, such as a `background-color` on `.panel.beta`.
+
+For more contrast, the second way is two rules: one for the system's setting, which an app's `data-contrast="standard"` turns off, and one for `data-contrast="more"`. The strong tone above measures 7.57:1 and 5.93:1 on the tint, so the border clears 3:1 in both themes.
+
+```css
+@media (prefers-contrast: more) {
+  .beta:not(:where(:root[data-contrast="standard"] *)) {
+    --intent-border: var(--intent-strong);
+  }
+}
+
+:root[data-contrast="more"] .beta {
+  --intent-border: var(--intent-strong);
+}
+```
 
 > **Intent does not pass down.** Each component resets the intent slots at its own root, so a `.success` container does not recolor a destructive button inside it. Put the intent class on the element that shows the color.
 
@@ -147,7 +168,7 @@ If you need those, there are two ways:
 
 Every color token holds a light and a dark value through `light-dark()`; one value means both themes use it. Palette names such as `neutral-950` are Tailwind's default palette, which the package's compiled CSS declares for the colors it uses.
 
-Each row is an override point: set it on `:root` to retheme the page, or on any element to retheme what is inside it. The `-hover`, `-subtle`, `-strong`, and `-contrast` rows are companions of their family's base color and do not follow it, so retheme the whole family. The `text` family has no `-subtle` row: the neutral intent takes its subtle tone from `--color-surface`.
+Each row is an override point: set it on `:root` to retheme the page, or on any element to retheme the components inside it. The element's own text and background are the exception: the reset reads `--color-text` and `--color-background` only on `html` and `body`, so a value set on a `<section>` recolors the components in it but not its own text or ground. Set `color: var(--color-text)` and `background-color: var(--color-background)` on the same element too. A [theme selector](#light-and-dark) already sets its `color`. The `-hover`, `-subtle`, `-strong`, and `-contrast` rows are companions of their family's base color and do not follow it, so retheme the whole family. The `text` family has no `-subtle` row: the neutral intent takes its subtle tone from `--color-surface`.
 
 | Token                          | Light, dark                  | Purpose                                                                                        |
 | ------------------------------ | ---------------------------- | ---------------------------------------------------------------------------------------------- |
@@ -176,24 +197,24 @@ Each row is an override point: set it on `:root` to retheme the page, or on any 
 | `--color-tooltip-contrast`     | `neutral-900`, `neutral-100` | Text on `--color-tooltip`.                                                                     |
 | `--color-success`              | `emerald-700`                | Fill of `.success`.                                                                            |
 | `--color-success-contrast`     | `neutral-50`                 | Text on a full success fill: 5.14:1.                                                           |
-| `--color-success-hover`        | `#007552`, `#008e66`         | Success fill under the pointer.                                                                |
+| `--color-success-hover`        | `#006c4c`, `#006448`         | Success fill under the pointer.                                                                |
 | `--color-success-subtle`       | `emerald-100`, `emerald-900` | Success tint behind soft components.                                                           |
-| `--color-success-strong`       | `emerald-800`, `emerald-300` | Success text, icons, and borders where the fill is not full.                                   |
+| `--color-success-strong`       | `emerald-950`, `emerald-300` | Success text, icons, and borders where the fill is not full.                                   |
 | `--color-warning`              | `amber-600`                  | Fill of `.warning`.                                                                            |
 | `--color-warning-contrast`     | `neutral-950`                | Text on a full warning fill: near-black, not the page color. 6.19:1.                           |
-| `--color-warning-hover`        | `#d46700`, `#e78300`         | Warning fill under the pointer.                                                                |
+| `--color-warning-hover`        | `#c56100`, `#e78300`         | Warning fill under the pointer.                                                                |
 | `--color-warning-subtle`       | `amber-100`, `amber-900`     | Warning tint behind soft components.                                                           |
-| `--color-warning-strong`       | `amber-800`, `amber-300`     | Warning text, icons, and borders where the fill is not full.                                   |
+| `--color-warning-strong`       | `amber-950`, `amber-300`     | Warning text, icons, and borders where the fill is not full.                                   |
 | `--color-destructive`          | `rose-700`                   | Fill of `.destructive`.                                                                        |
 | `--color-destructive-contrast` | `neutral-50`                 | Text on a full destructive fill: 5.78:1.                                                       |
-| `--color-destructive-hover`    | `#c00036`, `#d1054b`         | Destructive fill under the pointer.                                                            |
+| `--color-destructive-hover`    | `#b10030`, `#d1054b`         | Destructive fill under the pointer.                                                            |
 | `--color-destructive-subtle`   | `rose-100`, `rose-900`       | Destructive tint behind soft components.                                                       |
-| `--color-destructive-strong`   | `rose-800`, `rose-300`       | Destructive text, icons, and borders where the fill is not full.                               |
+| `--color-destructive-strong`   | `rose-950`, `rose-300`       | Destructive text, icons, and borders where the fill is not full.                               |
 | `--color-info`                 | `indigo-600`                 | Fill of `.info`.                                                                               |
 | `--color-info-contrast`        | `neutral-50`                 | Text on a full info fill: 6.19:1.                                                              |
-| `--color-info-hover`           | `#4b36e9`, `#5e4ff9`         | Info fill under the pointer.                                                                   |
+| `--color-info-hover`           | `#4634d8`, `#5e4ff9`         | Info fill under the pointer.                                                                   |
 | `--color-info-subtle`          | `indigo-100`, `indigo-900`   | Info tint behind soft components.                                                              |
-| `--color-info-strong`          | `indigo-800`, `indigo-300`   | Info text, icons, and borders where the fill is not full.                                      |
+| `--color-info-strong`          | `indigo-950`, `indigo-300`   | Info text, icons, and borders where the fill is not full.                                      |
 
 Theme changes belong in these values, not in component rules that check the theme.
 
@@ -211,7 +232,7 @@ An intent class sets these seven slots, and components read them. Because every 
 | `--intent-border`   | Line color. With no intent it is the aesthetic's `--ui-ink`, then `--color-border`; text controls and toggles read `--ui-control-ink`, then `--ui-ink`, then `--color-control-border`, and tables read `--ui-rule-ink` first. |
 | `--intent-fill-max` | How far a fill of this intent may go. `100%` for every intent except neutral.                                                                                                                                                 |
 
-`--intent-color` and `--intent-strong` are not interchangeable. The base color is chosen to be filled with; the strong tone is chosen to be read against the page. A soft or ghost component prints the strong tone, which is why a soft warning reads in amber-800 while a solid one is filled with amber-600.
+`--intent-color` and `--intent-strong` are not interchangeable. The base color is chosen to be filled with; the strong tone is chosen to be read against the page, and against a neutral `.solid` surface, where a component with an intent keeps its own text color. A soft or ghost component prints the strong tone, which is why a soft warning reads in amber-950 while a solid one is filled with amber-600.
 
 The strong tone also has to stay recognizably its own hue. On a dark page, the `-100` shade of every family is a pale tint with almost no color at small sizes: a soft success badge and a soft destructive one would both read as white. The dark strong tones are `-300` for that reason, and the tints under them are `-900`, which measures 5.0:1 or better wherever a partial fill holds text, and over 9:1 on the page.
 
@@ -223,7 +244,7 @@ The text color follows the fill. `--intent-contrast` is the text color for a ful
 
 ## Foundation tokens
 
-Foundation tokens set layout, shape, motion, focus, depth, and stacking. Override them on `:root`, or on an element for what is inside it.
+Foundation tokens set layout, shape, motion, focus, depth, and stacking. Override them on `:root`, or on an element for what is inside it. `--font-default` is the exception: an element's own font follows it only when the element sets `font-family` from it, as [Fonts](#fonts) shows.
 
 The four `--elevation-*` shadows are for elements you style yourself. They are separate from the `.flat`, `.raised`, and `.floating` classes, which scale a component's own shadow and draw nothing until an aesthetic or one of those classes asks for depth; see [Composing → Elevation](./composing.md#elevation). Both use the weights none, small, medium, and large, but one is a fixed value and the other scales shadow parts, so they do not always look the same.
 
@@ -274,7 +295,7 @@ The package ships no font files and makes no network requests. Every font token 
 
 `--font-default` reaches the page only through the reset, which `@codenhub/styles`, `/native`, `/tw`, `/native/tw`, and `/reset/tw` include. With `/theme` or `/components` alone, set `font-family` on `body` yourself, and set `--font-default` to the same font: `.glass` and `.neobrutalism` regions set their own `font-family` from the token, so a font set only on `body` does not reach inside them. Or set only the token, and write `font-family: var(--font-default)` on `body`. The aesthetic tokens are read by the aesthetic's own class, so they work with any entrypoint.
 
-To use a web font, load it the way you load any font, then name it in the token. Set the token on `:root` for the whole page, or on any element for that part of it:
+To use a web font, load it the way you load any font, then name it in the token. Set the token on `:root` for the whole page. For one part of it, set the token on that element and `font-family: var(--font-default)` with it, since the reset reads the token only on `html` and `body`, and the text inside inherits the font the element resolves:
 
 ```html
 <link rel="preconnect" href="https://fonts.googleapis.com" />

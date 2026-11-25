@@ -169,7 +169,7 @@ export function format(nodes: readonly Node[], indent = ""): string {
       const declarations = splitTop(node.body, ";").filter((declaration) => declaration.trim() !== "");
 
       css += `${indent}${selectors.join(`,\n${indent}`)} {\n`;
-      css += declarations.map((declaration) => `${indent}  ${declaration.trim()};\n`).join("");
+      css += declarations.map((declaration) => `${indent}  ${trimDeclaration(declaration)};\n`).join("");
       css += `${indent}}\n`;
     } else {
       css += `${indent}${node.prelude.trim()} { ${node.body} }\n`;
@@ -177,6 +177,15 @@ export function format(nodes: readonly Node[], indent = ""): string {
   }
 
   return css;
+}
+
+/* A custom property whose value is whitespace, as `--_d-holds-ink: ;`, holds a
+   space, which Lightning CSS keeps when it minifies; trimmed whole, it became
+   `--_d-holds-ink:;`, a property whose value is empty. Its value stays one space. */
+function trimDeclaration(declaration: string): string {
+  const trimmed = declaration.trim();
+
+  return trimmed.endsWith(":") && declaration.trimStart().length > trimmed.length ? `${trimmed} ` : trimmed;
 }
 
 function unescapeIdent(raw: string): string {

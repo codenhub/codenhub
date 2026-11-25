@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ajuda de campo que abre no hover e no foco, como ligá-la a leitores de tela e à tecla Escape, e onde um tooltip é cortado.
 order: 4
-source: e9dba9085f67616a424f7cd1da1ddde579829945
+source: 21c659e5fa3a03d415871b88dbb718873aa7aa77
 ---
 
 # Tooltips
@@ -26,7 +26,7 @@ O switch "Public profile" da tela de configurações merece uma explicação cur
 
 As três partes:
 
-- `.tooltip` envolve o gatilho e a mensagem. Ele posiciona a mensagem e não pinta nada.
+- `.tooltip` envolve o gatilho e a mensagem. Ele posiciona a mensagem e não pinta nada. Ele assume o tamanho do gatilho em qualquer layout, então um `.stack`, um `.field` ou um grid não o esticam nem afastam a mensagem do gatilho. Em volta de um componente que preenche sua linha, como um `.ipt`, um `.select`, um `.progress` ou um `.skeleton`, ele mantém a largura que o layout lhe dá, então o componente continua com a largura total. Em volta de um elemento seu que preenche a linha, defina `width: auto` no `.tooltip`.
 - `.tooltip-bubble` é a mensagem. É um elemento de verdade, então pode ter um `id` para o qual o gatilho aponta.
 - `.tooltip-icon` é um gatilho pequeno e redondo, para uma mensagem sem mais nada a que se prender. Qualquer elemento focável pode ser o gatilho no lugar dele: envolva um `.btn` existente em `.tooltip` e ele mantém o próprio visual.
 
@@ -56,17 +56,18 @@ Um balão tem a largura do texto, até 18rem, e a partir daí quebra a linha.
 
 ### Onde um tooltip é cortado
 
-O balão é posicionado só com CSS, no lado que você escolheu. Nada mede a página: ele não se move para ficar dentro da janela, não vira para o outro lado quando falta espaço e não vai para a camada superior (top layer) da página. Isso tem três consequências:
+O balão é posicionado só com CSS, no lado que você escolheu. Nada mede a página: ele não se move para ficar dentro da janela, não vira para o outro lado quando falta espaço e não vai para a camada superior (top layer) da página. Isso tem quatro consequências:
 
 - **Um contêiner com rolagem ou recorte o corta.** Um ancestral com `overflow: hidden`, `auto` ou `scroll` recorta o balão na borda dele. A tabela de chaves de API da tela de configurações fica num `.table-wrap`, que tem rolagem, então um tooltip acima da primeira linha é cortado no topo do wrapper. Aumentar o `z-index` não ajuda: ele muda sobre o que o balão é pintado, não se o contêiner o recorta.
 - **A borda da janela o corta.** Um tooltip acima da primeira linha de uma página, ou um tooltip à direita perto da borda direita, sai da tela.
 - **Esquerda e direita são lados físicos.** Numa página da direita para a esquerda, `"left"` continua significando o lado esquerdo da tela.
+- **O card seguinte pode cobri-lo, por um instante.** Sob `.glass`, cada card, painel, alerta e tabela é uma camada própria, então um balão é pintado acima das superfícies que vêm depois da sua só enquanto a sua superfície está elevada. Sob glass essas superfícies ficam com `position: relative` em repouso, exceto um `<dialog>` ou `[popover]`, que mantém a posição que o navegador lhe dá, então um filho com posição absoluta se posiciona em relação à sua superfície. O pacote eleva em um degrau, com `z-index: 1`, um `.card`, `.panel`, `.alert`, `.surface` ou `.data-table` enquanto contém um tooltip fixado aberto, ou um popover aberto ou um elemento `[open]`, ou contém o foco, ou enquanto está sob o ponteiro com um tooltip dentro. Um degrau basta para passar por cima das superfícies vizinhas e fica abaixo das suas próprias camadas, como um cabeçalho sticky ou um menu aberto. Fora do glass uma superfície não é uma camada própria e nada é elevado. Uma superfície que você mesmo posicionou, ou à qual deu o próprio `z-index`, mantém o seu, com uma exceção sob glass: uma posição definida no seu próprio `@layer components` num elemento que também leva uma classe de superfície do pacote, como em `class="panel my-header"`, perde para o `relative` do pacote. Defina essa posição com uma utility como `sticky`, ou numa regra fora de qualquer camada. O desfoque também torna cada superfície de vidro o bloco de contenção de um filho com `position: fixed`, então um balão fixo dentro de um card se posiciona em relação ao card; um balão aberto como `popover` é posicionado pela camada superior do navegador. Quando o ponteiro sai da superfície, a elevação acaba na hora, então um balão que avança sobre o card seguinte se apaga por baixo dele durante o `--tooltip-linger`.
 
 O que fazer:
 
 - Escolha um lado com espaço: na primeira linha de uma tabela, use `data-tooltip-position="bottom"`.
 - Tire o gatilho do tooltip de dentro do contêiner que recorta, ou remova o `overflow` de um contêiner que não precisa dele.
-- Se a posição do gatilho não puder ser conhecida de antemão, como numa lista com rolagem ou num painel redimensionável, use uma biblioteca de posicionamento ou o componente de popover do seu framework, que consegue medir e virar. Você ainda pode dar ao elemento da mensagem as classes de `.tooltip-bubble` para o visual, mas mostrar, esconder e posicionar, como descrito nesta página, passam a ser trabalho dessa biblioteca, e não do `.tooltip`.
+- Se a posição do gatilho não puder ser conhecida de antemão, como numa lista com rolagem ou num painel redimensionável, use uma biblioteca de posicionamento ou o componente de popover do seu framework, que consegue medir e virar. Você ainda pode dar ao elemento da mensagem as classes de `.tooltip-bubble` para o visual. Fora do `.tooltip`, a classe é só o visual: sem estado oculto em repouso, posição ou escala, então um popover que a biblioteca abre, como `<div popover class="tooltip-bubble primary">`, aparece assim que abre. Mostrar, esconder e posicionar, como descrito nesta página, passam então a ser trabalho dessa biblioteca.
 
 ## Hover, permanência e Escape
 
@@ -111,14 +112,14 @@ document.addEventListener("keydown", (event) => {
 
 ## Como o balão aparece
 
-Sem classe de intenção, o balão usa `--color-tooltip`, um fundo escolhido por tema: quase branco numa página clara, cinza médio numa escura, com `--color-tooltip-contrast` como cor do texto. Quase branco mede só 1.04:1 em relação a uma página clara, então o balão também desenha uma borda fina, e um `.edgeless` de um contêiner não consegue removê-la. Um `.edgeless` no próprio balão ainda consegue. O fundo continua opaco com qualquer apresentação, para que o balão continue legível sobre o que quer que ele cubra.
+Sem classe de intenção, o balão usa `--color-tooltip`, um fundo escolhido por tema: quase branco numa página clara, cinza médio numa escura, com `--color-tooltip-contrast` como cor do texto. Quase branco mede só 1.04:1 em relação a uma página clara, então o balão também desenha uma borda fina, e um `.edgeless` de um contêiner não consegue removê-la. Um `.edgeless` no próprio balão ainda consegue. O fundo é opaco com qualquer apresentação, para que o balão continue legível sobre o que quer que ele cubra, exceto um balão `.soft` ou `.ghost` sob `.glass`, descrito abaixo.
 
 Uma classe de intenção preenche o balão com a cor dessa intenção e troca o texto para a cor de contraste correspondente:
 
 - `.tooltip-bubble.primary` tem fundo quase preto com texto quase branco numa página clara, e fundo quase branco com texto quase preto numa escura.
 - `.tooltip-bubble.destructive` tem fundo vermelho com texto claro nos dois temas.
 
-Coloque as classes de intenção, apresentação, estética e elevação no `.tooltip-bubble`, o elemento que é pintado, e não no `.tooltip`. O balão é plano por padrão, mesmo numa estética que desenha profundidade; adicione `.raised` ou `.floating` ao balão para elevá-lo. `.glass` é a exceção: a sombra dele é um único valor completo que a elevação não consegue escalar, então um balão de vidro mantém essa sombra, e `.flat` também não a remove. Uma estética em vigor dá forma ao balão como a qualquer outro componente; com `.glass`, ele fica fosco como um card. O `.tooltip-icon` assume o canto da estética: quadrado com `.neobrutalism` e `.pixel`, um losango com `.cyber`.
+Coloque as classes de intenção, apresentação, estética e elevação no `.tooltip-bubble`, o elemento que é pintado, e não no `.tooltip`. O balão é plano por padrão, mesmo numa estética que desenha profundidade; adicione `.raised` ou `.floating` ao balão para elevá-lo. `.glass` é a exceção: a sombra dele é um único valor completo que a elevação não consegue escalar, então um balão de vidro mantém essa sombra, e `.flat` também não a remove. Uma estética em vigor dá forma ao balão como a qualquer outro componente; com `.glass`, um balão `.soft` ou `.ghost` fica fosco como um card e deixa a página aparecer, enquanto um balão padrão, `.solid` ou preenchido com uma intenção continua opaco. O `.tooltip-icon` assume o canto da estética: quadrado com `.neobrutalism` e `.pixel`, um losango com `.cyber`.
 
 O balão aparece sem o efeito de crescer quando o usuário pede movimento reduzido, seja pela configuração do sistema ou com `data-motion="reduce"` no `<html>`. Com `data-motion="none"`, o esmaecimento dele também termina de imediato, depois da espera, e `data-motion="full"` mantém o crescimento mesmo quando o sistema pede menos movimento. [Configurações do app](../accessibility.md#configurações-do-app) descreve o atributo.
 

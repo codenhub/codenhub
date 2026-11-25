@@ -2,7 +2,7 @@
 title: Solução de problemas
 description: O que cada erro e aviso quer dizer, e como resolver.
 order: 5
-source: 2d1643a4c47855d4636065591d926e6cdf415b36
+source: 0a0e9f2e2a10aab83a42708af4f535b5e9f1b543
 ---
 
 # Solução de problemas
@@ -95,12 +95,12 @@ Um dicionário vazio é aceito.
 
 A configuração é inválida. A maioria das mensagens tem o formato `[I18n] Invalid configuration: <option>: <problem>`, então a opção a corrigir é a primeira coisa depois dos dois-pontos. Confira se:
 
-- `locales` é uma lista não vazia, sem duplicatas (ignorando maiúsculas e minúsculas), e cada locale é feito de letras e dígitos ASCII separados por hífens, como `pt-BR`.
+- `locales` é uma lista não vazia, sem duplicatas (ignorando maiúsculas e minúsculas), e cada locale é uma tag de idioma que o `Intl` aceita, como `pt-BR`, ou uma tag de uso privado, como `x-pirate`. Um erro de digitação como `en-US-US` falha com `Must be a language tag Intl accepts`.
 - `defaultLocale` é um dos `locales`.
 - `loadLocale` é uma função.
 - `timeZone`, quando definido, é um que o `Intl` conhece. Um erro de digitação dá `timeZone: Must be a time zone Intl supports, such as "America/Sao_Paulo" or "UTC"`.
 - `dictionaryLimits` nomeia só limites conhecidos, cada um um número inteiro positivo. `maxKeys` dá `dictionaryLimits.maxKeys: Is not a recognized limit`, e `maxDepth: 0` dá `dictionaryLimits.maxDepth: Must be a positive whole number`. [Limites de tamanho](translations.md#limites-de-tamanho) lista os nomes.
-- `isSilent`, quando definido, é um booleano. `isSilent: "true"` dá `isSilent: Expected boolean, received string`.
+- `isSilent`, quando definido, é um booleano. `isSilent: "true"` dá `isSilent: Expected boolean, received "true"`.
 - `getLocaleDirection` e `onMissingKey`, quando definidos, são funções; senão a mensagem diz `getLocaleDirection: Must be a function` ou `onMissingKey: Must be a function`.
 - A configuração é um objeto simples. Uma instância de classe, ou um objeto que herda as opções, é rejeitado para que valores herdados não passem escondidos.
 
@@ -122,12 +122,12 @@ O mesmo vale para `localePrefix` numa configuração de roteamento guardada numa
 
 ## Uma mensagem aparece com o texto cru
 
-Você vê `{count, plural, one {# item} other {# items}` ou `{first-name}` na tela, e o console avisa sobre uma mensagem inválida. O texto não é sintaxe de mensagem válida, então aparece como foi escrito, com só os placeholders `{name}` simples preenchidos, em vez de meio formatado. O aviso aparece uma vez por texto e locale.
+Você vê `{count, plural, one {# item} other {# items}` ou `{first-name}` na tela, e o console avisa sobre uma mensagem inválida. O texto não é sintaxe de mensagem válida, então aparece como foi escrito, com só os placeholders `{name}` simples preenchidos, em vez de meio formatado. O aviso aparece uma vez por texto e locale em cada processo, não importa quantos gerenciadores o mostrem.
 
 Causas comuns:
 
 - **Falta uma chave, ou sobra uma.** Conte; toda `{` precisa da sua `}`.
-- **Um nome de placeholder tem outros caracteres.** Os nomes são letras ASCII, dígitos e sublinhados, então `{first-name}` e `{nome_ç}` aparecem como foram escritos. Use `{firstName}` ou `{nome}`.
+- **Um nome de placeholder tem outros caracteres.** Os nomes são letras, dígitos e sublinhados, de qualquer escrita, então `{first-name}` e `{price€}` aparecem como foram escritos. Use `{firstName}` ou `{price}`.
 - **Um formato que este pacote não suporta**, como `{n, number, currency}` ou um skeleton `::`. Formate o valor com `formatNumber()` e passe o resultado como um placeholder simples.
 - **Aninhamento com mais de 10 níveis**, ou a mesma opção `=1` duas vezes. Simplifique a mensagem.
 
@@ -137,7 +137,7 @@ Causas comuns:
 
 Vindo de `parse()`, o valor não é o pathname de uma URL: ele não começa com `/`, ou contém `?` ou `#`. Passe `url.pathname` em vez da URL inteira ou de um caminho com a query string, como o `request.url` do Node. Um caminho que é um pathname mas contém algo que o roteamento recusa, como `//` ou um segmento de ponto, faz `parse()` devolver `undefined`, então a URL estranha de um visitante vira um 404 em vez de um crash.
 
-Vindo de `localize()` ou `localizeAll()`, o caminho é um desses, ou contém algo que o roteamento recusa. [Caminhos que ele aceita](localized-urls.md#caminhos-que-ele-aceita) tem a lista completa, com o conserto de cada um.
+Vindo de `localize()` ou `localizeAll()`, o caminho é um desses, ou contém algo que o roteamento recusa. A mensagem diz qual regra o caminho quebra e cita o caminho, como `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, exceto uma query ou um fragmento, que podem conter um token: um caminho com `?` ou `#` é citado só até esse caractere. [Caminhos que ele aceita](localized-urls.md#caminhos-que-ele-aceita) tem a lista completa, com o conserto de cada um.
 
 ## `localize()` lança `RangeError`: "would be read as"
 
@@ -148,7 +148,7 @@ O caminho que `localize()` montaria abre uma página diferente, ou a mesma pági
 
 ## `localize()` lança `RangeError`: "would be longer than 8,192 characters or 100 segments"
 
-O caminho que você passou é válido, mas o prefixo do locale ou as palavras traduzidas deixam o resultado mais longo do que o `parse()` aceita. Encurte o caminho; um link desse tamanho também tende a ser cortado por servidores e proxies muito antes de alguém lê-lo.
+O caminho que você passou é válido, mas o prefixo do locale ou as palavras traduzidas deixam o resultado mais longo do que o `parse()` aceita. A mensagem termina com o tamanho que a URL teria, como `its URL there would have 8,198 characters in 2 segments`. Encurte o caminho; um link desse tamanho também tende a ser cortado por servidores e proxies muito antes de alguém lê-lo.
 
 ## Um placeholder aparece como foi escrito e nada avisa
 
@@ -156,20 +156,21 @@ Você vê `Ouvrir l{app}` onde esperava `Ouvrir l'éditeur`, e o console está q
 
 ## O binding do navegador avisa ou rejeita
 
-- **"Document synchronization requires a page document"**: `initializeBrowserI18n()` rodou sem `document`, como num Web Worker, e lançou `TypeError: [I18n] Document synchronization requires a page document; pass syncDocument: false without one.` antes de iniciar o gerenciador. Passe `syncDocument: false` e nenhum `root`; veja [Em um Web Worker](browser.md#em-um-web-worker).
+- **"Document synchronization requires a page document"**: `initializeBrowserI18n()` rodou sem `document`, como num Web Worker, e rejeitou com `TypeError: [I18n] Document synchronization requires a page document; pass syncDocument: false without one.` antes de iniciar o gerenciador. Passe `syncDocument: false` e nenhum `root`; veja [Em um Web Worker](browser.md#em-um-web-worker).
 - **"The manager already has a browser binding"**: você chamou `initializeBrowserI18n()` duas vezes para o mesmo gerenciador. Chame `disconnect()` no primeiro binding, ou fique com um só.
 - **"Browser initialization was superseded before its locale became active"**: o seu código chamou `i18n.init()` enquanto o binding iniciava o gerenciador, ou `i18n.setLocale()` num gerenciador que já estava inicializado, mesmo que para o locale que já está na tela. O gerenciador fica com o resultado da sua chamada, e o binding não é conectado. Deixe o binding iniciar o gerenciador e troque de idioma depois que a promise dele for resolvida.
 - **"Browser observation requires a root"**: `observe: true` precisa de um `root` para observar.
-- **"root must be an element, a document, or a shadow root, such as document.body."**: `root` era outra coisa, normalmente o `null` que `document.querySelector("#app")` devolve numa página sem `#app`. O binding lança o erro antes de iniciar o gerenciador. Confira se o elemento existe em toda página que roda o script, ou passe `document`.
-- **`onMissingKey` lançou um erro**: o binding ainda traduz todos os outros elementos, e depois rejeita com o primeiro erro na primeira inicialização, ou o reporta como erro não capturado depois de uma troca de idioma posterior. Só o texto ou atributo cuja chave faltava fica com o valor que tinha. Uma primeira inicialização que rejeita desse jeito deixa o gerenciador iniciado, mas o binding desconectado, então as trocas de idioma seguintes não traduzem a página; corrija o callback e chame `initializeBrowserI18n()` de novo.
-- **"Could not read persisted locale", "Could not persist locale" ou "Could not forget persisted locale"**: o `localStorage` não está disponível, como em alguns modos de navegação privada ou num Web Worker. A escolha do visitante não é salva ou, depois de `switchToSystemLocale()`, não é esquecida; todo o resto funciona. Passe `persistLocale: false` onde não houver armazenamento, para iniciar em silêncio.
+- **"root must be an element, a document, or a shadow root, such as document.body."**: `root` era outra coisa, normalmente o `null` que `document.querySelector("#app")` devolve numa página sem `#app`. O binding rejeita antes de iniciar o gerenciador. Confira se o elemento existe em toda página que roda o script, ou passe `document`.
+- **`onMissingKey` lançou um erro**: o binding ainda traduz todos os outros elementos, e depois rejeita com o primeiro erro na primeira inicialização, ou o reporta como erro não capturado depois de uma troca de idioma posterior. O texto ou atributo cuja chave faltava mostra o valor do HTML, como acontece com uma chave que falta. Uma primeira inicialização que rejeita desse jeito deixa o gerenciador iniciado, mas o binding desconectado, então as trocas de idioma seguintes não traduzem a página; corrija o callback e chame `initializeBrowserI18n()` de novo.
+- **"Could not read persisted locale", "Could not persist locale" ou "Could not forget persisted locale"**: o `localStorage` não está disponível, como em alguns modos de navegação privada ou num Web Worker, ou um método do seu [`storage`](server-rendering.md#passe-o-locale-para-o-navegador) lançou um erro. A escolha do visitante não é salva ou, depois de `switchToSystemLocale()`, não é esquecida; todo o resto funciona. Passe `persistLocale: false` onde não houver armazenamento, para iniciar em silêncio, ou corrija o método do `storage` que lançou o erro.
+- **"storage replaces storageKey", "storage requires persistLocale" ou "storage must be an object with get(), set(), and remove() methods"**: `initializeBrowserI18n()` rejeitou com um `TypeError` antes de iniciar o gerenciador. Passe só `storage`, com o salvamento ligado, e dê a ele os três métodos.
 - **"Could not switch to the detected locale"**: o idioma do navegador mudou enquanto o binding [seguia o sistema](browser.md#ofereça-uma-opção-sistema), e o loader falhou para o locale detectado. A página mantém o idioma atual. Corrija o loader.
 - **"switchToSystemLocale() requires a connected browser binding"**: você chamou `switchToSystemLocale()` depois de `disconnect()`. Chame-o no binding que está conectado.
 - **`Could not load locale "pt"; using "es".`** ou **`Could not load locale "pt"; using the default locale.`**: o loader falhou para um locale salvo ou detectado que não é o padrão, então o visitante recebeu o seguinte: o locale detectado pelo navegador depois de um salvo, e depois o padrão. Corrija o loader; a escolha salva é mantida para a próxima vez. Se o próprio locale padrão falhar ao carregar, não sobra nada para onde cair, e a inicialização é rejeitada com `Failed to load translations for locale "en".`
 - **"Skipping translation on <p> because translated elements must be leaves"**: o elemento com `data-i18n` tem elementos filhos. Coloque a chave num elemento que contenha só texto, ou traduza com `t()`.
 - **"Skipping translation on <style> because the element can run, hide, or reparse its text as HTML"**: uma chave `data-i18n` está num elemento `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>` ou `<plaintext>`, cujo texto roda como código, decide o que aparece ou é escrito sem escape quando a página é salva como HTML. O aviso nomeia a chave e passa o elemento, então o console aponta para ele. Mude a chave para um elemento comum. As chaves `data-i18n-<attribute>` dele, como o `data-i18n-title` de um `<iframe>`, continuam sendo traduzidas.
-- **"Skipping translation because data-i18n contains an invalid key"**, ou o mesmo para um `data-i18n-<attribute>`: a chave está em branco, tem mais de 1.000 caracteres ou contém um caractere de controle ASCII, então nenhum dicionário consegue guardá-la. O elemento fica com o texto atual. Corrija a chave no HTML.
-- **O texto de `data-i18n` mostra `{name}`**: a tradução de HTML não consegue preencher placeholders. Renderize esse texto com `t()` e passe os valores.
+- **"Skipping translation because data-i18n contains an invalid key"**, ou o mesmo para um `data-i18n-<attribute>`: a chave está em branco, tem mais de 1.000 caracteres ou contém um caractere de controle ASCII, então nenhum dicionário consegue guardá-la. O elemento mostra o texto do HTML, como com uma chave que nenhum dicionário tem, inclusive quando uma chave cuja tradução ele mostrava muda para uma inválida. Corrija a chave no HTML.
+- **"Skipping translation because data-i18n names a message that needs values"**: a mensagem tem um placeholder, um plural ou um select, e a tradução de HTML não tem valores para preenchê-los. O elemento mantém o texto do HTML, e o aviso aparece uma vez por chave. Renderize esse texto com `t()` e passe os valores.
 - **Um atributo `data-i18n-href` não faz nada**: só atributos de texto podem ser traduzidos. Veja [Traduza HTML sem framework](browser.md#traduza-html-sem-framework).
 
 Os avisos do navegador são silenciados junto com o resto quando o gerenciador tem `isSilent: true`.

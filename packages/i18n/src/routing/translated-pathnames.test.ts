@@ -98,6 +98,23 @@ describe("translated pathnames", () => {
       expect(routing.localize(path, "en")).toBe(pathname);
     });
 
+    it("should encode the printable ASCII a URL encodes, and [, ], |, and ^, which a URL's pathname can leave raw", () => {
+      const routing = create();
+      // `encodeURI` encodes these; a URL's pathname encodes the first seven, and `^` too in recent runtimes.
+      const encoded = new Map([...' "<>`{}[]|^'].map((character) => [character, encodeURI(character)]));
+      // Every other printable ASCII character but `/`, `\`, `%`, `?`, and `#`, which a segment can't hold raw.
+      const printable = Array.from({ length: 0x7f - 0x20 }, (_, index) => String.fromCharCode(0x20 + index));
+
+      for (const character of printable.filter((character) => !"/\\%?#".includes(character))) {
+        const spelling = `/products/a${encoded.get(character) ?? character}a`;
+
+        expect(routing.parse(`/products/a${character}a`)?.pathname).toBe(spelling);
+        expect(routing.parse(new URL(`/products/a${character}a`, "https://example.com").pathname)?.pathname).toBe(
+          spelling,
+        );
+      }
+    });
+
     it("should not read an escaped reserved character as the character, so c%2B%2B and c++ are two pages", () => {
       const routing = create();
 
@@ -125,27 +142,16 @@ describe("translated pathnames", () => {
       });
     });
 
-    it("should refuse a URL where a canonical path belongs, and switch language through parse()", () => {
+    it("should read a prefixed path as that locale's URL, so it can switch language", () => {
       const routing = create();
 
-      expect(() => routing.localize("/pt/sobre", "es")).toThrow(RangeError);
-      expect(() => routing.localizeAll("/pt/sobre")).toThrow(RangeError);
-      expect(routing.localize(routing.parse("/pt/sobre")!.pathname, "es")).toBe("/es/acerca");
-    });
-
-    // Burmese is `my`, and `/my/orders` is an English page no URL leads to: `/my/orders` is the Burmese `/orders`.
-    it("should refuse a page whose path starts with a locale code rather than build another page's links", () => {
-      const routing = createLocaleRouting({
-        locales: ["en", "pt", "my"],
-        defaultLocale: "en",
-        localePrefix: "except-default",
-      });
-
-      expect(() => routing.localizeAll("/my/orders")).toThrow(RangeError);
-      expect(routing.localizeAll("/orders").map(({ pathname }) => pathname)).toEqual([
-        "/orders",
-        "/pt/orders",
-        "/my/orders",
+      expect(routing.localize("/pt/about", "en")).toBe("/about");
+      expect(routing.localize("/pt/sobre", "es")).toBe("/es/acerca");
+      expect(routing.localize("/pt/about", "pt")).toBe("/pt/sobre");
+      expect(routing.localizeAll("/pt/sobre")).toEqual([
+        { locale: "en", pathname: "/about" },
+        { locale: "pt", pathname: "/pt/sobre" },
+        { locale: "es", pathname: "/es/acerca" },
       ]);
     });
 
@@ -174,10 +180,12 @@ describe("translated pathnames", () => {
         const routing = create({ localePrefix });
 
         expect(routing.parse("/%70t/sobre")).toMatchObject({ locale: "pt", pathname: "/about" });
-        expect(() => routing.localize("/%70t/sobre", "es")).toThrow(RangeError);
+        expect(routing.localize("/%70t/sobre", "es")).toBe(routing.localize("/about", "es"));
         // A leading locale after the prefix is refused, written plainly or percent-encoded.
         expect(routing.parse("/pt/en/about")).toBeUndefined();
         expect(routing.parse("/pt/%65n/about")).toBeUndefined();
+        expect(() => routing.localize("/pt/en/about", "es")).toThrow(RangeError);
+        expect(() => routing.localize("/pt/%65n/about", "es")).toThrow(RangeError);
       },
     );
 
@@ -295,14 +303,10 @@ describe("translated pathnames", () => {
 
     it("should redirect a path without a prefix by reading it in the chosen locale", () => {
       const routing = create({ localePrefix: "always" });
-      const redirect = (pathname: string, locale: string) => {
-        const guess = routing.parse(`/${locale}${pathname}`)!;
-        return routing.localize(guess.pathname, guess.locale);
-      };
 
-      expect(redirect("/sobre", "pt")).toBe("/pt/sobre");
-      expect(redirect("/about", "pt")).toBe("/pt/sobre");
-      expect(redirect("/about", "en")).toBe("/en/about");
+      expect(routing.localize("/pt/sobre", "pt")).toBe("/pt/sobre");
+      expect(routing.localize("/pt/about", "pt")).toBe("/pt/sobre");
+      expect(routing.localize("/en/about", "en")).toBe("/en/about");
     });
 
     it("should match a translated segment that mixes Unicode with an escape that isn't UTF-8", () => {
@@ -366,6 +370,22 @@ describe("translated pathnames", () => {
       });
     });
 
+    it("should keep the prefix when the default locale's parameter could match the path", () => {
+      const routing = create({
+        localePrefix: "when-ambiguous",
+        pathnames: {
+          "/about": { pt: "/sobre" },
+          "/:slug": {},
+        },
+      });
+
+      expect(routing.localize("/about", "pt")).toBe("/pt/sobre");
+      expect(routing.parse("/sobre")).toMatchObject({
+        locale: "en",
+        pathname: "/sobre",
+      });
+    });
+
     it("should keep the prefix when another locale's parameter could match the path", () => {
       const routing = create({
         localePrefix: "when-ambiguous",
@@ -376,6 +396,22 @@ describe("translated pathnames", () => {
       });
 
       expect(routing.localize("/about", "pt")).toBe("/pt/sobre");
+      expect(routing.parse("/sobre")).toMatchObject({
+        locale: "en",
+        pathname: "/sobre",
+      });
+    });
+
+    it("should keep the prefix on both of two translated paths that overlap, whatever their order", () => {
+      for (const pathnames of [
+        { "/a/a/:x": { pt: "/p/:x" }, "/b/b/:y": { es: "/:y/q" } },
+        { "/b/b/:y": { es: "/:y/q" }, "/a/a/:x": { pt: "/p/:x" } },
+      ]) {
+        const routing = create({ localePrefix: "when-ambiguous", pathnames });
+
+        expect(routing.localize("/a/a/1", "pt")).toBe("/pt/p/1");
+        expect(routing.localize("/b/b/1", "es")).toBe("/es/1/q");
+      }
     });
 
     it("should keep the prefix on a translated path made only of parameters", () => {
@@ -413,7 +449,7 @@ describe("translated pathnames", () => {
         locale: "pt",
         pathname: "/about",
       });
-      expect(routing.localize(routing.parse("/pt/sobre")!.pathname, "pt")).toBe("/sobre");
+      expect(routing.localize("/pt/sobre", "pt")).toBe("/sobre");
     });
 
     it("should behave like `except-default` without a table", () => {
@@ -947,6 +983,69 @@ describe("translated pathnames", () => {
       ]);
     });
 
+    it("should translate a catch-all route pattern through a catch-all, not a parameter that matches one segment", () => {
+      const routing = create({
+        localePrefix: "always",
+        pathnames: {
+          "/help/:id": { pt: "/ajuda/artigo/:id" },
+          "/help/:path*": { pt: "/ajuda/:path*" },
+        },
+      });
+
+      expect(routing.localizeAll("/help/:path*")).toEqual([
+        { locale: "en", pathname: "/en/help/:path*" },
+        { locale: "pt", pathname: "/pt/ajuda/:path*" },
+        { locale: "es", pathname: "/es/help/:path*" },
+      ]);
+      expect(routing.localizeAll("/help/:id")).toEqual([
+        { locale: "en", pathname: "/en/help/:id" },
+        { locale: "pt", pathname: "/pt/ajuda/artigo/:id" },
+        { locale: "es", pathname: "/es/help/:id" },
+      ]);
+      // The pattern each locale registers matches the URLs `parse` reads as that route.
+      expect(routing.parse("/pt/ajuda/a/b")).toMatchObject({
+        locale: "pt",
+        pathname: "/help/a/b",
+      });
+      expect(routing.parse("/pt/ajuda/a/b")?.alternates).toContainEqual({
+        locale: "pt",
+        pathname: "/pt/ajuda/a/b",
+      });
+      expect(routing.parse("/pt/ajuda/artigo/a")).toMatchObject({
+        locale: "pt",
+        pathname: "/help/a",
+      });
+    });
+
+    it("should read a catch-all route pattern back through the catch-all", () => {
+      // The Portuguese `/b/:path*` and `/b/:id` overlap; `/pt/b/:path*` is the catch-all's pattern, not an article.
+      const routing = create({
+        pathnames: {
+          "/articles/:id": { pt: "/b/:id" },
+          "/docs/:path*": { pt: "/b/:path*" },
+        },
+      });
+
+      expect(routing.localize("/docs/:path*", "pt")).toBe("/pt/b/:path*");
+      expect(routing.parse("/pt/b/:path*")).toMatchObject({
+        locale: "pt",
+        pathname: "/docs/:path*",
+      });
+      expect(routing.localize("/articles/:id", "pt")).toBe("/pt/b/:id");
+      expect(routing.localize("/docs/a/b", "pt")).toBe("/pt/b/a/b");
+    });
+
+    it("should keep the words of a catch-all route pattern the table lists no catch-all for", () => {
+      const routing = create({
+        pathnames: { "/help/:id": { pt: "/ajuda/:id" } },
+      });
+
+      // `/help/a/b` is unlisted, so its Portuguese URL keeps the English words, and the pattern does too.
+      expect(routing.localize("/help/:path*", "pt")).toBe("/pt/help/:path*");
+      expect(routing.localize("/help/a/b", "pt")).toBe("/pt/help/a/b");
+      expect(routing.localize("/help/:id", "pt")).toBe("/pt/ajuda/:id");
+    });
+
     it("should drop the prefix with `when-ambiguous` when no other locale's path overlaps", () => {
       const routing = create({ localePrefix: "when-ambiguous", pathnames: docs });
 
@@ -997,19 +1096,20 @@ describe("translated pathnames", () => {
 
     it("should require a plain object of plain objects of pathnames", () => {
       expect(invalid([])).toThrow("pathnames: Expected object, received array");
-      expect(invalid({ "/about": "/sobre" })).toThrow('pathnames["/about"]: Expected object, received string');
+      expect(invalid({ "/about": "/sobre" })).toThrow('pathnames["/about"]: Expected object, received "/sobre"');
       expect(invalid({ "/about": { pt: 1 } })).toThrow('pathnames["/about"].pt: Expected string, received number');
     });
 
     it("should name an invalid pathname", () => {
-      expect(invalid({ about: { pt: "/sobre" } })).toThrow(
-        'pathnames["about"]: Must be a valid absolute application pathname',
-      );
+      expect(invalid({ about: { pt: "/sobre" } })).toThrow('pathnames["about"]: Must start with /');
       expect(invalid({ "/about": { pt: "/sobre?x" } })).toThrow(
-        'pathnames["/about"].pt: Must be a valid absolute application pathname',
+        'pathnames["/about"].pt: Must not contain ?, which starts a query',
+      );
+      expect(invalid({ "/about": { pt: "/sobre//x" } })).toThrow(
+        'pathnames["/about"].pt: Must not contain an empty segment, as // makes',
       );
       expect(invalid({ "/about": { pt: "/../sobre" } })).toThrow(
-        'pathnames["/about"].pt: Must not contain dot segments',
+        'pathnames["/about"].pt: Must not contain a dot segment, . or ..',
       );
     });
 

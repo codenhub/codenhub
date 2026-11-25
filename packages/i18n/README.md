@@ -17,8 +17,8 @@ pnpm add @codenhub/i18n
 import { createI18n } from "@codenhub/i18n";
 
 const dictionaries = {
-  en: { home: { title: "Welcome", greeting: "Hello, {name}!" }, cart: { items: { one: "{count} item", other: "{count} items" } } },
-  pt: { home: { title: "Bem-vindo", greeting: "Olá, {name}!" }, cart: { items: { one: "{count} item", other: "{count} itens" } } },
+  en: { home: { title: "Welcome", greeting: "Hello, {name}!" }, cart: { items: { one: "{count, number} item", other: "{count, number} items" } } },
+  pt: { home: { title: "Bem-vindo", greeting: "Olá, {name}!" }, cart: { items: { one: "{count, number} item", other: "{count, number} itens" } } },
 } as const;
 
 export const i18n = createI18n({
@@ -65,7 +65,7 @@ Two optional entry points cover what differs by environment:
 - Node.js 26 or newer, or a current Chromium, Firefox, or WebKit browser or Web Worker.
 - No runtime dependencies.
 
-In a Web Worker, the root entry point and `@codenhub/i18n/routing` work as anywhere else. `@codenhub/i18n/browser` works only with `syncDocument: false` and no `root`, since a worker has no page; with the defaults it throws a `TypeError` before starting the manager. See [In a Web Worker](docs/browser.md#in-a-web-worker).
+In a Web Worker, the root entry point and `@codenhub/i18n/routing` work as anywhere else. `@codenhub/i18n/browser` works only with `syncDocument: false` and no `root`, since a worker has no page; with the defaults it rejects with a `TypeError` before starting the manager. See [In a Web Worker](docs/browser.md#in-a-web-worker).
 
 ## Notes
 

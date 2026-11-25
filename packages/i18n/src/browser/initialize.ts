@@ -23,6 +23,17 @@ const hasTranslationKey = (element: Element): boolean =>
  */
 const isForeignChange = (mutation: MutationRecord): boolean =>
   mutation.type === "attributes" || Array.from(mutation.addedNodes).some(isElement);
+/**
+ * The keyed element whose content other code replaced while it showed a translation, such as by setting
+ * `textContent`. The pass writes the translation back over that text, so it is not the element's fallback.
+ */
+const getReplacedText = (mutation: MutationRecord): Element | undefined =>
+  mutation.type === "childList" &&
+  isElement(mutation.target) &&
+  mutation.target.hasAttribute("data-i18n") &&
+  !showsTranslatedText(mutation.target)
+    ? mutation.target
+    : undefined;
 
 /**
  * Optional browser integrations applied around a consumer-owned i18n manager.
@@ -40,6 +51,12 @@ export interface BrowserI18nOptions<TLocale extends string> {
   /** Local storage key used for the JSON locale preference. Defaults to `"i18n"`. Storage is best-effort: a failed read or write warns and is skipped. */
   storageKey?: string | undefined;
   /**
+   * Where the visitor's choice is kept instead of `localStorage`, such as a cookie a server also reads. The binding
+   * reads, writes, and forgets the locale through it exactly where it would use `localStorage`. It can't be combined
+   * with `storageKey` or `persistLocale: false`, which contradict it.
+   */
+  storage?: BrowserLocaleStorage | undefined;
+  /**
    * Whether a stored locale is read, and explicit or later application-made locales are written. A locale detected
    * from navigator preferences or the default is not written. Defaults to `true`.
    */
@@ -50,6 +67,27 @@ export interface BrowserI18nOptions<TLocale extends string> {
   root?: ParentNode | undefined;
   /** Whether additions and translation-key attribute changes below `root` are incrementally observed. Defaults to `false`. */
   observe?: boolean | undefined;
+}
+
+/**
+ * A synchronous store for the visitor's chosen locale, used by `initializeBrowserI18n()` in place of `localStorage`.
+ *
+ * Each method is called on the store, so a class instance works, and its result is used at once: a returned promise
+ * is not awaited. An exception from any method warns, unless the manager is silent, and the binding carries on as
+ * though nothing were stored, or as though the write had not happened.
+ */
+export interface BrowserLocaleStorage {
+  /**
+   * Returns the stored locale, or `undefined` or `null` when there is none. A value that is not a string, or a string
+   * that names no configured locale, even after matching as a browser preference is, counts as nothing stored, without
+   * a warning. A stored locale the application no longer lists exactly, such as `pt-PT` once only `pt-BR` is
+   * configured, is matched and left as it is.
+   */
+  get(): string | null | undefined;
+  /** Stores `locale`, a configured locale, after the application applies it; never a locale the binding detected. */
+  set(locale: string): void;
+  /** Forgets the stored locale, as `switchToSystemLocale()` does. */
+  remove(): void;
 }
 
 /** Browser effects exclusively owned for one i18n manager after successful initialization. */
@@ -81,9 +119,12 @@ export interface BrowserI18nBinding {
    * task's synchronous work. A listener that throws is reported like an event listener's error, and the others still
    * run.
    *
+   * It is a function property rather than a method, so it can be passed detached, as to React's
+   * `useSyncExternalStore(binding.subscribe, …)`.
+   *
    * @returns A function that stops the calls; calling it again does nothing. `disconnect()` stops every listener.
    */
-  subscribe(listener: () => void): () => void;
+  readonly subscribe: (listener: () => void) => () => void;
   /**
    * Stops locale-change handling, mutation observation, and `subscribe()` calls.
    *
@@ -98,44 +139,61 @@ interface StoredLocale {
   readonly locale: unknown;
 }
 
+const STORAGE_METHODS = ["get", "set", "remove"] as const;
+
+/** The default store: `localStorage[storageKey]`, holding `{ "locale": "fr" }` as JSON, the format since 0.1.0. */
+const createLocalStorage = (storageKey: string): BrowserLocaleStorage => ({
+  get() {
+    const storedValue = localStorage.getItem(storageKey);
+    if (storedValue === null) {
+      return undefined;
+    }
+    const storedLocale = JSON.parse(storedValue) as StoredLocale;
+    return typeof storedLocale?.locale === "string" ? storedLocale.locale : undefined;
+  },
+  set(locale) {
+    localStorage.setItem(storageKey, JSON.stringify({ locale }));
+  },
+  remove() {
+    localStorage.removeItem(storageKey);
+  },
+});
+
 const warn = (i18n: I18n, message: string, cause: unknown): void => {
   if (!i18n.isSilent) {
     console.warn(message, cause);
   }
 };
 
-const readPersistedLocale = <TLocale extends string>(i18n: I18n<TLocale>, storageKey: string): TLocale | undefined => {
+const readPersistedLocale = <TLocale extends string>(
+  i18n: I18n<TLocale>,
+  storage: BrowserLocaleStorage,
+): TLocale | undefined => {
   try {
-    const storedValue = localStorage.getItem(storageKey);
-
-    if (storedValue === null) {
-      return undefined;
-    }
-
-    const storedLocale = JSON.parse(storedValue) as StoredLocale;
-    if (typeof storedLocale?.locale !== "string") {
+    const storedLocale: unknown = storage.get();
+    if (typeof storedLocale !== "string") {
       return undefined;
     }
     // A locale saved before the application renamed or dropped it, such as `pt-PT` once only `pt-BR` is configured,
     // still names the visitor's language, so it is matched rather than discarded.
-    return i18n.resolveLocale(storedLocale.locale) ?? i18n.matchLocale([storedLocale.locale]);
+    return i18n.resolveLocale(storedLocale) ?? i18n.matchLocale([storedLocale]);
   } catch (cause) {
     warn(i18n, "[I18n] Could not read persisted locale.", cause);
     return undefined;
   }
 };
 
-const persistLocale = <TLocale extends string>(i18n: I18n<TLocale>, storageKey: string): void => {
+const persistLocale = (i18n: I18n, storage: BrowserLocaleStorage): void => {
   try {
-    localStorage.setItem(storageKey, JSON.stringify({ locale: i18n.locale }));
+    storage.set(i18n.locale);
   } catch (cause) {
     warn(i18n, "[I18n] Could not persist locale.", cause);
   }
 };
 
-const forgetPersistedLocale = (i18n: I18n, storageKey: string): void => {
+const forgetPersistedLocale = (i18n: I18n, storage: BrowserLocaleStorage): void => {
   try {
-    localStorage.removeItem(storageKey);
+    storage.remove();
   } catch (cause) {
     warn(i18n, "[I18n] Could not forget persisted locale.", cause);
   }
@@ -170,7 +228,8 @@ const getMutationObserver = (root: ParentNode): typeof MutationObserver => {
  * @returns A binding that disconnects browser-owned listeners and observation.
  * @throws {TypeError} When observation lacks a root, when `root` is not an element, a document, or a shadow root,
  * such as the `null` of a `querySelector()` that found nothing, when `syncDocument` is on without a global `document`, such as in a
- * Web Worker, when there is no global event target, such as on a server, when the manager was not created by
+ * Web Worker, when there is no global event target, such as on a server, when `storage` lacks a `get()`, `set()`, or
+ * `remove()` method or is passed with `storageKey` or `persistLocale: false`, when the manager was not created by
  * `createI18n()`, or when it already has a browser binding. These are
  * thrown before the manager is initialized.
  * @throws {RangeError} When an explicit locale is unsupported or is not a string at runtime.
@@ -191,12 +250,31 @@ export async function initializeBrowserI18n<TLocale extends string>(
   const {
     i18n,
     locale,
-    storageKey = DEFAULT_STORAGE_KEY,
+    storageKey,
     persistLocale: shouldPersistLocale = true,
     syncDocument: shouldSyncDocument = true,
     observe = false,
   } = options;
   let root = options.root;
+
+  if (options.storage !== undefined) {
+    const { storage } = options;
+    if (
+      typeof storage !== "object" ||
+      storage === null ||
+      !STORAGE_METHODS.every((method) => typeof storage[method] === "function")
+    ) {
+      throw new TypeError("[I18n] storage must be an object with get(), set(), and remove() methods.");
+    }
+    // Both name what `storage` replaces, so either one beside it is a mistake rather than a preference to weigh.
+    if (storageKey !== undefined) {
+      throw new TypeError("[I18n] storage replaces storageKey; pass only one of them.");
+    }
+    if (!shouldPersistLocale) {
+      throw new TypeError("[I18n] storage requires persistLocale; drop storage or persistLocale: false.");
+    }
+  }
+  const storage = options.storage ?? createLocalStorage(storageKey ?? DEFAULT_STORAGE_KEY);
 
   if (observe && root === undefined) {
     throw new TypeError("[I18n] Browser observation requires a root.");
@@ -229,7 +307,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
   const domTranslator = createDomTranslator({ isSilent: i18n.isSilent });
   const applyEffects = (shouldPersist: boolean): void => {
     if (shouldPersist) {
-      persistLocale(i18n, storageKey);
+      persistLocale(i18n, storage);
     }
     if (shouldSyncDocument) {
       syncDocumentLocale(i18n);
@@ -241,9 +319,14 @@ export async function initializeBrowserI18n<TLocale extends string>(
     // The full pass covers pending additions and key changes but does not find an element whose last key was removed,
     // so only those are handled first; the pass covers the other pending records.
     const keyRemovedElements = new Set<Element>();
+    const replacedTexts = new Set<Element>();
     for (const mutation of observer?.takeRecords() ?? []) {
       if (mutation.type === "attributes" && !hasTranslationKey(mutation.target as Element)) {
         keyRemovedElements.add(mutation.target as Element);
+      }
+      const replaced = getReplacedText(mutation);
+      if (replaced !== undefined) {
+        replacedTexts.add(replaced);
       }
     }
     // Each step runs even when an earlier one throws, as from `onMissingKey`, and the first error is thrown last.
@@ -255,11 +338,18 @@ export async function initializeBrowserI18n<TLocale extends string>(
               domTranslator.translateRoot({
                 root: element,
                 boundary: observedRoot,
+                locale: i18n.locale,
                 translate: (key) => internals.lookup(key),
               });
             }
           }),
-        () => domTranslator.translateRoot({ root: observedRoot, translate: (key) => internals.lookup(key) }),
+        () =>
+          domTranslator.translateRoot({
+            root: observedRoot,
+            locale: i18n.locale,
+            translate: (key) => internals.lookup(key),
+            replacedTexts,
+          }),
         handleChangesDuringPass,
       ],
       (step) => step(),
@@ -292,6 +382,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
     const changedRoots = new Set<Element>();
     // An element whose last key was removed is not found by an ancestor's scan, so it is translated directly.
     const keyRemovedElements = new Set<Element>();
+    const replacedTexts = new Set<Element>();
 
     for (const mutation of mutations) {
       if (mutation.type === "attributes") {
@@ -303,12 +394,10 @@ export async function initializeBrowserI18n<TLocale extends string>(
         continue;
       }
 
-      if (
-        isElement(mutation.target) &&
-        mutation.target.hasAttribute("data-i18n") &&
-        !showsTranslatedText(mutation.target)
-      ) {
-        changedRoots.add(mutation.target);
+      const replaced = getReplacedText(mutation);
+      if (replaced !== undefined) {
+        changedRoots.add(replaced);
+        replacedTexts.add(replaced);
       }
 
       for (const addedNode of mutation.addedNodes) {
@@ -343,11 +432,22 @@ export async function initializeBrowserI18n<TLocale extends string>(
       domTranslator.translateRoot({
         root: changedRoot,
         boundary: observedRoot,
+        locale: i18n.locale,
         translate: (key) => internals.lookup(key),
+        replacedTexts,
       });
     });
   };
+  /**
+   * Whether a request took effect since the last pass. A re-init that switches the language dispatches `ready` and then
+   * `locale-change`, and the page changed once, so the second event finds nothing to do.
+   */
+  let hasUnhandledApply = false;
   const applyBrowserEffects = (): void => {
+    if (!hasUnhandledApply) {
+      return;
+    }
+    hasUnhandledApply = false;
     queueNotification();
     applyEffects(false);
   };
@@ -370,13 +470,14 @@ export async function initializeBrowserI18n<TLocale extends string>(
   // Every other request that takes effect is a choice the application made, so it persists when enabled, including one
   // for the locale already active, which dispatches no event.
   const handleApply = (requestId: number): void => {
+    hasUnhandledApply = true;
     if (isRequestingDetectedLocale || requestId === detectedRequestId) {
       return;
     }
     isFollowingSystem = false;
     queueNotification();
     if (shouldPersistLocale) {
-      persistLocale(i18n, storageKey);
+      persistLocale(i18n, storage);
     }
   };
   const handleLanguageChange = async (): Promise<void> => {
@@ -406,7 +507,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
       throw new Error("[I18n] switchToSystemLocale() requires a connected browser binding.");
     }
     if (shouldPersistLocale) {
-      forgetPersistedLocale(i18n, storageKey);
+      forgetPersistedLocale(i18n, storage);
     }
     isFollowingSystem = true;
     queueNotification();
@@ -497,7 +598,7 @@ export async function initializeBrowserI18n<TLocale extends string>(
       candidates = [locale];
     } else {
       // Stored, then detected, then the default, each tried once.
-      persistedLocale = shouldPersistLocale ? readPersistedLocale(i18n, storageKey) : undefined;
+      persistedLocale = shouldPersistLocale ? readPersistedLocale(i18n, storage) : undefined;
       startDetectedLocale = i18n.matchLocale(getNavigatorPreferences());
       const preferences = [persistedLocale, startDetectedLocale, i18n.defaultLocale].filter(
         (candidate): candidate is TLocale => candidate !== undefined,

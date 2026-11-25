@@ -3,7 +3,7 @@ title: Visão geral
 description: Como a folha de estilos é carregada no build de um framework e qual guia seguir.
 group: Integração
 order: 2
-source: 90c207e467034bfeb56dba5cfdfa6ad749158af7
+source: 52e0563bc739ebe40d0bbc3957ccaa946633ff7e
 ---
 
 # Integração
@@ -17,7 +17,7 @@ Toda stack faz os mesmos dois imports, a partir do mesmo tipo de lugar — um la
 1. Um [entrypoint](../setup.md#todos-os-entrypoints) — o `@codenhub/styles` compilado para qualquer build, ou `@codenhub/styles/tw` quando o projeto já roda Tailwind CSS v4.
 2. `@codenhub/styles/aesthetics` (ou `/aesthetics/tw`), só se o projeto usar uma [estética](../usage/aesthetics.md). Ele pode vir antes ou depois do entrypoint, porque todo entrypoint declara as [camadas de cascata](../setup.md#camadas-de-cascata) antes de usar uma.
 
-Importar de um único lugar importa por dois motivos. Alguns frameworks só _permitem_ CSS global a partir de um arquivo raiz designado e falham no build caso contrário — o Pages Router do Next.js é um deles; veja [Next.js → Solução de problemas](./nextjs.md#solução-de-problemas). Onde o framework permite de forma mais ampla, como faz o App Router do Next.js, importar a partir da raiz continua sendo a escolha recomendada para uma ordem de CSS previsível — e importar por componente carregaria as mesmas regras de reset e de tokens uma vez por componente, em vez de uma vez por aplicação.
+Importar de um único lugar importa por dois motivos. Alguns frameworks só _permitem_ os seus próprios arquivos CSS globais a partir de um arquivo raiz designado e falham no build caso contrário — o Pages Router do Next.js é um deles, e o arquivo CSS que contém o `/tw` é um dos seus; veja [Next.js → Solução de problemas](./nextjs.md#solução-de-problemas). Onde o framework permite de forma mais ampla, importar a partir da raiz continua sendo a escolha recomendada, porque assim a ordem em que as folhas de estilos carregam não depende de qual página ou componente o leitor abriu primeiro.
 
 ## Qual guia seguir
 
@@ -59,6 +59,25 @@ Depois importe o pacote com o prefixo `npm:` do Parcel, que diz a ele que o nome
 ```
 
 Os outros entrypoints compilados funcionam do mesmo jeito, como `@codenhub/styles/dist/aesthetics/neobrutalism.css`.
+
+### Executores de testes
+
+Um teste de componente que importa um arquivo que importa `@codenhub/styles` carrega a folha de estilos também. O Vitest não precisa de nada: ele resolve o mapa de `exports` do pacote para o arquivo `.css` e, por padrão, não processa CSS nos testes. O Jest não processa CSS nenhum, e a linha de `moduleNameMapper` de costume para arquivos `.css` não pega esse import, já que `@codenhub/styles` e `@codenhub/styles/aesthetics/pixel` não têm extensão; aí o Jest lê a folha de estilos como JavaScript e falha com `SyntaxError: Invalid or unexpected token`. Mapeie os especificadores do pacote para o mesmo módulo vazio:
+
+```js
+// jest.config.js
+module.exports = {
+  moduleNameMapper: {
+    "^@codenhub/styles(/.*)?$": "<rootDir>/styleMock.js",
+    "\\.css$": "<rootDir>/styleMock.js",
+  },
+};
+```
+
+```js
+// styleMock.js
+module.exports = {};
+```
 
 ## Conferindo se funcionou
 

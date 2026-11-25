@@ -1,6 +1,6 @@
 ---
 title: Write your translations
-description: Dictionaries, JSON files, placeholders, ICU messages, plurals, formatters, typed keys and values, checking for untranslated keys, and size limits.
+description: Dictionaries, JSON files, placeholders, ICU messages, links and bold text, plurals, formatters, typed keys and values, checking for untranslated keys, and size limits.
 order: 1
 ---
 
@@ -108,7 +108,7 @@ t("home.title"); // "Bem-vindo", from pt
 A key is looked up in this order:
 
 1. The active locale.
-2. Each configured locale made by dropping its last subtags, such as `zh-Hant` for `zh-Hant-TW`. A parent written in another script is skipped: `zh` is Simplified Chinese, so a `zh-Hant` page falls back to the default rather than mixing scripts.
+2. Each configured locale made by dropping its last subtags, such as `zh-Hant` for `zh-Hant-TW`. A parent written in another script is skipped: `zh` is Simplified Chinese, so a `zh-Hant` page falls back to the default rather than mixing scripts. A deprecated language code counts as the one that replaced it, as `Intl` reads it, so `he-IL` falls back to a configured `iw`, and `iw-IL` to `he`. `no` and `nb` count as one language, as they do in [matching](index.md#turn-outside-input-into-a-locale).
 3. The configured locale named by its language and script, such as `zh-Hant` for `zh-HK`, which is written in Traditional Chinese, or `sr-Latn` for `sr-ME`. So a `zh-HK` dictionary can hold only what Hong Kong says differently.
 4. The default locale.
 
@@ -127,19 +127,19 @@ Write `{name}` where a value goes, and pass the value to `t()`:
 ```
 
 ```ts
-t("order.confirmed", { name: "Ana", orderId: "1042" });
+t("order.confirmed", { name: "Ana", orderId: 1042 });
 // "Thanks, Ana. Order 1042 ships tomorrow."
 ```
 
-Values can be strings, numbers, or dates. Placeholder names use ASCII letters, digits, and `_`, such as `{firstName}` or `{first_name}`. A name with anything else, such as `{first-name}` or `{nome_ç}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
+Values can be strings, numbers, or dates, and a `select` also takes a boolean. Placeholder names use letters and digits in any script, and `_`, such as `{firstName}`, `{first_name}`, or `{año}`. A name with anything else, such as `{first-name}` or `{price€}`, is not a placeholder: the message is invalid syntax, logs a warning, and shows `{first-name}` as written.
 
 Use placeholders instead of joining fragments. `t("before") + name + t("after")` locks every language into English word order, while a whole sentence with a placeholder lets each translation put the value where it belongs. Word order is the first thing every translator wants to change, and they are usually right.
 
 A few details:
 
 - A placeholder with no matching value stays as written, so a missing value shows up as `{name}` on screen rather than disappearing.
-- One `t()` call fills at most 100 arguments, counting those inside plural and select forms, and leaves the rest as written. A UI sentence never gets close; the limit keeps a huge fetched message from costing one formatting step per placeholder.
-- A number in a plain `{name}` is formatted for the reader, as `{name, number}` does: `1234.5` reads "1,234.5" in English and "1.234,5" in Portuguese. Write `{name, number, integer}` or another style, as the next section shows, to format it differently.
+- One `t()` call fills at most 100 arguments, counting those inside plural and select forms and each `#`, and leaves the rest as written, a `#` as `#`. A UI sentence never gets close; the limit keeps a huge fetched message from costing one formatting step per placeholder, or from repeating a long number thousands of times.
+- Numbers in a plain `{name}` are inserted as JavaScript writes them: `1234.5`. Write `{name, number}` to format them for the reader, as the next section shows.
 - Braces and apostrophes are message syntax, so text that shows them literally needs quoting; see [Literal braces and apostrophes](#literal-braces-and-apostrophes).
 
 ### Format numbers and dates in the text
@@ -164,14 +164,14 @@ t("cart.discount", { rate: 0.15 }); // "15% off"
 t("order.shipped", { date: new Date() });
 ```
 
-| Argument                | Styles                                                             | Value                 |
-| ----------------------- | ------------------------------------------------------------------ | --------------------- |
-| `{n, number}`           | none, `integer`, `percent`                                         | number                |
-| `{d, date}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp |
-| `{d, time}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp |
-| `{n, plural, …}`        | see [Plurals](#plurals)                                            | number                |
-| `{n, selectordinal, …}` | ordinal forms, such as `one {#st} two {#nd} few {#rd} other {#th}` | number                |
-| `{v, select, …}`        | any words, plus `other`                                            | string or number      |
+| Argument                | Styles                                                             | Value                      |
+| ----------------------- | ------------------------------------------------------------------ | -------------------------- |
+| `{n, number}`           | none, `integer`, `percent`                                         | number                     |
+| `{d, date}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp      |
+| `{d, time}`             | `short`, `medium` (the default), `long`, `full`                    | `Date` or a timestamp      |
+| `{n, plural, …}`        | see [Plurals](#plurals)                                            | number                     |
+| `{n, selectordinal, …}` | ordinal forms, such as `one {#st} two {#nd} few {#rd} other {#th}` | number                     |
+| `{v, select, …}`        | any words, plus `other`                                            | string, number, or boolean |
 
 Formatting uses the language of the dictionary the text came from, so English text that fills in for a missing Portuguese key is written the English way. An argument whose value has the wrong type, such as a string for `{n, number}`, stays as written.
 
@@ -185,6 +185,8 @@ A `select` picks text by a value, such as a pronoun, and needs an `other` option
 ```json
 { "review": { "replied": "{gender, select, female {She} male {He} other {They}} replied to your review" } }
 ```
+
+A boolean picks the option named `true` or `false`, so `{isAdmin, select, true {Admin} other {Member}}` shows "Admin" for `{ isAdmin: true }`. Only `select` reads a boolean; in a plain `{isAdmin}` it stays as written.
 
 To format a value in code, use the manager's formatters. They follow the active locale:
 
@@ -230,7 +232,7 @@ Inside a plural's forms, `#` stands for the number; write `'#'` for a literal `#
 
 Quoted text is text to the types too: in `'{it''s {x}'`, which shows `{it's {x}`, `x` is not a value `t()` asks for.
 
-Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each text in each locale, among the 1,000 most recent. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message.
+Text that is not valid syntax, such as an unclosed `{` or a stray `}`, logs a warning, unless the manager is silent, and is shown with only its `{name}` placeholders filled. The warning names the key and the locale, and comes once for each key, text, and locale among the roughly 1,000 most recent, so an edited text warns again. [Find untranslated keys](#find-untranslated-keys) shows a test that checks every message's syntax.
 
 ## Plurals
 
@@ -274,6 +276,27 @@ Three things to watch for:
 - **`count` must be a number.** A string such as `"5"` does not select a form; the group is then treated as a missing key. Convert it where it comes in, such as `Number(params.get("count"))`. The manager doesn't guess, since `"1,5"` is one and a half in Portuguese and not a number at all to JavaScript.
 - **A plain string under the same key wins over forms.** If `cart.items` is a string, `count` only fills `{count}`.
 - **Without `other`, it is not a plural group.** `{ "one": "…", "two": "…" }` works only for counts whose form happens to be there; any other count shows the key. `has()` says such a group is not a key, and typed keys don't offer it. Add `other`.
+
+### Show a formatted count
+
+A plain `{count}` writes the number as JavaScript does, so 1234 items reads "1234 items" rather than "1,234 items", or "1.234 itens" in Portuguese. Write `{count, number}` in the forms instead:
+
+```json
+{
+  "cart": {
+    "items": {
+      "one": "{count, number} item",
+      "other": "{count, number} items"
+    }
+  }
+}
+```
+
+```ts
+t("cart.items", { count: 1234 }); // "1,234 items"
+```
+
+That is a lot of tea, but the comma is right.
 
 ### Plurals inside a sentence
 
@@ -373,12 +396,12 @@ Which values each argument takes:
 
 - `number`, `plural`, and `selectordinal` arguments take a number.
 - `date` and `time` take a `Date` or a timestamp.
-- `select` takes a string or number.
-- A plain `{name}` takes any of these.
+- `select` takes a string, number, or boolean.
+- A plain `{name}` takes a string, number, or `Date`.
 
-Extra values are allowed. When several dictionaries are typed, a key needs the values of every one that has it.
+Only the values the message uses are checked. Any other value may have any type, so `t("home.greeting", user)` takes a whole `User` with an `isAdmin: boolean`, and an object literal may carry extra values too. When several dictionaries are typed, a key needs the values of every one that has it.
 
-A JSON import types every text as `string`, since TypeScript doesn't keep JSON string values, so a JSON dictionary checks keys but accepts any values. To check values, write the default language as `as const` TypeScript and keep the other languages in JSON, typed as the default:
+A JSON import types every text as `string`, since TypeScript doesn't keep JSON string values, so a JSON dictionary checks keys but accepts any values, except that a plural group still needs a number `count`. To check values, write the default language as `as const` TypeScript and keep the other languages in JSON, typed as the default:
 
 ```ts
 import en from "./locales/en";
@@ -393,8 +416,9 @@ The loader's return type is what types `t()`, so a translation must use the same
 Reading a message's arguments happens entirely in the type system, which is clever right up until it can't see the message. In these cases `t()` accepts any values, or none, for that key. Nothing fails to compile; the check is just off:
 
 - **The key is one of several.** In `t(hasFailed ? "checkout.failed" : "checkout.done")`, TypeScript sees a union of two keys and can't know which message's values apply. Call `t()` with each key in its own branch, `hasFailed ? t("checkout.failed", { orderId }) : t("checkout.done")`, and each call is checked.
-- **The message is a plain `string`**, as every text in a JSON dictionary is. Write the default language as `as const` TypeScript, as above.
-- **The message has invalid syntax**, such as an unclosed `{`, a placeholder name that isn't ASCII letters, digits, and `_` (`{first-name}`), `{n, number, currency}`, or a `select` or `plural` without `other`. Some invalid syntax, such as an option written twice, an unknown plural form, or nesting past 10 levels, may still ask for values. Either way, the runtime can't read it either: it logs a warning and shows the text with only valid `{name}` placeholders filled. Fix the message; the [message check](#find-untranslated-keys) finds these.
+- **The message is a plain `string`**, as every text in a JSON dictionary is. A plural group still needs a number `count`, since its shape says so. Write the default language as `as const` TypeScript, as above.
+- **The message has invalid syntax**, such as an unclosed `{`, a placeholder name with a character other than a letter, a digit, or `_` (`{first-name}`), `{n, number, currency}`, or a `select` or `plural` without `other`. Some invalid syntax, such as an option written twice, an unknown plural form, or nesting past 10 levels, may still ask for values. Either way, the runtime can't read it either: it logs a warning and shows the text with only valid `{name}` placeholders filled. Fix the message; the [message check](#find-untranslated-keys) finds these.
+- **A placeholder name has a letter outside ASCII**, such as `{año}`. The runtime reads it, but outside ASCII the types can't tell a letter from a symbol such as `€`, which makes the message invalid, so they leave the message unread rather than ask for a value the runtime never reads. Use an ASCII name where you want the check.
 - **The message is too long for the types to read**: about 900 apostrophes, 450 arguments, or 900 spaces inside one argument's braces, in one text. TypeScript has a limit on how deep a type can go, and the reading stops short of it instead of failing your build. At runtime the message works normally. If you have one of these, it is probably three messages in a trench coat; splitting it brings the checks back.
 - **The manager's type is written by hand without the dictionary.** `I18n<"en" | "pt", Key>` checks keys but not values. Pass the dictionary type as a third type argument, `I18n<"en" | "pt", Key, typeof en>`, to keep them checked.
 
@@ -460,8 +484,9 @@ test("every message is valid", async () => {
     }
   }
 
-  expect(warn.mock.calls.filter(([text]) => String(text).startsWith("[I18n] Invalid message"))).toEqual([]);
+  const invalid = warn.mock.calls.filter(([text]) => String(text).startsWith("[I18n] Invalid message"));
   warn.mockRestore();
+  expect(invalid).toEqual([]);
 });
 ```
 

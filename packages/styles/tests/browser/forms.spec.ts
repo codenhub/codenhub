@@ -1,3 +1,5 @@
+import { readFile } from "node:fs/promises";
+
 import { expect, test } from "./fixtures";
 import {
   BUTTON_INTENT_TOKENS,
@@ -12,6 +14,12 @@ import {
 } from "./test-utils";
 
 const FORMS_URL = `${ORIGIN}/forms/?env=vanilla`;
+
+/* Every way a control is disabled, as `box` dims it and the docs list it. */
+const DISABLED_SPELLINGS = ["disabled", ".disabled", 'aria-disabled="true"', "data-disabled"];
+/* A field disabled by one spelling, in markup a page can parse. */
+const disabledField = (spelling: string) =>
+  spelling === ".disabled" ? '<input class="ipt disabled" />' : `<input class="ipt" ${spelling} />`;
 
 /* Matrix rows name a fill and an edge, and the test id joins them with a dash the
    way `playground/shared/matrix.js` does. */
@@ -1262,41 +1270,44 @@ test.describe("forms", () => {
   test("propagates an inner control's invalid and disabled state to the group", async ({ page }) => {
     await page.goto(FORMS_URL);
 
-    const measured = await page.evaluate(() => {
-      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+    const measured = await page.evaluate(
+      (fields) => {
+        const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
 
-      const read = (className: string, inner: string) => {
-        const element = document.createElement("div");
+        const read = (className: string, inner: string) => {
+          const element = document.createElement("div");
 
-        element.className = className;
-        element.innerHTML = inner;
-        host.append(element);
+          element.className = className;
+          element.innerHTML = inner;
+          host.append(element);
 
-        const styles = getComputedStyle(element);
-        /* What a reader sees is the product of the group's opacity and the
+          const styles = getComputedStyle(element);
+          /* What a reader sees is the product of the group's opacity and the
            control's, so a group and a control both dimmed is dimmed twice. */
-        const control = element.firstElementChild;
-        const effectiveOpacity =
-          Number.parseFloat(styles.opacity) * (control ? Number.parseFloat(getComputedStyle(control).opacity) : 1);
-        const values = { border: styles.borderTopColor, cursor: styles.cursor, effectiveOpacity };
+          const control = element.firstElementChild;
+          const effectiveOpacity =
+            Number.parseFloat(styles.opacity) * (control ? Number.parseFloat(getComputedStyle(control).opacity) : 1);
+          const values = { border: styles.borderTopColor, cursor: styles.cursor, effectiveOpacity };
 
-        element.remove();
+          element.remove();
 
-        return values;
-      };
+          return values;
+        };
 
-      /* The group's line is `text-control`'s -- the intent drawn at
+        /* The group's line is `text-control`'s -- the intent drawn at
          `--_line-rest` -- so a lone `.ipt.destructive` is the reference for what
          a reddened line looks like, no fraction to reconstruct. */
-      return {
-        destructiveLine: read("ipt destructive", "").border,
-        neutralLine: read("ipt", "").border,
-        plain: read("input-group", `<input class="ipt" />`),
-        invalid: read("input-group", `<input class="ipt" aria-invalid="true" />`),
-        disabled: read("input-group", `<input class="ipt" disabled />`),
-        loneDisabled: read("field", `<input class="ipt" disabled />`),
-      };
-    });
+        return {
+          destructiveLine: read("ipt destructive", "").border,
+          neutralLine: read("ipt", "").border,
+          plain: read("input-group", `<input class="ipt" />`),
+          invalid: read("input-group", `<input class="ipt" aria-invalid="true" />`),
+          disabled: Object.fromEntries(fields.map(([spelling, field]) => [spelling, read("input-group", field)])),
+          loneDisabled: read("field", `<input class="ipt" disabled />`),
+        };
+      },
+      DISABLED_SPELLINGS.map((spelling) => [spelling, disabledField(spelling)] as const),
+    );
 
     expect(
       getColorDistance(measured.invalid.border, measured.destructiveLine),
@@ -1310,12 +1321,14 @@ test.describe("forms", () => {
       getColorDistance(measured.plain.border, measured.neutralLine),
       "a valid group keeps the neutral line",
     ).toBeLessThan(2);
-    expect(measured.disabled.effectiveOpacity, "an inner disabled dims the group once").toBeCloseTo(
-      measured.loneDisabled.effectiveOpacity,
-      2,
-    );
-    expect(measured.disabled.effectiveOpacity, "and does dim it").toBeLessThan(1);
-    expect(measured.disabled.cursor, "and shows the not-allowed cursor").toBe("not-allowed");
+    for (const [spelling, disabled] of Object.entries(measured.disabled)) {
+      expect(disabled.effectiveOpacity, `an inner ${spelling} dims the group once`).toBeCloseTo(
+        measured.loneDisabled.effectiveOpacity,
+        2,
+      );
+      expect(disabled.effectiveOpacity, `and ${spelling} does dim it`).toBeLessThan(1);
+      expect(disabled.cursor, `and ${spelling} shows the not-allowed cursor`).toBe("not-allowed");
+    }
 
     /* A dimmed group does not answer the pointer, as a disabled lone field
        does not: its line once darkened on hover anyway. Hovered for real and
@@ -1323,16 +1336,19 @@ test.describe("forms", () => {
        does darken, so the probe is shown to move a line that can move. A
        `<select>` with a disabled option is a control, not a group, and keeps
        its hover. */
-    await page.evaluate(() => {
-      const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+    await page.evaluate(
+      (fields) => {
+        const host = document.querySelector('[data-testid="preview-root"]') ?? document.body;
 
-      host.insertAdjacentHTML(
-        "beforeend",
-        `<div class="input-group" data-hover-probe="enabled"><input class="ipt" /></div>
-         <div class="input-group" data-hover-probe="disabled"><input class="ipt" disabled /></div>
+        host.insertAdjacentHTML(
+          "beforeend",
+          `<div class="input-group" data-hover-probe="enabled"><input class="ipt" /></div>
+         ${fields.map(([, field], index) => `<div class="input-group" data-hover-probe="disabled-${index}">${field}</div>`).join("")}
          <select class="select" data-hover-probe="select"><option disabled>Off</option><option>On</option></select>`,
-      );
-    });
+        );
+      },
+      DISABLED_SPELLINGS.map((spelling) => [spelling, disabledField(spelling)] as const),
+    );
 
     const hoverLine = async (probe: string) => {
       const element = page.locator(`[data-hover-probe="${probe}"]`);
@@ -1351,11 +1367,18 @@ test.describe("forms", () => {
     };
 
     const enabled = await hoverLine("enabled");
-    const disabled = await hoverLine("disabled");
     const select = await hoverLine("select");
 
     expect(getColorDistance(enabled.hovered, enabled.rest), "an enabled group's line moves").toBeGreaterThan(2);
-    expect(getColorDistance(disabled.hovered, disabled.rest), "a disabled group's line holds").toBeLessThan(2);
+    for (const [index, spelling] of DISABLED_SPELLINGS.entries()) {
+      // oxlint-disable-next-line no-await-in-loop -- one pointer, hovered in turn.
+      const disabled = await hoverLine(`disabled-${index}`);
+
+      expect(
+        getColorDistance(disabled.hovered, disabled.rest),
+        `a group with an inner ${spelling} holds its line`,
+      ).toBeLessThan(2);
+    }
     expect(getColorDistance(select.hovered, select.rest), "a select with a disabled option moves").toBeGreaterThan(2);
   });
 
@@ -1550,6 +1573,43 @@ test.describe("forms", () => {
       expect(listBox.chevron).toBe(false);
       expect(listBox.symmetric).toBe(true);
       expect(listBox.height).toBeGreaterThan(40);
+    }
+  });
+
+  /* A list box's padding follows the size step, as a drop-down's start does:
+     `.select.sm[multiple]` was 0.75rem on both sides, wider than its 0.625rem
+     start. */
+  test("pads a sized list box as its size step", async ({ page }) => {
+    await page.goto(FORMS_URL);
+
+    const pads = await page.evaluate(() => {
+      const host = document.createElement("div");
+
+      host.innerHTML = ["", "sm", "lg"]
+        .flatMap((size) => [
+          `<select class="select ${size}"><option>One</option></select>`,
+          `<select class="select ${size}" multiple><option>One</option></select>`,
+          `<select class="select ${size}" size="3"><option>One</option></select>`,
+        ])
+        .join("");
+      document.body.append(host);
+      const result = [...host.querySelectorAll("select")].map((select) => {
+        const style = getComputedStyle(select);
+
+        return [style.paddingLeft, style.paddingRight];
+      });
+
+      host.remove();
+
+      return result;
+    });
+
+    for (const [index, size] of ["", "sm", "lg"].entries()) {
+      const [single, multiple, sized] = pads.slice(index * 3, index * 3 + 3);
+
+      for (const listBox of [multiple!, sized!]) {
+        expect(listBox, `.select${size ? `.${size}` : ""} list box`).toEqual([single![0], single![0]]);
+      }
     }
   });
 
@@ -2281,7 +2341,10 @@ test.describe("forms", () => {
 
   /* The text controls take the button's size steps, so a `.btn.sm` and an
      `.ipt.sm` line up in a row: height, text size, and the corner the size
-     step scales. */
+     step scales. Heights are read under every aesthetic and under a 2px
+     border, the preset in docs/usage/presets.md: `.btn.lg` once kept its
+     padding whole while the controls gave the line back, and stood 49.5px to
+     their 48px wherever the border was 2px. */
   test("sizes text controls and groups with the button's size steps", async ({ page }) => {
     await page.goto(FORMS_URL);
 
@@ -2335,6 +2398,58 @@ test.describe("forms", () => {
     expect(sizes.sm.btn.height, "the steps differ").toBeLessThan(sizes.default.btn.height);
     expect(sizes.lg.btn.height, "the steps differ").toBeGreaterThan(sizes.default.btn.height);
 
+    const regions = await page.evaluate(() => {
+      const root = document.querySelector('[data-testid="preview-root"]') ?? document.body;
+      const regionsToRead = [
+        ["2px border", "", "--border-width: 2px"],
+        ["chunky-tile", "chunky-tile", ""],
+        ["cyber", "cyber", ""],
+        ["glass", "glass", ""],
+        ["neobrutalism", "neobrutalism", ""],
+        ["pixel", "pixel", ""],
+        ["sketch", "sketch", ""],
+        ["sketch-rounded", "sketch sketch-rounded", ""],
+      ] as const;
+
+      return regionsToRead.flatMap(([label, classes, style]) => {
+        const host = document.createElement("div");
+
+        host.className = classes;
+        host.setAttribute("style", style);
+        host.innerHTML = ["", "sm", "lg"]
+          .map(
+            (size) =>
+              `<div data-size="${size || "default"}">` +
+              `<button class="btn ${size}" type="button">Go</button>` +
+              `<input class="ipt ${size}" />` +
+              `<select class="select ${size}"><option>One</option></select>` +
+              `<div class="input-group ${size}"><span>@</span><input class="ipt" /></div></div>`,
+          )
+          .join("");
+        root.append(host);
+
+        const rows = [...host.children].map((row) => ({
+          label: `${label} ${(row as HTMLElement).dataset.size}`,
+          heights: [...row.children].map((element) => ({
+            name: element.className.split(" ")[0],
+            height: element.getBoundingClientRect().height,
+          })),
+        }));
+
+        host.remove();
+
+        return rows;
+      });
+    });
+
+    for (const { heights, label } of regions) {
+      const button = heights[0]!.height;
+
+      for (const { height, name } of heights.slice(1)) {
+        expect.soft(height, `${label} .${name} height`).toBeCloseTo(button, 1);
+      }
+    }
+
     for (const control of ["ipt", "select", "textarea", "group"] as const) {
       expect(sizes.sm[control].paddingStart, `.${control}.sm pads less`).toBeLessThan(
         sizes.default[control].paddingStart,
@@ -2384,4 +2499,146 @@ test("an input group leaves what is not a text field alone", async ({ page }) =>
   await page.evaluate((html) => (document.body.innerHTML = html), markup("input-group"));
 
   expect(await read()).toEqual(alone);
+});
+
+const FULL_STYLES_URL = `${ORIGIN}/shared/entry-vanilla.css`;
+const NATIVE_STYLES_URL = `${ORIGIN}/native/entry-vanilla.css`;
+
+/* A read-only field can be focused and its value selected, so it keeps its
+   ring, but nothing about it answers the pointer: it rests on the quiet field
+   tone, `--color-foreground`, and its text stays at full strength. */
+for (const [entry, url, classed] of [
+  ["the classes", FULL_STYLES_URL, true],
+  ["/native", NATIVE_STYLES_URL, false],
+] as const) {
+  test(`rests a read-only field on the quiet tone with no hover and a focus ring, from ${entry}`, async ({ page }) => {
+    await page.setContent('<!doctype html><html><body><button data-testid="before">.</button></body></html>');
+    await page.addStyleTag({ url });
+    await stopTransitions(page);
+    await page.evaluate((isClassed) => {
+      const cls = (name: string) => (isClassed ? `class="${name}"` : "");
+      document.body.insertAdjacentHTML(
+        "beforeend",
+        `<input ${cls("ipt")} readonly value="ada" data-testid="ipt" />
+         <button data-testid="between">.</button>
+         <textarea ${cls("textarea")} readonly data-testid="textarea">ada</textarea>
+         <input ${cls("ipt")} value="ada" data-testid="ipt-editable" />
+         <span data-testid="quiet" style="background: color-mix(in oklab, var(--color-foreground) 100%, transparent)">.</span>`,
+      );
+    }, classed);
+
+    const quiet = await page.getByTestId("quiet").evaluate((element) => getComputedStyle(element).backgroundColor);
+    const editable = await page.getByTestId("ipt-editable").evaluate((element) => getComputedStyle(element).color);
+
+    for (const [testId, before] of [
+      ["ipt", "before"],
+      ["textarea", "between"],
+    ] as const) {
+      const control = page.getByTestId(testId);
+      const read = () =>
+        control.evaluate((element) => {
+          const styles = getComputedStyle(element);
+          return {
+            line: styles.borderTopColor,
+            fill: styles.backgroundColor,
+            color: styles.color,
+            opacity: styles.opacity,
+          };
+        });
+
+      // oxlint-disable-next-line no-await-in-loop -- one control at a time.
+      const rest = await read();
+      expect(rest.fill, `${testId} rests on the quiet tone`).toBe(quiet);
+      expect(rest.color, `${testId} keeps the editable field's text`).toBe(editable);
+      expect(rest.opacity, `${testId} is not dimmed`).toBe("1");
+
+      // oxlint-disable-next-line no-await-in-loop -- one control at a time.
+      await control.hover();
+      // oxlint-disable-next-line no-await-in-loop -- one control at a time.
+      expect(await read(), `${testId} does not answer the pointer`).toEqual(rest);
+      // oxlint-disable-next-line no-await-in-loop -- one control at a time.
+      await page.mouse.move(0, 0);
+
+      // oxlint-disable-next-line no-await-in-loop -- one control at a time.
+      await page.getByTestId(before).focus();
+      // oxlint-disable-next-line no-await-in-loop -- one control at a time.
+      await page.keyboard.press("Tab");
+      // oxlint-disable-next-line no-await-in-loop -- one control at a time.
+      const ring = await control.evaluate((element) => ({
+        focused: element.matches(":focus-visible"),
+        style: getComputedStyle(element).outlineStyle,
+      }));
+      expect(ring, `${testId} keeps its focus ring`).toEqual({ focused: true, style: "solid" });
+    }
+  });
+}
+
+/* The group is the field boundary, so a group whose field is read-only rests
+   on the quiet tone and ignores the pointer as the lone field does. */
+test("rests an input group on the quiet tone when its field is read-only", async ({ page }) => {
+  await page.setContent(
+    `<!doctype html><html><body>
+       <div class="input-group" data-testid="group"><input class="ipt" readonly value="ada" /></div>
+       <span data-testid="quiet" style="background: color-mix(in oklab, var(--color-foreground) 100%, transparent)">.</span>
+     </body></html>`,
+  );
+  await page.addStyleTag({ url: FULL_STYLES_URL });
+  await stopTransitions(page);
+
+  const quiet = await page.getByTestId("quiet").evaluate((element) => getComputedStyle(element).backgroundColor);
+  const group = page.getByTestId("group");
+  const read = () =>
+    group.evaluate((element) => {
+      const styles = getComputedStyle(element);
+      return { line: styles.borderTopColor, fill: styles.backgroundColor };
+    });
+
+  const rest = await read();
+  expect(rest.fill).toBe(quiet);
+  await group.hover();
+  expect(await read()).toEqual(rest);
+});
+
+/* A rendered legend is not one of its fieldset's flex items, so a `.stack`
+   gap never reached it and it sat flush against the first option. */
+test("spaces a fieldset's legend from its first option as the stack spaces the rest", async ({ page }) => {
+  await page.setContent(
+    `<!doctype html><html><body>
+       <fieldset class="stack tight" data-testid="set">
+         <legend class="label">Billing period</legend>
+         <label class="cluster tight"><input class="radio" type="radio" name="p" /> Monthly</label>
+         <label class="cluster tight"><input class="radio" type="radio" name="p" /> Yearly</label>
+       </fieldset></body></html>`,
+  );
+  await page.addStyleTag({ url: FULL_STYLES_URL });
+
+  const gaps = await page.getByTestId("set").evaluate((set) => {
+    const [legend, first, second] = [...set.children].map((element) => element.getBoundingClientRect());
+    return { legend: first!.top - legend!.bottom, options: second!.top - first!.bottom };
+  });
+
+  expect(gaps.options).toBeCloseTo(8, 1);
+  expect(gaps.legend).toBeCloseTo(gaps.options, 1);
+});
+
+/* docs/usage/forms.md, "Sizes": the example promises a small field and a
+   small button in one row, and `.ipt` is full width, so the button wrapped. */
+test("lines the sizes example's small field and button up in one row at 320px", async ({ page }) => {
+  await page.setViewportSize({ width: 320, height: 640 });
+  const docs = await readFile(new URL("../../docs/usage/forms.md", import.meta.url), "utf8");
+  const example = docs.split("### Sizes")[1]!.split("```html")[1]!.split("```")[0]!;
+
+  await page.setContent(`<!doctype html><html><body style="margin: 0; padding: 16px">${example}</body></html>`);
+  await page.addStyleTag({ url: FULL_STYLES_URL });
+
+  const [field, button] = await page.evaluate(() =>
+    [document.querySelector("input")!, document.querySelector("button")!].map((element) => {
+      const rect = element.getBoundingClientRect();
+      return { top: rect.top, height: rect.height, right: rect.right };
+    }),
+  );
+
+  expect(button!.top, "the button shares the field's row").toBe(field!.top);
+  expect(button!.height).toBe(field!.height);
+  expect(button!.right).toBeLessThanOrEqual(304);
 });

@@ -22,17 +22,17 @@ describe("shareWorkers", () => {
   });
 
   it("shouldStartNoMorePackagesThanThePoolHasBrowsers", () => {
-    expect(shareWorkers(BROWSER_WORKER_POOL, 6, {}, LAPTOP)).toEqual({ concurrency: 2, workersPerPackage: 1 });
+    expect(shareWorkers(BROWSER_WORKER_POOL, 6, {}, LAPTOP)).toEqual({ concurrency: 4, workersPerPackage: 1 });
   });
 
   it("shouldGiveOneBrowserPackageEveryBrowser", () => {
-    expect(shareWorkers(BROWSER_WORKER_POOL, 1, {}, LAPTOP)).toEqual({ concurrency: 1, workersPerPackage: 2 });
+    expect(shareWorkers(BROWSER_WORKER_POOL, 1, {}, LAPTOP)).toEqual({ concurrency: 1, workersPerPackage: 4 });
   });
 
   it("shouldNotRoundAMachineBetweenSizesUpToTheNextBrowser", () => {
-    const machine = { cores: 16, memoryBytes: 12 * GIB };
+    const machine = { cores: 16, memoryBytes: 11 * GIB };
 
-    expect(shareWorkers(BROWSER_WORKER_POOL, 1, {}, machine)).toEqual({ concurrency: 1, workersPerPackage: 1 });
+    expect(shareWorkers(BROWSER_WORKER_POOL, 1, {}, machine)).toEqual({ concurrency: 1, workersPerPackage: 2 });
   });
 
   it("shouldKeepAtLeastOneWorkerOnASmallMachine", () => {

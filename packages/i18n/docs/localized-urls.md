@@ -16,11 +16,10 @@ The examples continue the tea shop's `en` and `pt` app from the earlier pages. S
 // src/routing.ts
 import { createLocaleRouting } from "@codenhub/i18n/routing";
 
-export const routing = createLocaleRouting({
-  locales: ["en", "pt"] as const,
-  defaultLocale: "en",
-  localePrefix: "except-default",
-});
+export const locales = ["en", "pt"] as const;
+export const defaultLocale = "en";
+
+export const routing = createLocaleRouting({ locales, defaultLocale, localePrefix: "except-default" });
 ```
 
 `localePrefix` decides which paths start with their locale. It is required and has no default, because each choice gives your site different URLs, and URLs are hard to change once people have bookmarked them. Leaving it out throws `TypeError: [I18n] Invalid locale routing configuration: localePrefix: Expected "always", "except-default", or "when-ambiguous", received undefined`.
@@ -37,7 +36,7 @@ How to choose:
 - `"always"` makes every URL name its language, so `/about` is not a page, which suits a site that redirects `/` to the visitor's language.
 - `"when-ambiguous"` drops the prefix from translated paths that can only belong to one language, and is worth reading about before you pick it.
 
-Use the same `locales` and `defaultLocale` as your manager. Routing is separate from the manager, so it also works where no translation happens, such as in a server's redirect logic.
+Use the same `locales` and `defaultLocale` as your manager, by importing these constants where you create it. Routing is separate from the manager, so it also works where no translation happens, such as in a server's redirect logic.
 
 If you keep the configuration in a variable before passing it in, put `as const` after the whole object: `const config = { … } as const`. Without it, TypeScript widens `localePrefix` to `string`, and `createLocaleRouting` rejects it at compile time. `as const` on `localePrefix` alone compiles, but types every locale as `string`, so `localize("/about", "fr")` compiles too.
 
@@ -86,7 +85,7 @@ With `localePrefix: "always"`, a path without a locale returns `undefined` too, 
 
 ```ts
 // A file, such as `/favicon.ico`, is not a page; see Redirect to the canonical URL below.
-const isFile = /\.[a-z0-9]+$/i.test(url.pathname);
+const isFile = staticFiles.has(url.pathname);
 const route = isFile ? undefined : routing.parse(url.pathname);
 if (route === undefined && !isFile) {
   const locale = pickLocale(i18n, request);
@@ -124,10 +123,10 @@ Run this redirect, and the one for a missing prefix above, only for page routes,
 - With `trailingSlash: "always"`, this redirect sends `/favicon.ico` to `/favicon.ico/`.
 - With `localePrefix: "always"`, the one above sends it to `/en/favicon.ico`.
 
-Neither has a file. If the redirects have to run first, skip paths that end in a file extension, as both examples do:
+Neither has a file. If the redirects have to run first, skip the paths you serve as files, as both examples do. `staticFiles` is a `Set` of them, such as every file in your build's output directory, each written as a pathname like `/favicon.ico`. Testing for a file extension instead turns a page such as `/blog/node.js` or `/users/john.doe` into a file, which skips both redirects and leaves the page unrouted:
 
 ```ts
-const isFile = /\.[a-z0-9]+$/i.test(url.pathname);
+const isFile = staticFiles.has(url.pathname);
 const route = isFile ? undefined : routing.parse(url.pathname);
 if (route !== undefined) {
   const canonical = routing.localize(route.pathname, route.locale);
@@ -148,7 +147,11 @@ routing.localize("/about", "pt"); // "/pt/about"
 routing.localize("/about", "en"); // "/about"
 ```
 
-A canonical path never starts with a locale, so `localize()` throws a `RangeError` for one, such as `/pt/about`. That is a URL; pass `parse("/pt/about").pathname` instead. It throws for a page of your own whose path starts with a locale code, too: with Burmese, `my`, configured, an English page at `/my/orders` has no URL, since `/my/orders` is the Burmese `/orders`. Give such a page another path.
+A path that already starts with a locale is read as that locale's URL, so the prefix is replaced:
+
+```ts
+routing.localize("/pt/about", "en"); // "/about"
+```
 
 On a localized site, switching language is a navigation, not just `setLocale()`: `setLocale()` changes the text but never the URL. So the shop's language picker reads the current page with `parse()`, takes its path in the new language from `alternates`, keeps the query string and fragment, and lets your router go there:
 
@@ -167,17 +170,29 @@ Going through `parse()` matters once paths are translated: `/sobre` is a Portugu
 Use the same list for the `<link rel="alternate" hreflang>` tags that tell search engines about each language. Add an `x-default` tag for readers whose language you don't offer, pointing at the default locale's page, when it has one:
 
 ```ts
-const defaultLocale = "en"; // the defaultLocale you configured
+import { defaultLocale, routing } from "./routing";
+
+// Your framework's own escaping does the same.
+const escapeHtml = (text: string) => text.replaceAll("&", "&amp;").replaceAll('"', "&quot;").replaceAll("'", "&#39;").replaceAll("<", "&lt;").replaceAll(">", "&gt;");
+
 const link = (hreflang: string, pathname: string) => `<link rel="alternate" hreflang="${escapeHtml(hreflang)}" href="${escapeHtml(new URL(pathname, "https://example.com").href)}">`;
 
-const tags = route.alternates.map((page) => link(page.locale, page.pathname));
-const fallback = route.alternates.find((page) => page.locale === defaultLocale);
-if (fallback !== undefined) {
-  tags.push(link("x-default", fallback.pathname));
+// The tags for a request's `url.pathname`, or none for a path that is no page.
+export function alternateLinks(pathname: string): string[] {
+  const route = routing.parse(pathname);
+  if (route === undefined) {
+    return [];
+  }
+  const tags = route.alternates.map((page) => link(page.locale, page.pathname));
+  const fallback = route.alternates.find((page) => page.locale === defaultLocale);
+  if (fallback !== undefined) {
+    tags.push(link("x-default", fallback.pathname));
+  }
+  return tags;
 }
 ```
 
-Escape both values as you would any text in HTML, or let your framework create the tags. A path can contain characters, such as `"` or `&`, that are allowed in a URL but not raw inside an attribute.
+Escape both values as you would any text in HTML, or let your framework create the tags. A path can contain characters, such as `&` or `'`, that are allowed in a URL but not raw inside an attribute.
 
 ## Translate paths
 
@@ -213,7 +228,7 @@ How the table reads:
 - **Anything the table doesn't list keeps its words.** `/blog` is `/pt/blog`, and `/products/42` in Spanish is `/es/products/42`, since only Portuguese translates it.
 - **Fixed segments match case-sensitively**, as URLs do, so `/pt/Sobre` is not the about page. Only the locale prefix ignores case.
 - **Prefer plain letters in paths.** Routing doesn't change your words, so `/servicos` is what you get only if you write `/servicos`. Most sites drop accents from URLs, because an accented path is shown percent-encoded wherever it gets copied as text, such as `/servi%C3%A7os`. Accents work too: `"/serviços"` matches the `/servi%C3%A7os` that browsers send, and `localize()` returns the encoded form, as it does for every segment, such as a product slug, and as `parse()` returns its `pathname`. So a static build that writes a folder for that path has to decode it first, as in [Build a static site](server-rendering.md#build-a-static-site).
-- **A page comes back in one spelling.** `parse()` writes every segment, listed or not, as RFC 3986 normalizes a URL: an escaped letter, digit, or `-._~` is decoded, every other escape is written in upper case, and a character a URL encodes, such as `é`, is encoded. So `/%61bout` and `/pt/%73obre`, odd spellings of `/about` and `/pt/sobre`, both give `pathname: "/about"`, and `/products/caf%c3%a9` gives `/products/caf%C3%A9`. An escaped reserved character stays escaped, so `/products/c%2B%2B` and `/products/c++` are two pages, since a server may read `%2B` differently from `+`. So pass the pathname as the URL writes it, such as `new URL(request.url).pathname`, not one your framework decoded: decoded, `/100%25` becomes `/100%`, which `parse()` refuses.
+- **A page comes back in one spelling.** `parse()` writes every segment, listed or not, as RFC 3986 normalizes a URL: an escaped letter, digit, or `-._~` is decoded, every other escape is written in upper case, and a character a URL encodes, such as `é`, is encoded. So `/%61bout` and `/pt/%73obre`, odd spellings of `/about` and `/pt/sobre`, both give `pathname: "/about"`, and `/products/caf%c3%a9` gives `/products/caf%C3%A9`. An escaped reserved character stays escaped, so `/products/c%2B%2B` and `/products/c++` are two pages, since a server may read `%2B` differently from `+`. So pass the pathname as the URL writes it, such as `new URL(request.url).pathname`, not one your framework decoded: decoded, `/products/c%2B%2B` becomes `/products/c++`, another page.
 - **A fixed segment beats a parameter, and a parameter beats a catch-all.** With both `/products/new` and `/products/:id` listed, `/products/new` is the new-product page, whichever order the table lists them in. With `/help/contact` and `/help/:path*`, `/help/contact` is the contact page and every other `/help/…` path goes to the catch-all.
 - **The default locale can be translated too.** A Portuguese-first site with English code can use `defaultLocale: "pt"` and `{ "/about": { pt: "/sobre" } }`, so `/sobre` is the Portuguese page and `/en/about` the English one.
 
@@ -259,7 +274,7 @@ for (const { locale, pathname } of routing.localizeAll("/products/:id")) {
 
 `@codenhub/router` takes the first route that matches, in the order you register them. When two of a locale's paths can match the same URL, such as `/pt/produtos/novo` and `/pt/produtos/:id`, register the one with fixed words first.
 
-`localizeAll()` writes a catch-all as `:name*`. Translate that into your framework's own syntax when you register it, such as `[...path]` in a file-based router. `@codenhub/router` has no catch-all, so with it, route such paths by rewriting to the canonical path instead.
+A pattern that ends in `:name*` is translated through the table's catch-all, never through a parameter: with `/help/:id` and `/help/:path*` both listed, `localizeAll("/help/:path*")` gives the Portuguese `/pt/ajuda/:path*`, not the one-segment `/pt/ajuda/artigo/:path*`. `localizeAll()` writes a catch-all as `:name*`. Translate that into your framework's own syntax when you register it, such as `[...path]` in a file-based router. `@codenhub/router` has no catch-all, so with it, route such paths by rewriting to the canonical path instead.
 
 ## Drop the prefix
 
@@ -338,9 +353,14 @@ const config = {
   locales,
   // `zh-TW` is `zh-Hant`: a language and its likely script, as `matchLocale()` compares them, with Norwegian `no` as `nb`.
   languages: Object.fromEntries(
-    locales.map((locale) => {
-      const { language, script } = new Intl.Locale(locale).maximize();
-      return [`${language === "no" ? "nb" : language}-${script}`, locale];
+    locales.flatMap((locale) => {
+      let likely;
+      try {
+        likely = new Intl.Locale(locale).maximize();
+      } catch {
+        return []; // A private-use locale, such as `x-pirate`, has no language to match; only a saved choice selects it.
+      }
+      return [[`${likely.language === "no" ? "nb" : likely.language}-${likely.script}`, locale]];
     }),
   ),
   targets: Object.fromEntries(locales.filter((locale) => locale !== defaultLocale).map((locale) => [locale, routing.localize(pathname, locale)])),
@@ -425,14 +445,17 @@ This is the boring part of the page. It is also the part that decides whether a 
 - **A malformed escape**, a `%` not followed by two hex digits, as in `/50%off`. Write `%25` for a literal `%`… which is also refused, per the previous rule, so take the `%` out of the path.
 - **More than 8,192 characters or 100 segments**, or a path whose canonical path would be longer than that, as a short translated path can be when its table entry is long. Servers and proxies cut off URLs around this length anyway, and no page is 100 folders deep; a request of thousands of one-letter segments would otherwise cost work in every locale.
 
-A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError`, such as `TypeError: [I18n] pathname must not contain dot segments`, and you fix the path in your code.
+A request can carry any of these, such as a scanner asking for `//wp-login.php`, so `parse()` returns `undefined` for them, and the same 404 answers them as any other path that is no page. `localize()` and `localizeAll()` build links from your own paths rather than read requests, so for the same paths they throw a `TypeError` that quotes the path and names the rule, such as `TypeError: [I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, and you fix the path in your code.
 
-Every method, `parse()` included, throws `TypeError: [I18n] pathname must be a valid absolute application pathname` for a value that is not a URL's pathname at all:
+Every method, `parse()` included, throws a `TypeError` for a value that is not a URL's pathname at all:
 
-- One that does not start with `/`, such as a full URL `https://…`.
-- One that contains `?` or `#`, such as Node's `request.url` with its query string.
+- One that does not start with `/`, such as a full URL: `TypeError: [I18n] pathname must start with /; pass url.pathname`.
+- One that contains `?` or `#`, such as Node's `request.url` with its query string: `TypeError: [I18n] pathname "/search?…" must not contain ?, which starts a query; pass url.pathname`. The error names whichever of the two comes first.
+- One that is not a string: `TypeError: [I18n] pathname must be a string, received undefined`.
 
 That is a mistake in the calling code, not a request to answer, so it fails loudly instead of answering 404 to every URL with a query.
+
+No routing error quotes a query or a fragment, which can hold a token: a path with `?` or `#` is quoted only up to it. A value that doesn't start with `/`, such as a full URL, whose user info can hold a credential, isn't quoted at all.
 
 Ordinary escapes, such as `%20` and `%C3%A7`, are fine, and a trailing slash is kept: `/pt/sobre/` parses to `/about/`.
 

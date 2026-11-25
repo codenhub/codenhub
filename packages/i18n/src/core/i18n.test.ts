@@ -196,6 +196,18 @@ describe("createI18n", () => {
     );
   });
 
+  it.each([
+    ["fr?token=secret", '[I18n] Unsupported locale "fr?…".'],
+    ["fr#a?token=secret", '[I18n] Unsupported locale "fr#…".'],
+  ])("keeps a query or a fragment out of %j's error", async (locale, message) => {
+    const i18n = createI18n(createConfig());
+
+    const rejection = i18n.init({ locale: locale as Locale });
+
+    await expect(rejection).rejects.toBeInstanceOf(RangeError);
+    await expect(rejection).rejects.toThrow(message);
+  });
+
   it("treats only undefined init locale as omitted", async () => {
     const i18n = createI18n(createConfig());
 

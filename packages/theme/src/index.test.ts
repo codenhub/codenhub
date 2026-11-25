@@ -460,7 +460,58 @@ describe("Theme behavior", () => {
 
     theme.set("dark");
 
-    expect(root.className).toBe("dark");
+    expect(root.className).toBe("theme-dark dark");
+  });
+
+  it("should add the color scheme class for a theme with a custom name", () => {
+    const theme = createTheme({
+      themes: { paper: { colorScheme: "light" }, ink: { colorScheme: "dark" } },
+      defaultTheme: "paper",
+      systemTheme: { light: "paper", dark: "ink" },
+    }).init();
+
+    theme.set("paper");
+
+    expect(root.getAttribute("data-theme")).toBe("paper");
+    expect(root.className).toBe("theme-paper theme-light");
+
+    theme.set("ink");
+
+    expect(root.className).toBe("theme-ink theme-dark");
+  });
+
+  it("should add the color scheme class when className is disabled", () => {
+    root.className = "app-shell theme-dark";
+
+    createTheme({ className: false }).init();
+
+    expect(root.className).toBe("app-shell theme-light");
+  });
+
+  it("should keep the active theme's class when it names the opposite scheme", () => {
+    const themes = { light: { colorScheme: "dark" }, dark: { colorScheme: "light" } } as const;
+
+    createTheme({ themes, systemTheme: { light: "dark", dark: "light" } })
+      .init()
+      .set("light");
+
+    expect(root.className).toBe("theme-light theme-dark");
+
+    root.className = "";
+    window.localStorage.setItem("app-theme-preference", "light");
+    new Function(createTheme({ themes, systemTheme: { light: "dark", dark: "light" } }).getPrePaintScript())();
+
+    expect(root.className).toBe("theme-light theme-dark");
+  });
+
+  it("should keep the scheme class when a configured theme class shares its name", () => {
+    const theme = createTheme({
+      themes: { light: { colorScheme: "light" }, dark: { colorScheme: "dark" }, paper: { colorScheme: "light" } },
+    }).init();
+
+    theme.set("paper");
+
+    expect(root.className).toBe("theme-paper theme-light");
   });
 
   it("should not remove pre-existing dark classes when darkClass is disabled", () => {
@@ -498,7 +549,7 @@ describe("Theme behavior", () => {
     theme.set("high contrast");
 
     expect(root.getAttribute("data-mode")).toBe("high contrast");
-    expect(root.className).toBe("mode-high-contrast dark");
+    expect(root.className).toBe("mode-high-contrast theme-dark dark");
   });
 
   it("should pass the theme with its static tokens to a custom class resolver", () => {
@@ -754,6 +805,36 @@ describe("Theme behavior", () => {
       expect(theme.name).toBe("dark");
       mediaQueryList.dispatch(false);
       expect(theme.name).toBe("light");
+    } finally {
+      restore();
+    }
+  });
+
+  it("should report the choice made on this page when storage is unavailable", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const restore = replaceLocalStorage({
+      get: () => {
+        throw new Error("blocked");
+      },
+    });
+
+    try {
+      const theme = createTheme().init();
+      expect(theme.preference).toBeNull();
+
+      theme.set("light");
+      expect(theme.preference).toBe("light");
+      expect(theme.followsSystem).toBe(false);
+
+      theme.toggle();
+      expect(theme.preference).toBe("dark");
+
+      theme.clearPreference();
+      expect(theme.preference).toBeNull();
+
+      theme.set("dark");
+      theme.destroy();
+      expect(theme.preference).toBeNull();
     } finally {
       restore();
     }
@@ -1238,6 +1319,30 @@ describe("Theme following the system within a pair", () => {
       expect(theme.name).toBe("ocean-dark");
       mediaQueryList.dispatch(false);
       expect(theme.name).toBe("ocean-light");
+    } finally {
+      restore();
+    }
+  });
+
+  it("should report whether this page's choice follows the system when storage is unavailable", () => {
+    createMatchMedia(true);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const restore = replaceLocalStorage({
+      get() {
+        throw new Error("blocked");
+      },
+    });
+    try {
+      const theme = createTheme({ themes: familyThemes }).init();
+      theme.set("ocean-light");
+      expect(theme.name).toBe("ocean-light");
+      expect(theme.preference).toBe("ocean-light");
+      expect(theme.followsSystem).toBe(false);
+
+      theme.set("ocean-light", { followSystem: true });
+      expect(theme.name).toBe("ocean-dark");
+      expect(theme.preference).toBe("ocean-light");
+      expect(theme.followsSystem).toBe(true);
     } finally {
       restore();
     }
@@ -1781,6 +1886,15 @@ describe("Theme destroy", () => {
     expect(root.style.colorScheme).toBe("");
     expect(root.style.getPropertyValue("--color-primary")).toBe("");
   });
+
+  it("should remove the color scheme class with revertDom when className is disabled", () => {
+    const theme = createTheme({ className: false }).init();
+    theme.set("dark");
+
+    theme.destroy({ revertDom: true });
+
+    expect(root.className).toBe("");
+  });
 });
 
 describe("Theme pre-paint script", () => {
@@ -1803,7 +1917,7 @@ describe("Theme pre-paint script", () => {
 
     expect(root.getAttribute("data-mode")).toBe("dark");
     expect(root.style.colorScheme).toBe("dark");
-    expect(root.className).toBe("app-dark dark");
+    expect(root.className).toBe("app-dark theme-dark dark");
     expect(root.style.getPropertyValue("--color-primary")).toBe("red");
   });
 
@@ -1861,6 +1975,22 @@ describe("Theme pre-paint script", () => {
     run(createTheme().getPrePaintScript());
 
     expect(root.className).toBe("app-shell theme-dark");
+  });
+
+  it("should apply the color scheme class for a theme with a custom name", () => {
+    root.className = "theme-light";
+    window.localStorage.setItem("app-theme-preference", "ink");
+
+    run(
+      createTheme({
+        themes: { paper: { colorScheme: "light" }, ink: { colorScheme: "dark" } },
+        defaultTheme: "paper",
+        systemTheme: { light: "paper", dark: "ink" },
+        className: false,
+      }).getPrePaintScript(),
+    );
+
+    expect(root.className).toBe("theme-dark");
   });
 
   it("should remove the dark class for a light theme when darkClass is enabled", () => {

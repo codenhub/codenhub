@@ -148,3 +148,178 @@ test("aligns a table's cells and caption to the inline start in either direction
     }
   }
 });
+
+/* The bubble is placed against the `.tooltip` wrapper, so it is centred on the
+   trigger only while the wrapper is the trigger's size. A layout that stretched
+   the wrapper moved the bubble off its trigger: in a `.field` or a `.stack` a
+   top bubble over a button centred on the full column, and in a row stretched
+   by a taller sibling a right bubble sat level with the row's middle. Read in
+   every layout helper, a grid, and a stretching flex row, at every placement,
+   in either direction, from the compiled CSS and the Tailwind build. */
+for (const [entry, url] of [
+  ["dist", `${ORIGIN}/shared/entry-vanilla.css`],
+  ["/tw", `${ORIGIN}/shared/entry-tw.css`],
+] as const) {
+  test(`centres a tooltip's bubble on its trigger in every layout, from ${entry}`, async ({ page }) => {
+    await page.setContent("<!doctype html><html><body></body></html>");
+    await page.addStyleTag({ url });
+
+    const layouts = {
+      stack: '<div class="stack" style="width: 480px">',
+      field: '<div class="field" style="width: 480px">',
+      cluster: '<div class="cluster" style="width: 480px; height: 160px; align-items: stretch">',
+      view: '<div class="view" style="width: 480px">',
+      "view vertical": '<div class="view vertical" style="width: 480px">',
+      "view horizontal": '<div class="view horizontal" style="width: 480px">',
+      "auto-grid": '<div class="auto-grid" style="width: 480px">',
+      grid: '<div style="display: grid; width: 480px; height: 160px">',
+      "stretch row": '<div style="display: flex; width: 480px; height: 160px">',
+    };
+    const failures: string[] = [];
+
+    for (const dir of ["ltr", "rtl"]) {
+      for (const [layout, open] of Object.entries(layouts)) {
+        for (const position of ["top", "bottom", "left", "right"]) {
+          // oxlint-disable-next-line no-await-in-loop -- one layout on the page at a time.
+          const read = await page.evaluate(
+            ([markup, side, direction]) => {
+              document.documentElement.dir = direction;
+              document.body.innerHTML = `<div style="padding: 120px">${markup}<span class="tooltip" data-state="open" data-tooltip-position="${side}"><button class="btn">Save</button><span class="tooltip-bubble">Saves the draft</span></span><div style="height: 120px; width: 40px"></div></div></div>`;
+              for (const animation of document.getAnimations()) {
+                animation.finish();
+              }
+
+              const rect = (selector: string) => document.querySelector(selector)!.getBoundingClientRect();
+              const trigger = rect(".tooltip > .btn");
+              const bubble = rect(".tooltip-bubble");
+
+              return {
+                vertical: side === "top" || side === "bottom",
+                offset:
+                  side === "top" || side === "bottom"
+                    ? bubble.left + bubble.width / 2 - (trigger.left + trigger.width / 2)
+                    : bubble.top + bubble.height / 2 - (trigger.top + trigger.height / 2),
+                gap:
+                  side === "top"
+                    ? trigger.top - bubble.bottom
+                    : side === "bottom"
+                      ? bubble.top - trigger.bottom
+                      : side === "left"
+                        ? trigger.left - bubble.right
+                        : bubble.left - trigger.right,
+              };
+            },
+            [open, position, dir] as const,
+          );
+          const label = `${dir} ${layout} ${position}`;
+
+          if (Math.abs(read.offset) > 1) {
+            failures.push(`${label}: bubble ${read.offset.toFixed(1)}px off the trigger's centre`);
+          }
+          if (read.gap < 0 || read.gap > 16) {
+            failures.push(`${label}: bubble ${read.gap.toFixed(1)}px from the trigger`);
+          }
+        }
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
+}
+
+/* A tooltip around a component that fills its line keeps it the width its
+   layout gives it. Sizing the wrapper to its content alone drew a full-width
+   `.ipt` in a 480px `.field` 215px wide, the width of its own `size`, and a
+   `.progress` 2px and a `.skeleton` 0px, because their `width: 100%` then had
+   nothing wider to fill. Every component whose rule sets `width: 100%` is
+   here. The bubble centres on the component, which is the wrapper's width
+   either way. */
+const CLASSED_FULL_WIDTH = {
+  ipt: '<input class="ipt" />',
+  textarea: '<textarea class="textarea"></textarea>',
+  select: '<select class="select"><option>One</option></select>',
+  "input-group": '<div class="input-group"><input class="ipt" /></div>',
+  progress: '<progress class="progress" value="40" max="100"></progress>',
+  skeleton: '<div class="skeleton"></div>',
+  field: '<div class="field"><input class="ipt" /></div>',
+  "data-table": '<table class="data-table"><tr><td>One</td></tr></table>',
+  "section-content": '<div class="section-content">One</div>',
+};
+for (const [entry, url, fields] of [
+  ["dist", `${ORIGIN}/shared/entry-vanilla.css`, CLASSED_FULL_WIDTH],
+  ["/tw", `${ORIGIN}/shared/entry-tw.css`, CLASSED_FULL_WIDTH],
+  [
+    "/native",
+    `${ORIGIN}/native/entry-vanilla.css`,
+    {
+      input: "<input />",
+      textarea: "<textarea></textarea>",
+      select: "<select><option>One</option></select>",
+      progress: '<progress value="40" max="100"></progress>',
+    },
+  ],
+] as const) {
+  test(`keeps a full-width component full width inside a tooltip, from ${entry}`, async ({ page }) => {
+    await page.setContent("<!doctype html><html><body></body></html>");
+    await page.addStyleTag({ url });
+
+    const failures: string[] = [];
+
+    for (const [name, markup] of Object.entries(fields)) {
+      // oxlint-disable-next-line no-await-in-loop -- one field on the page at a time.
+      const read = await page.evaluate((field) => {
+        document.body.innerHTML = `<div class="field" style="width: 480px"><label>Name</label><span class="tooltip" data-state="open">${field}<span class="tooltip-bubble">Help</span></span></div>`;
+        // A skeleton's sheen never ends, and finishing it throws.
+        for (const animation of document.getAnimations()) {
+          if (animation.effect?.getComputedTiming().endTime !== Infinity) {
+            animation.finish();
+          }
+        }
+
+        const trigger = document.querySelector(".tooltip > :first-child")!.getBoundingClientRect();
+        const bubble = document.querySelector(".tooltip-bubble")!.getBoundingClientRect();
+
+        return {
+          width: trigger.width,
+          offset: bubble.left + bubble.width / 2 - (trigger.left + trigger.width / 2),
+        };
+      }, markup);
+
+      if (Math.abs(read.width - 480) > 1) {
+        failures.push(`${name}: ${read.width.toFixed(1)}px wide in a 480px field`);
+      }
+      if (Math.abs(read.offset) > 1) {
+        failures.push(`${name}: bubble ${read.offset.toFixed(1)}px off the field's centre`);
+      }
+    }
+
+    expect(failures).toEqual([]);
+  });
+}
+
+/* The tooltip page tells a consumer whose own element fills its line to set
+   `width: auto` on the `.tooltip`; it has to beat the wrapper's
+   `fit-content` from either build. */
+for (const [entry, url] of [
+  ["dist", `${ORIGIN}/shared/entry-vanilla.css`],
+  ["/tw", `${ORIGIN}/shared/entry-tw.css`],
+] as const) {
+  test(`keeps a consumer's full-width element full width in a tooltip set to width: auto, from ${entry}`, async ({
+    page,
+  }) => {
+    await page.setContent("<!doctype html><html><body></body></html>");
+    await page.addStyleTag({ url });
+
+    const widths = await page.evaluate(() => {
+      const read = (tooltipStyle: string) => {
+        document.body.innerHTML = `<div class="stack" style="width: 480px"><span class="tooltip" data-state="open" style="${tooltipStyle}"><div style="width: 100%; height: 8px"></div><span class="tooltip-bubble">Help</span></span></div>`;
+        return document.querySelector(".tooltip > div")!.getBoundingClientRect().width;
+      };
+
+      return { bare: read(""), auto: read("width: auto") };
+    });
+
+    expect(widths.bare).toBeLessThan(10);
+    expect(widths.auto).toBeCloseTo(480, 0);
+  });
+}

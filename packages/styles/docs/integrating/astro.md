@@ -23,11 +23,22 @@ import "@codenhub/styles";
 </html>
 ```
 
-Every page that uses this layout loads the stylesheet once. Running Tailwind CSS v4? Import `@codenhub/styles/tw` through Astro's Tailwind integration instead — see [Tailwind CSS v4](./tailwind.md), including when an explicit `@source` is actually needed.
+Every page that uses this layout loads the stylesheet once. Astro's minimal template creates no layout; if your project has none, create this one and wrap your pages in it.
+
+Running Tailwind CSS v4? Set it up with `npx astro add tailwind`, which on Astro 5.2 and later adds the `@tailwindcss/vite` plugin and a `src/styles/global.css`; on an older release it sets up Tailwind CSS v3 instead. Replace that file's `@import "tailwindcss"` with `@import "@codenhub/styles/tw"`, and import the file in the layout in place of `@codenhub/styles`:
+
+```astro
+---
+// src/layouts/Layout.astro
+import "../styles/global.css";
+---
+```
+
+See [Tailwind CSS v4](./tailwind.md), including when an explicit `@source` is actually needed.
 
 ## Force a theme
 
-Apply `.dark` or `.light` on `<html>` to force a theme instead of following the system preference; see [Theming → Light and dark](../usage/theming.md#light-and-dark).
+Apply `data-theme="light"` or `data-theme="dark"` on `<html>` to force a theme instead of following the system preference; see [Theming → Light and dark](../usage/theming.md#light-and-dark).
 
 ## Next
 

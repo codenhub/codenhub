@@ -2,7 +2,7 @@
 title: Feedback
 description: Un botón que indica que está guardando, alertas, badges, placeholders de carga y barras de progreso, y lo que tu código debe mantener sincronizado con ellos.
 order: 3
-source: 90f3b926ce9f13e34183267232f56ec0ce38ab27
+source: b9e6381383bd60c3305a4d3df95041b68ed6c645
 ---
 
 # Feedback
@@ -33,21 +33,27 @@ Deshabilitar el botón evita que un segundo clic envíe el formulario dos veces.
 
 ## Confirmar el resultado con una alerta
 
-Cuando el guardado sale bien, muestra una alerta encima del formulario:
+Cuando el guardado sale bien, muestra una alerta encima del formulario. Los lectores de pantalla anuncian una región live cuando cambia su contenido, no cuando aparece, así que la región tiene que estar en la página antes que el mensaje. Renderiza un `<div role="status">` desnudo al cargar la página, vacío y sin clase, e inserta la `.alert` dentro cuando haya algo que decir:
 
 ```html
-<div class="alert success" role="status">Profile saved.</div>
+<div role="status">
+  <!-- Se inserta cuando el guardado sale bien: -->
+  <div class="alert success">Profile saved.</div>
+</div>
 ```
 
 `role="status"` hace que los lectores de pantalla anuncien el texto de forma educada, después de lo que estén leyendo. Para un error sobre el que el usuario debe actuar, usa `role="alert"`, que interrumpe:
 
 ```html
-<div class="alert destructive" role="alert">Your changes were not saved. Check your connection and try again.</div>
+<div role="alert">
+  <!-- Se inserta cuando el guardado falla: -->
+  <div class="alert destructive">Your changes were not saved. Check your connection and try again.</div>
+</div>
 ```
 
-Los lectores de pantalla anuncian una región live cuando cambia su contenido, así que renderiza la región vacía al cargar la página y pon el mensaje dentro, en lugar de insertar un nuevo elemento de alerta que ya contenga el texto. El paquete no añade rol, temporización ni botón de cierre; eso es cosa tuya.
+Deja el rol en el contenedor y no en la `.alert`. Una `.alert` vacía sigue dibujando su relleno, su tinte y su borde, así que una región que espera un mensaje en la página se vería como una caja vacía; el contenedor desnudo no ocupa espacio hasta que llega la alerta. Para borrar el mensaje, quita la alerta, no el contenedor. El paquete no añade rol, temporización ni botón de cierre; eso es cosa tuya.
 
-Una alerta es una fila con una separación de 0.75rem, así que un icono colocado antes del mensaje queda espaciado automáticamente. `.alert-icon` da a un icono un tamaño de 1.25rem y lo alinea con la primera línea de texto:
+Una alerta presenta su mensaje como un solo párrafo, así que un enlace o un `<strong>` dentro de él sigue en la línea junto a las palabras que lo rodean. Un icono colocado antes del mensaje queda al inicio de la primera línea, a 0.75rem del texto; las líneas que se ajustan más allá del icono continúan por debajo de él. `.alert-icon` da a un icono un tamaño de 1.25rem, la altura de la primera línea de la alerta:
 
 ```html
 <div class="alert warning" role="status">

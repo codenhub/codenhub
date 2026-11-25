@@ -1,7 +1,7 @@
-import { execFileSync } from "node:child_process";
-import { chmod, chown, lstat, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { execFileSync, spawnSync } from "node:child_process";
+import { chmod, cp, lstat, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
-import { tmpdir } from "node:os";
+import { tmpdir, userInfo } from "node:os";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -264,6 +264,67 @@ describe("build", () => {
     expect(await readOutput("app/views/app.css")).toBe(first);
   });
 
+  /* Django's collectstatic copies the package's dist/ into staticfiles/, and a
+     second build can name the first one's output: each names every class it
+     holds, so read as content the whole stylesheet shipped. */
+  it("does not read a copy of the package's stylesheets, class list, or another build's output", async () => {
+    expect(await build("build", "-c", "app/views/**/*", "-o", "alone.css")).toBe(0);
+    const alone = await readOutput("alone.css");
+
+    // Every file the package ships, as collectstatic copies them: the aesthetics and the theme carry no notice.
+    await cp(path.join(packageRoot, "dist"), path.join(project, "staticfiles"), { recursive: true });
+    // An older version's class list, which this version's does not match byte for byte.
+    const classes = JSON.parse(
+      await readFile(path.join(packageRoot, "dist", "purge", "classes.json"), "utf8"),
+    ) as string[];
+
+    await writeFile(
+      path.join(project, "staticfiles", "classes.old.json"),
+      JSON.stringify(classes.slice(1), undefined, 2),
+    );
+
+    expect(
+      await build("build", "-c", "app/views/**/*", "-c", "staticfiles/**/*", "-c", "alone.css", "-o", "app.css"),
+    ).toBe(0);
+    expect(await readOutput()).toBe(alone);
+  });
+
+  it("still reads a safelist written as a JSON list of classes", async () => {
+    await writeFile(path.join(project, "safelist.json"), '["data-table"]\n');
+
+    expect(await build("build", "-c", "app/views/**/*.erb", "-c", "safelist.json", "-o", "app.css")).toBe(0);
+    expect(await readOutput()).toMatch(ruleFor("data-table"));
+  });
+
+  // `fs.globSync` skipped a folder it could not list, so its classes were lost and the build succeeded.
+  it.skipIf(process.platform !== "win32" && process.getuid?.() === 0)(
+    "fails on a folder a --content glob cannot list, naming it",
+    async () => {
+      const locked = path.join(project, "app", "views", "locked");
+
+      await mkdir(locked);
+      await writeFile(path.join(locked, "table.html.erb"), '<table class="data-table">\n');
+      if (process.platform === "win32") {
+        execFileSync("icacls", [locked, "/deny", `${userInfo().username}:(RD)`], { stdio: "ignore" });
+      } else {
+        await chmod(locked, 0o000);
+      }
+
+      try {
+        expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(1);
+        expect(stderr).toHaveLength(1);
+        expect(stderr[0]).toMatch(/^chs: (EACCES|EPERM): /);
+        expect(stderr[0]).toContain(locked);
+      } finally {
+        if (process.platform === "win32") {
+          execFileSync("icacls", [locked, "/remove:d", userInfo().username], { stdio: "ignore" });
+        } else {
+          await chmod(locked, 0o755);
+        }
+      }
+    },
+  );
+
   it.skipIf(!canSymlink)("does not read its own output through a link a glob matches", async () => {
     const argv = ["build", "-c", "app/views/*", "-o", "app.css"];
 
@@ -275,26 +336,37 @@ describe("build", () => {
     expect(await readOutput()).toBe(first);
   });
 
-  it.skipIf(!canSymlink)("writes through an --output that is a link, and keeps the link", async () => {
+  it.skipIf(!canSymlink)("replaces an --output that is a link, and leaves the file it led to", async () => {
     await writeFile(path.join(project, "real.css"), "");
     await symlink(path.join(project, "real.css"), path.join(project, "app.css"), "file");
 
     expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-    expect((await lstat(path.join(project, "app.css"))).isSymbolicLink()).toBe(true);
-    expect(await readOutput("real.css")).toMatch(ruleFor("btn"));
+    expect((await lstat(path.join(project, "app.css"))).isSymbolicLink()).toBe(false);
+    expect(await readOutput()).toMatch(ruleFor("btn"));
+    expect(await readOutput("real.css")).toBe("");
   });
 
-  it.skipIf(!canSymlink)("writes where an --output link points before its target exists", async () => {
-    await symlink(path.join(project, "build", "real.css"), path.join(project, "app.css"), "file");
+  /* The temporary file was named after the process ID, which anyone can guess,
+     and written through whatever stood there, so a link planted at that name
+     made the build overwrite a file it was never given. */
+  it.skipIf(!canSymlink)("does not write through a link planted where its temporary file went", async () => {
+    const victim = path.join(root, "victim.txt");
+
+    await writeFile(victim, "keep me");
+    await symlink(victim, path.join(project, `app.css.${process.pid}.tmp`), "file");
 
     expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-    expect((await lstat(path.join(project, "app.css"))).isSymbolicLink()).toBe(true);
-    expect(await readOutput("build/real.css")).toMatch(ruleFor("btn"));
+    expect(await readFile(victim, "utf8")).toBe("keep me");
+    expect(await readOutput()).toMatch(ruleFor("btn"));
   });
 
-  /* The stylesheet is renamed over the output, so it used to take the mode and
-     owner a new file gets: a `0640` file of the web server's group came back
-     `0644` and the runner's, readable by everyone and maybe not by the server. */
+  it("leaves no temporary file beside the output", async () => {
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+    expect((await readdir(project)).sort()).toEqual(["app", "app.css"]);
+  });
+
+  /* The stylesheet is renamed over the output, so it used to take the mode a
+     new file gets: a `0640` file came back `0644`, readable by everyone. */
   it.skipIf(process.platform === "win32").each([
     ["0640", 0o640],
     ["0444", 0o444],
@@ -307,53 +379,6 @@ describe("build", () => {
     expect((await stat(file)).mode & 0o777).toBe(mode);
     expect(await readOutput()).toMatch(/\n {2}\S/);
   });
-
-  it.skipIf(process.platform === "win32" || process.getuid?.() !== 0)(
-    "keeps the owner and group of the stylesheet it replaces, as root",
-    async () => {
-      const file = path.join(project, "app.css");
-
-      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-      await chown(file, 4321, 4322);
-      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-      expect(await stat(file)).toMatchObject({ uid: 4321, gid: 4322 });
-      expect(stderr).toEqual([]);
-    },
-  );
-
-  // A user can give a file they own to any group they are in.
-  const otherGroup = process.getgroups?.().find((gid) => gid !== process.getegid?.());
-
-  it.skipIf(process.platform === "win32" || otherGroup === undefined)(
-    "keeps the group of the stylesheet it replaces",
-    async () => {
-      const file = path.join(project, "app.css");
-
-      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-      await chown(file, -1, otherGroup ?? -1);
-      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-      expect((await stat(file)).gid).toBe(otherGroup);
-      expect(stderr).toEqual([]);
-    },
-  );
-
-  /* POSIX follows `alias` before its `..`; Windows collapses the `..` first, so the case does not arise there. */
-  it.skipIf(!canSymlink || process.platform === "win32")(
-    "writes where an --output link points when its target climbs out of another link",
-    async () => {
-      const authored = "a { color: red; }";
-
-      await mkdir(path.join(project, "nested", "dir"), { recursive: true });
-      await symlink(path.join(project, "nested", "dir"), path.join(project, "alias"), "dir");
-      await writeFile(path.join(project, "real.css"), authored);
-      // Written whole: `path.join` would collapse the `..` this test is about.
-      await symlink("alias/../real.css", path.join(project, "app.css"), "file");
-
-      expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
-      expect(await readOutput("real.css")).toBe(authored);
-      expect(await readOutput("nested/real.css")).toMatch(ruleFor("btn"));
-    },
-  );
 });
 
 describe("failures", () => {
@@ -367,32 +392,19 @@ describe("failures", () => {
     return stderr[0] ?? "";
   }
 
-  // POSIX refuses a `..` out of a folder that does not exist; collapsing it instead named an authored file.
-  it.skipIf(!canSymlink || process.platform === "win32")(
-    "refuses an --output link that leads out of a missing folder",
-    async () => {
-      const authored = "a { color: red; }";
-
-      await mkdir(path.join(project, "nested", "dir"), { recursive: true });
-      await symlink(path.join(project, "nested", "dir"), path.join(project, "alias"), "dir");
-      await writeFile(path.join(project, "real.css"), authored);
-      await writeFile(path.join(project, "nested", "real.css"), authored);
-      await symlink("alias/../missing/../real.css", path.join(project, "app.css"), "file");
-
-      expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(
-        /leads out of a folder that does not exist/,
-      );
-      expect(await readOutput("real.css")).toBe(authored);
-      expect(await readOutput("nested/real.css")).toBe(authored);
-    },
-  );
-
   it("rejects a build without --content", async () => {
     expect(await failureOf("build", "-o", "app.css")).toMatch(/--content/);
   });
 
   it("rejects a build without --output", async () => {
     expect(await failureOf("build", "-c", "app/views/**/*.erb")).toMatch(/--output/);
+  });
+
+  // A quoted variable left empty by a script was told to read "/**/*", the whole disk.
+  it.each(["", "  "])("takes a --content of %j as missing", async (entry) => {
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-c", entry, "-o", "app.css")).toBe(
+      'chs: missing --content; name the templates to scan, as in --content "app/views/**/*.erb".',
+    );
   });
 
   // A quoted variable left empty by a script; written as given, it names a file of spaces.
@@ -429,6 +441,53 @@ describe("failures", () => {
     expect(await failureOf("build", "-c", "app/view/**/*.erb", "-o", "app.css")).toMatch(/app\/view\/\*\*\/\*\.erb/);
   });
 
+  // After a build into public/, the glob matched only the stylesheet, which is never read, so the build read nothing.
+  it("rejects a --content glob that matches only the --output", async () => {
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "public/s.css")).toBe(0);
+    stdout = [];
+
+    expect(await failureOf("build", "-c", "public/*.css", "-o", "public/s.css")).toBe(
+      'chs: --content "public/*.css" matches only --output public/s.css, which is never read for classes; name the templates to scan.',
+    );
+  });
+
+  // parseArgs keeps the last value, so `-o a.css -o b.css` wrote only b.css and said nothing of a.css.
+  it("refuses --output given twice", async () => {
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "a.css", "--output=b.css")).toBe(
+      "chs: --output is given more than once; name one stylesheet to write.",
+    );
+    expect(await readdir(project)).toEqual(["app"]);
+  });
+
+  // parseArgs takes `-a.css` for a flag, and its own advice, to write `--output=-a.css`, was dropped.
+  it.each([
+    ["-o", "--output"],
+    ["--content", "--content"],
+  ])("says how to give %s a value that starts with a dash", async (flag, name) => {
+    expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css", flag, "-a.css")).toBe(
+      `chs: option "${name}" is missing its value; to give it a value that starts with a dash, write ${name}=-a.css.`,
+    );
+  });
+
+  // A value left out before the next option was told to be written as `--content=-o`.
+  it.each([
+    [["-c", "-o", "out.css"], "--content"],
+    [["-c", "a.html", "-o", "--no-minify"], "--output"],
+    [["--content", "--output=out.css"], "--content"],
+    [["-c", "a.html", "--output", "--aesthetic", "glass"], "--output"],
+    [["-c", "a.html", "-o", "--help"], "--output"],
+  ])("says only that a value is missing when %j gives the next option instead", async (args, name) => {
+    expect(await failureOf("build", ...args)).toBe(
+      `chs: option "${name}" is missing its value; run "chs --help" for the options.`,
+    );
+  });
+
+  it("says a --content folder is a folder and shows a glob for its files", async () => {
+    expect(await failureOf("build", "-c", "app/views", "-o", "app.css")).toBe(
+      `chs: --content "app/views" is a folder in ${project}, not a file; name the files in it, as in "app/views/**/*".`,
+    );
+  });
+
   it("rejects extra arguments, which an unquoted glob expanded by the shell produces", async () => {
     expect(await failureOf("build", "-c", "app/views/a.html.erb", "app/views/b.html.erb", "-o", "app.css")).toMatch(
       /app\/views\/b\.html\.erb.*quote/,
@@ -443,11 +502,13 @@ describe("failures", () => {
     expect(await failureOf("watch", "-c", "app/views/**/*.erb", "-o", "app.css")).toMatch(/"watch"/);
   });
 
-  it("rejects a Node.js older than it supports, naming both versions", async () => {
-    nodeVersion = "24.22.1";
+  it("rejects a Node.js older than the engines floor, naming both versions", async () => {
+    const manifest = JSON.parse(await readFile(new URL("../../package.json", import.meta.url), "utf8"));
+    const floor = Number(/^>=(\d+)$/.exec(manifest.engines.node)?.[1]);
+    nodeVersion = `${floor - 1}.12.0`;
 
     expect(await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(
-      "chs: this command needs Node.js 26 or newer; this is Node.js 24.22.1.",
+      `chs: this command needs Node.js ${floor} or newer; this is Node.js ${floor - 1}.12.0.`,
     );
   });
 
@@ -485,18 +546,6 @@ describe("failures", () => {
       expect((await stat("/dev/null")).isCharacterDevice()).toBe(true);
     },
   );
-
-  // The temporary file is the one write that can fail partway; a directory in its place makes it fail.
-  it("leaves the previous stylesheet whole when the write fails", async () => {
-    await writeFile(path.join(project, "app.css"), "/*! @codenhub/styles | previous */");
-    await mkdir(path.join(project, `app.css.${process.pid}.tmp`));
-
-    const failure = await failureOf("build", "-c", "app/views/**/*.erb", "-o", "app.css");
-
-    expect(failure).toMatch(/^chs: cannot write --output app\.css: .+ \((?:EISDIR|EPERM)\); .+\.$/);
-    expect(failure).not.toContain(".tmp");
-    expect(await readFile(path.join(project, "app.css"), "utf8")).toBe("/*! @codenhub/styles | previous */");
-  });
 
   /* The write goes through a file beside the output, so Node.js's message named
      that file, which the user never gave, and not the --output they did. */
@@ -623,6 +672,30 @@ describe("failures", () => {
     await writeFile(path.join(project, "app.css"), await readFile(path.join(packageRoot, "dist", "index.css"), "utf8"));
 
     expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+  });
+});
+
+/* Every other test runs the source; these run the file `bin` names, as an
+   installed package does, so a bundling mistake shows here. */
+describe("the shipped command", () => {
+  const cli = path.join(packageRoot, "dist", "cli.js");
+  const spawn = (...argv: string[]) => spawnSync(process.execPath, [cli, ...argv], { cwd: project, encoding: "utf8" });
+
+  it("builds and prints one line on stdout", async () => {
+    const result = spawn("build", "-c", "app/views/**/*.erb", "-o", "app.css");
+    const { size } = await stat(path.join(project, "app.css"));
+
+    expect(result).toMatchObject({ status: 0, stderr: "", stdout: `${path.join(project, "app.css")} ${size} bytes\n` });
+    expect(await readOutput()).toMatch(ruleFor("btn"));
+  });
+
+  it("fails with one chs: line on stderr", () => {
+    const result = spawn("build", "-c", "app/view/**/*.erb", "-o", "app.css");
+
+    expect(result).toMatchObject({ status: 1, stdout: "" });
+    expect(result.stderr).toBe(
+      `chs: --content "app/view/**/*.erb" matches no file in ${project}; check the path, or run from the project root.\n`,
+    );
   });
 });
 

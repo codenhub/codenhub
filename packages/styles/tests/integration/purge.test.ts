@@ -121,7 +121,6 @@ describe("the stylesheets the command reads", () => {
     expect([...inSource].filter((name) => !droppable.has(name)).sort()).toEqual([
       "dark",
       "disabled",
-      "light",
       "theme-dark",
       "theme-light",
     ]);
@@ -141,5 +140,12 @@ describe("format", () => {
     expect(format(parse("@layer a{.btn,.card{color:red;margin:0}}"))).toBe(
       "@layer a {\n  .btn,\n  .card {\n    color:red;\n    margin:0;\n  }\n}\n",
     );
+  });
+
+  /* `--x: ;` is a custom property whose value is a space, which Lightning CSS
+     keeps in the minified build; trimmed to `--x:;`, it became one whose value
+     is empty, which the readable build should not change. */
+  it("keeps a custom property whose value is whitespace as a single space", () => {
+    expect(format(parse(".box{--_d-holds-ink:  ;color:red}"))).toBe(".box {\n  --_d-holds-ink: ;\n  color:red;\n}\n");
   });
 });

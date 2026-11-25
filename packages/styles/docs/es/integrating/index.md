@@ -3,7 +3,7 @@ title: Visión general
 description: Cómo se carga la hoja de estilos en el build de un framework, y qué guía seguir.
 group: Integración
 order: 2
-source: 90c207e467034bfeb56dba5cfdfa6ad749158af7
+source: 52e0563bc739ebe40d0bbc3957ccaa946633ff7e
 ---
 
 # Integración
@@ -17,7 +17,7 @@ Todos los stacks hacen los mismos dos imports, desde el mismo tipo de lugar: un 
 1. Un [punto de entrada](../setup.md#todos-los-puntos-de-entrada): el compilado `@codenhub/styles` para cualquier build, o `@codenhub/styles/tw` cuando el proyecto ya usa Tailwind CSS v4.
 2. `@codenhub/styles/aesthetics` (o `/aesthetics/tw`), solo si el proyecto usa una [estética](../usage/aesthetics.md). Puede ir antes o después del punto de entrada, porque cada punto de entrada declara las [capas de cascada](../setup.md#capas-de-cascada) antes de usar una.
 
-Importar desde un solo lugar importa por dos motivos. Algunos frameworks solo _permiten_ CSS global desde un archivo raíz designado y, si no, el build falla; el Pages Router de Next.js es uno de ellos, consulta [Next.js → Solución de problemas](./nextjs.md#solución-de-problemas). Donde un framework lo permite de forma más amplia, como hace el App Router de Next.js, importar desde la raíz sigue siendo la opción recomendada para que el orden del CSS sea predecible; además, importar en cada componente cargaría las mismas reglas de reset y de tokens una vez por componente en lugar de una vez por aplicación.
+Importar desde un solo lugar importa por dos motivos. Algunos frameworks solo _permiten_ tus propios archivos CSS globales desde un archivo raíz designado y, si no, el build falla; el Pages Router de Next.js es uno de ellos, y el archivo CSS que contiene `/tw` es uno de los tuyos; consulta [Next.js → Solución de problemas](./nextjs.md#solución-de-problemas). Donde un framework lo permite de forma más amplia, importar desde la raíz sigue siendo la opción recomendada, porque así el orden en que se cargan las hojas de estilos no depende de qué página o componente abrió primero el lector.
 
 ## Qué guía seguir
 
@@ -59,6 +59,25 @@ Luego importa el paquete con el prefijo `npm:` de Parcel, que le indica que el n
 ```
 
 Los demás puntos de entrada compilados funcionan igual, como `@codenhub/styles/dist/aesthetics/neobrutalism.css`.
+
+### Ejecutores de tests
+
+Un test de componente que importa un archivo que importa `@codenhub/styles` carga también la hoja de estilos. Vitest no necesita nada: resuelve el mapa de `exports` del paquete al archivo `.css` y, por defecto, no procesa CSS en los tests. Jest no procesa CSS en absoluto, y la línea habitual de `moduleNameMapper` para archivos `.css` no alcanza este import, porque `@codenhub/styles` y `@codenhub/styles/aesthetics/pixel` no tienen extensión; Jest lee entonces la hoja de estilos como JavaScript y falla con `SyntaxError: Invalid or unexpected token`. Mapea los especificadores del paquete al mismo módulo vacío:
+
+```js
+// jest.config.js
+module.exports = {
+  moduleNameMapper: {
+    "^@codenhub/styles(/.*)?$": "<rootDir>/styleMock.js",
+    "\\.css$": "<rootDir>/styleMock.js",
+  },
+};
+```
+
+```js
+// styleMock.js
+module.exports = {};
+```
 
 ## Comprobar que funciona
 

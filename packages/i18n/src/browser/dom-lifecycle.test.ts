@@ -209,6 +209,36 @@ describe("initializeBrowserI18n document integration", () => {
     }
   });
 
+  it("translates an element that script puts inside a blocked element, as 0.4.0 does", async () => {
+    const container = document.createElement("xmp");
+    const span = document.createElement("span");
+    span.setAttribute("data-i18n", "greeting");
+    span.textContent = "Own";
+    container.append(span);
+    document.body.append(container);
+
+    const binding = await initializeBrowserI18n({ i18n: createManager(), locale: "fr", root: document.body });
+
+    expect(span.textContent).toBe("Bonjour");
+    binding.disconnect();
+  });
+
+  it("translates a template's content passed as the root", async () => {
+    const template = document.createElement("template");
+    template.innerHTML = '<p data-i18n="greeting">Own</p>';
+    document.body.append(template);
+
+    const binding = await initializeBrowserI18n({
+      i18n: createManager(),
+      locale: "fr",
+      root: template.content,
+      syncDocument: false,
+    });
+
+    expect(template.content.querySelector("p")?.textContent).toBe("Bonjour");
+    binding.disconnect();
+  });
+
   it("settles when two observing bindings share an element", async () => {
     document.body.innerHTML = '<div id="widget"></div>';
     const widget = document.querySelector("#widget")!;
@@ -358,6 +388,47 @@ describe("initializeBrowserI18n document integration", () => {
     await flushMutations();
 
     expect(paragraph.textContent).toBe("Ola");
+    binding.disconnect();
+  });
+
+  it("keeps the HTML text as the fallback of a leaf whose text the binding writes back over", async () => {
+    document.body.innerHTML = '<button data-i18n="frOnly">Place order</button>';
+    const button = document.querySelector("button")!;
+    const i18n = createManager();
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+
+    button.textContent = "Placing order…";
+    await flushMutations();
+    expect(button.textContent).toBe("Francais seulement");
+    await i18n.setLocale("en");
+
+    expect(button.textContent).toBe("Place order");
+    await i18n.setLocale("fr");
+    button.removeAttribute("data-i18n");
+    await flushMutations();
+    expect(button.textContent).toBe("Place order");
+    binding.disconnect();
+  });
+
+  it("keeps the HTML text as the fallback of a leaf whose text is replaced just before a locale change", async () => {
+    document.body.innerHTML = '<button data-i18n="frOnly">Place order</button>';
+    const button = document.querySelector("button")!;
+    const i18n = createManager();
+    // Registered before the binding, so the text is replaced just before the binding retranslates the root.
+    i18n.addEventListener("locale-change", () => {
+      if (i18n.locale === "pt-BR") {
+        button.textContent = "Placing order…";
+      }
+    });
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe: true });
+
+    await i18n.setLocale("pt-BR");
+    expect(button.textContent).toBe("Place order");
+    button.textContent = "Placing order…";
+    await flushMutations();
+    await i18n.setLocale("ar");
+
+    expect(button.textContent).toBe("Place order");
     binding.disconnect();
   });
 
@@ -564,14 +635,13 @@ describe("initializeBrowserI18n document integration", () => {
       }
     }
     customElements.define("echo-button", EchoButton, { extends: "button" });
-    document.body.innerHTML = "<div></div>";
-    const root = document.querySelector("div")!;
-    const i18n = createManager();
-    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root, observe: true });
     const button = document.createElement("button", { is: "echo-button" });
-    button.setAttribute("data-i18n-aria-label", "greeting");
+    document.body.append(button);
+    const i18n = createManager();
+    // A component is translated only as the root itself, since the binding never reads into one from outside.
+    const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: button, observe: true });
 
-    root.append(button);
+    button.setAttribute("data-i18n-aria-label", "greeting");
     await flushMutations();
     await flushMutations();
 
@@ -666,6 +736,63 @@ describe("initializeBrowserI18n document integration", () => {
     expect(document.querySelector("body > span")?.textContent).toBe("Bonjour");
     expect(reported).toEqual([failure, failure]);
   });
+
+  // A throwing handler is a miss, so the element shows its HTML value rather than the earlier key's or locale's text.
+  it.each([
+    { change: "its key changes to a missing one", target: "text", observe: true },
+    { change: "its key changes to a missing one", target: "text", observe: false },
+    { change: "its key changes to a missing one", target: "attribute", observe: true },
+    { change: "its key changes to a missing one", target: "attribute", observe: false },
+    { change: "the new locale lacks its key", target: "text", observe: false },
+    { change: "the new locale lacks its key", target: "attribute", observe: false },
+  ])(
+    "shows the HTML $target and reports the error when $change and onMissingKey throws (observe: $observe)",
+    async ({ change, target, observe }) => {
+      const keyAttribute = target === "text" ? "data-i18n" : "data-i18n-title";
+      document.body.innerHTML =
+        target === "text" ? '<p data-i18n="frOnly">Own</p>' : '<p data-i18n-title="frOnly" title="Own"></p>';
+      const paragraph = document.querySelector("p")!;
+      const read = () => (target === "text" ? paragraph.textContent : paragraph.getAttribute("title"));
+      const failure = new Error("missing key");
+      let shouldThrow = false;
+      const i18n = createManager({
+        onMissingKey: () => {
+          if (shouldThrow) {
+            throw failure;
+          }
+        },
+      });
+      const binding = await initializeBrowserI18n({ i18n, locale: "fr", root: document.body, observe });
+      expect(read()).toBe("Francais seulement");
+      const reported: unknown[] = [];
+      const onError = (event: ErrorEvent) => {
+        reported.push(event.error);
+        event.preventDefault();
+      };
+      window.addEventListener("error", onError);
+      shouldThrow = true;
+
+      try {
+        if (change === "the new locale lacks its key") {
+          await i18n.setLocale("en");
+        } else {
+          paragraph.setAttribute(keyAttribute, "missing");
+          if (observe) {
+            await flushMutations();
+          } else {
+            await i18n.setLocale("pt-BR");
+          }
+        }
+      } finally {
+        window.removeEventListener("error", onError);
+        binding.disconnect();
+      }
+
+      expect(read()).toBe("Own");
+      expect(paragraph.hasAttribute("lang")).toBe(false);
+      expect(reported).toEqual([failure]);
+    },
+  );
 
   it("does not translate an element added to the root and moved outside it before observation runs", async () => {
     document.body.innerHTML = '<div id="root"></div><div id="outside"></div>';
@@ -892,6 +1019,30 @@ describe("initializeBrowserI18n binding lifecycle", () => {
     expect(document.documentElement.dir).toBe("rtl");
     expect(document.querySelector("p")?.textContent).toBe("Marhaba");
     binding.disconnect();
+  });
+
+  // A re-init that switches the language dispatches `ready` and `locale-change`, which is still one change to the page.
+  type Manager = ReturnType<typeof createManager>;
+  it.each([
+    { step: "the first init", run: undefined },
+    { step: "setLocale()", run: (i18n: Manager) => i18n.setLocale("fr") },
+    { step: "a re-init that switches locale", run: (i18n: Manager) => i18n.init({ locale: "fr" }) },
+    { step: "a re-init of the same locale", run: (i18n: Manager) => i18n.init({ locale: "en" }) },
+  ])("translates the page once and reports each missing key once after $step", async ({ run }) => {
+    document.body.innerHTML = '<p data-i18n="missing">Fallback</p><p data-i18n-title="gone">Other</p>';
+    const missed: string[] = [];
+    const i18n = createManager({ onMissingKey: (key) => missed.push(key) });
+    const binding = await initializeBrowserI18n({ i18n, locale: "en", root: document.body });
+    try {
+      if (run !== undefined) {
+        missed.length = 0;
+        await run(i18n);
+      }
+
+      expect(missed.sort()).toEqual(["gone", "missing"]);
+    } finally {
+      binding.disconnect();
+    }
   });
 
   it("releases ownership and browser hooks when observer setup fails", async () => {

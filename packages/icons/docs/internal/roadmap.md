@@ -1,6 +1,6 @@
 ---
 status: DRAFT
-last_updated: 2026-11-16
+last_updated: 2026-11-22
 scope: `@codenhub/icons` direction and open questions.
 ---
 
@@ -9,6 +9,10 @@ scope: `@codenhub/icons` direction and open questions.
 ## Purpose
 
 Durable direction for `@codenhub/icons` that does not yet belong in the root `docs/roadmap.md`. [Registry architecture](./registry-architecture.md) owns the current design.
+
+## Direction
+
+- **A build tool is an adapter, not the path.** `@codenhub/icons` works the same in a project that runs no build tool at all: `chi build` writes the icons a project's files use, and the Tailwind CSS, Vite, and PostCSS plugins are adapters for projects that already run one, never a requirement. This follows the direction `@codenhub/styles` records in [A build the package owns](../../../styles/docs/internal/roadmap.md#a-build-the-package-owns-with-tailwind-as-an-adapter), and the adapter rule of [Few dependencies](../../../../docs/guidelines/code.md#few-dependencies). Rejected: the Tailwind plugin as the main route, with `chi build` a fallback, which ties what a project without Tailwind gets to a tool it does not run.
 
 ## Planned
 

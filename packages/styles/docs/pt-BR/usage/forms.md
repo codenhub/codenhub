@@ -2,7 +2,7 @@
 title: Formulários
 description: Campos com rótulo, dicas e erros, ícones e prefixos fixos, selects e toggles de checkbox, radio e switch.
 order: 2
-source: f91a53bc38fba0047f74d883388a36f2bc3d22ae
+source: ee3488b3d60936482c5bd1f9f5c4d7835c12db89
 ---
 
 # Formulários
@@ -42,10 +42,12 @@ Os cantos acompanham o tamanho, como num botão. Um `.textarea` mantém a altura
 
 ```html
 <div class="cluster tight">
-  <input class="ipt sm" aria-label="Coupon code" />
+  <input class="ipt sm" aria-label="Coupon code" style="flex: 1 1 0" />
   <button class="btn sm" type="button">Apply</button>
 </div>
 ```
+
+Um controle de texto ocupa a largura toda do seu contêiner, então numa linha ele empurraria o botão para a linha seguinte. `flex: 1 1 0` faz ele dividir a linha, ficando com o que o botão deixa.
 
 ## Mostre um erro de validação
 
@@ -141,7 +143,7 @@ Um `.select` também funciona num grupo. O grupo remove o padding lateral do con
 
 Qualquer elemento serve de adorno: uma classe de ícone, um `<svg>` inline, um `<img>` ou texto. O pacote não entrega ícones para campos, porque uma imagem embutida não conseguiria acompanhar a cor do seu texto, o seu tema ou a sua estética.
 
-O grupo lê intenção e apresentação do mesmo jeito que um `.ipt` sozinho: `.input-group.primary` colore a borda e o texto digitado, e `.input-group.soft.edgeless` é um campo afundado na página. Coloque a intenção no grupo, não no controle de dentro: o grupo desenha o campo, então o texto do controle recebe a intenção do grupo, e uma classe de intenção no controle não tem efeito. `aria-invalid="true"` ou `disabled` no controle de dentro se aplica ao grupo inteiro, e o mesmo vale para qualquer um dos dois no próprio grupo. O anel de foco do grupo aparece quando o campo dele tem foco, então, diferente de um campo sozinho, ele também aparece depois de um clique do mouse. Um botão dentro do grupo, como um botão de limpar, desenha o seu próprio anel quando tem foco, e o grupo não desenha nenhum: um único anel sempre marca o único controle que tem foco.
+O grupo lê intenção e apresentação do mesmo jeito que um `.ipt` sozinho: `.input-group.primary` colore a borda e o texto digitado, e `.input-group.soft.edgeless` é um campo afundado na página. Coloque a intenção no grupo, não no controle de dentro: o grupo desenha o campo, então o texto do controle recebe a intenção do grupo, e uma classe de intenção no controle não tem efeito. `aria-invalid="true"` no controle de dentro se aplica ao grupo inteiro, e o mesmo vale ao desabilitá-lo com qualquer um de `disabled`, `aria-disabled="true"`, `data-disabled` ou `.disabled`: o grupo fica esmaecido e deixa de reagir ao hover. Qualquer um dos dois estados no próprio grupo faz o mesmo. O anel de foco do grupo aparece quando o campo dele tem foco, então, diferente de um campo sozinho, ele também aparece depois de um clique do mouse. Um botão dentro do grupo, como um botão de limpar, desenha o seu próprio anel quando tem foco, e o grupo não desenha nenhum: um único anel sempre marca o único controle que tem foco.
 
 ## Decorações do navegador
 
@@ -197,6 +199,7 @@ A tela de configurações tem três tipos de toggle: um checkbox para optar por 
 
 - `.checkbox` vai em `type="checkbox"`, `.radio` em `type="radio"` e `.switch` em `type="checkbox"`. Dê você mesmo `role="switch"` a um switch, para que ele seja anunciado como ligado ou desligado, e não como marcado.
 - `.cluster.tight` no `<label>` alinha o controle com o texto e deixa um espaçamento de 0.5rem.
+- Um `<legend>` num fieldset `.stack` fica afastado da primeira opção pelo espaçamento da stack, como as opções ficam umas das outras. O navegador desenha um legend fora do layout do seu fieldset, então o espaçamento sozinho nunca chegava até ele.
 - Um checkbox com a propriedade `indeterminate` definida, para um grupo em que só alguns itens estão marcados, mostra um traço, e mantém o traço mesmo quando também está `checked`, como faz o checkbox nativo do navegador. Defina-a por script (`input.indeterminate = true`); não existe atributo para isso.
 
 ### Cores de marcado e desmarcado
@@ -246,6 +249,17 @@ Em repouso, a borda de um campo é propositalmente mais clara que 3:1 em relaç�
 ## Controles desabilitados
 
 `disabled`, `aria-disabled="true"`, `data-disabled` ou `.disabled` num controle o desenham com opacidade reduzida e cursor de não permitido. Assim como nos botões, só o atributo `disabled` impede a digitação; os outros mudam apenas a aparência.
+
+## Campos somente leitura
+
+`readonly` num `.ipt` ou num `.textarea` impede que o valor seja editado, mas o deixa focável, selecionável e enviado com o formulário. O campo fica em repouso na cor discreta de campo, `--color-foreground`, não muda sob o ponteiro e mantém o texto em intensidade total e o seu anel de foco, para ser lido como um valor a ler, e não como um lugar para digitar. Ele não fica esmaecido: esmaecer diz que um controle está indisponível, e um valor somente leitura continua ali para ser lido e copiado. Um `.input-group` cujo campo é somente leitura fica em repouso do mesmo jeito.
+
+```html
+<div class="field">
+  <label class="label" for="account-id">Account ID</label>
+  <input class="ipt" id="account-id" name="account-id" value="acct_4821" readonly />
+</div>
+```
 
 ## Criando o seu próprio controle
 

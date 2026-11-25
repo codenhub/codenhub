@@ -1,3 +1,4 @@
+import { randomBytes } from "node:crypto";
 import { existsSync, readFileSync, realpathSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import path from "node:path";
@@ -17,7 +18,7 @@ export interface CliIo {
 }
 
 const BIN = "chs";
-const MIN_NODE_MAJOR = 26;
+const MIN_NODE_MAJOR = 24;
 /* `./aesthetics/tw` is the Tailwind source of every aesthetic, not an aesthetic
    named `tw`, which the path therefore rules out as a name. */
 const AESTHETIC_EXPORT = /^\.\/aesthetics\/(?!tw$)([^/]+)$/;
@@ -80,7 +81,7 @@ export async function run(argv: readonly string[], io: CliIo): Promise<number> {
 }
 
 function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "version" {
-  const { values, positionals } = parseFlags(argv);
+  const { values, positionals, tokens } = parseFlags(argv);
 
   if (values.help) {
     return "help";
@@ -102,8 +103,14 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
       `unexpected argument "${extra[0]}"; quote each --content glob so the shell does not expand it, as in --content "app/views/**/*.erb".`,
     );
   }
-  if (!values.content?.length) {
+  // A quoted variable left empty, as in `-c "$TEMPLATES"`, named the working directory, and the advice for a folder named the root of the disk.
+  if (!values.content?.length || values.content.some((entry) => entry.trim() === "")) {
     throw new Error(`missing --content; name the templates to scan, as in --content "app/views/**/*.erb".`);
+  }
+
+  // parseArgs keeps the last value of a flag given twice, so `-o a.css -o b.css` wrote b.css alone.
+  if (tokens.filter((token) => token.kind === "option" && token.name === "output").length > 1) {
+    throw new Error("--output is given more than once; name one stylesheet to write.");
   }
 
   const output = values.output?.trim();
@@ -125,19 +132,32 @@ function parseCommandLine(argv: readonly string[]): BuildOptions | "help" | "ver
   };
 }
 
+const OPTIONS = {
+  content: { type: "string", short: "c", multiple: true },
+  output: { type: "string", short: "o" },
+  aesthetic: { type: "string", multiple: true },
+  "no-minify": { type: "boolean" },
+  help: { type: "boolean" },
+  version: { type: "boolean" },
+} as const;
+
+/* One of this command's own options, as `-o`, `--output`, or `--output=a.css`:
+   after an option that takes a value, it is a value left out, not one that
+   starts with a dash. */
+function isOwnOption(arg: string): boolean {
+  return Object.entries(OPTIONS).some(
+    ([name, option]) =>
+      arg === `--${name}` || arg.startsWith(`--${name}=`) || ("short" in option && arg === `-${option.short}`),
+  );
+}
+
 function parseFlags(argv: readonly string[]) {
   try {
     return parseArgs({
       args: [...argv],
       allowPositionals: true,
-      options: {
-        content: { type: "string", short: "c", multiple: true },
-        output: { type: "string", short: "o" },
-        aesthetic: { type: "string", multiple: true },
-        "no-minify": { type: "boolean" },
-        help: { type: "boolean" },
-        version: { type: "boolean" },
-      },
+      tokens: true,
+      options: OPTIONS,
     });
   } catch (error) {
     // parseArgs words its errors for programmers ("To specify a positional argument starting with a '-'..."), so keep only the part naming the flag.
@@ -148,6 +168,22 @@ function parseFlags(argv: readonly string[]) {
     }
 
     const code = (error as { code?: string }).code;
+    // As in "To specify an option argument starting with a dash use '--output=-XYZ' or '-o-XYZ'."
+    const name = (error as Error).message.includes("starting with a dash")
+      ? /'(--[\w-]+)=-XYZ'/.exec((error as Error).message)?.[1]
+      : undefined;
+
+    if (name !== undefined) {
+      const at = argv.findIndex((arg, index) => arg === flag && argv[index + 1]?.startsWith("-"));
+      const value = at === -1 ? "<value>" : argv[at + 1];
+
+      if (value !== undefined && isOwnOption(value)) {
+        throw new Error(`option "${name}" is missing its value; run "${BIN} --help" for the options.`);
+      }
+      throw new Error(
+        `option "${name}" is missing its value; to give it a value that starts with a dash, write ${name}=${value}.`,
+      );
+    }
 
     throw new Error(
       code === "ERR_PARSE_ARGS_UNKNOWN_OPTION"
@@ -171,15 +207,23 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
 
   await assertReplaceable(options, io.cwd, output);
 
-  // Through a link, the file it leads to is the one written, and the one no glob may read.
-  const target = await realPathOf(output);
-  const contents = readContent(options.contentGlobs, io.cwd, target);
+  /* The output's folder as the system resolves it, as each content file is, so
+     a glob that reaches the output by another spelling, such as a Windows 8.3
+     short name, still leaves it out. The output itself is not followed: a link
+     there is replaced, as other build tools replace one. */
+  const resolved = path.join(await realPathOf(path.dirname(output)), path.basename(output));
+  const contents = readContent(options.contentGlobs, io.cwd, resolved, options.output);
 
   const droppable = new Set(JSON.parse(await readPackageFile(PURGE_CLASSES)) as string[]);
+  const shipped = await readShippedSizes();
   const found = new Set<string>();
 
   // One file at a time, so a broad glob holds only the file being read and the classes found so far.
   for (const content of contents) {
+    // oxlint-disable-next-line no-await-in-loop -- one file at a time, as the loop reads them
+    if (await isPackageCopy(content, droppable, shipped)) {
+      continue;
+    }
     for (const name of findClasses(content, droppable)) {
       found.add(name);
     }
@@ -187,41 +231,132 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   // A class this command may not drop is one no template has to name, such as `.theme-dark`, so it always counts as used.
   const used = { has: (name: string) => found.has(name) || !droppable.has(name) };
 
+  const write = options.shouldMinify ? serialize : format;
   const stylesheets = await Promise.all(
     [PURGE_SOURCE, ...options.aesthetics.map((name) => resolveExport(`./aesthetics/${name}`))].map(readPackageFile),
   );
-  const write = options.shouldMinify ? serialize : format;
   const css = stylesheets.map((stylesheet) => write(purge(parse(stylesheet), used))).join("");
 
   /* Written beside the output and renamed over it, so a write that fails
      partway, on a full disk say, leaves the previous stylesheet whole rather
      than a truncated one a deploy would ship. */
-  const temporary = `${target}.${process.pid}.tmp`;
+  let temporary: string | undefined;
 
   try {
-    await fs.mkdir(path.dirname(target), { recursive: true });
-    await fs.writeFile(temporary, css);
-    await keepOwnership(temporary, target, options.output, io);
-    await replaceFile(temporary, target);
+    await fs.mkdir(path.dirname(output), { recursive: true });
+
+    const created = await createTemporary(output);
+
+    temporary = created.path;
+    try {
+      await created.handle.writeFile(css);
+      await keepModeOf(created.handle, output);
+    } finally {
+      await created.handle.close();
+    }
+    await replaceFile(temporary, output);
   } catch (error) {
-    // Best effort: the error worth reporting is the one above.
-    await fs.rm(temporary, { force: true }).catch(() => undefined);
+    // Best effort, and only for a file this build created: the error worth reporting is the one above.
+    if (temporary !== undefined) {
+      await fs.rm(temporary, { force: true }).catch(() => undefined);
+    }
     throw new Error(`cannot write --output ${options.output}: ${describeWriteError(error)}`);
   }
 
   return output;
 }
 
+/* The files this package ships under `dist/`, by size, so a content file is
+   compared with one only when the sizes agree. */
+async function readShippedSizes(): Promise<Map<number, string[]>> {
+  const dist = path.join(packageRoot, "dist");
+  const sizes = new Map<number, string[]>();
+  const entries = await fs.readdir(dist, { recursive: true, withFileTypes: true });
+
+  for (const entry of entries.filter((dirent) => dirent.isFile())) {
+    const file = path.join(entry.parentPath, entry.name);
+    // oxlint-disable-next-line no-await-in-loop -- a few dozen files at most
+    const { size } = await fs.stat(file);
+
+    sizes.set(size, [...(sizes.get(size) ?? []), file]);
+  }
+
+  return sizes;
+}
+
+/* A copy of what this package ships, or of what this command wrote, names
+   every class it holds, so read as content it kept them all: Django's
+   `collectstatic` copies the package's `dist/` into `staticfiles/`, and two
+   builds over one folder read each other. A file that starts with the
+   package's notice is one of them; so is a JSON list of class names holding at
+   least half of this version's, as a copy of `purge/classes.json` from this or
+   a nearby version does and a safelist does not; and so is a file the same as
+   one this version ships, such as an aesthetic, which carries no notice. */
+async function isPackageCopy(
+  content: string,
+  droppable: ReadonlySet<string>,
+  shipped: ReadonlyMap<number, readonly string[]>,
+): Promise<boolean> {
+  if (WRITTEN_HEAD.test(content.slice(0, HEAD_BYTES))) {
+    return true;
+  }
+  if (/^\s*\[/.test(content) && isClassList(content, droppable)) {
+    return true;
+  }
+
+  for (const file of shipped.get(Buffer.byteLength(content)) ?? []) {
+    // oxlint-disable-next-line no-await-in-loop -- rarely more than one file of a size
+    if ((await fs.readFile(file, "utf8")) === content) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function isClassList(content: string, droppable: ReadonlySet<string>): boolean {
+  let list: unknown;
+
+  try {
+    list = JSON.parse(content);
+  } catch {
+    return false;
+  }
+
+  return (
+    Array.isArray(list) &&
+    list.every((item) => typeof item === "string") &&
+    list.filter((item: string) => droppable.has(item)).length >= droppable.size / 2
+  );
+}
+
+/* A name anyone could guess, such as one from the process ID, let whoever can
+   write to the output's folder plant a link there first, and the write went
+   through it to a file the build was never given. The name is random, and the
+   file is created with `wx`, which fails on any entry already there, a link
+   included, so the file written is always one this build created. Everything
+   after goes through the handle, never the name. */
+async function createTemporary(target: string): Promise<{ path: string; handle: fs.FileHandle }> {
+  for (let attempt = 1; ; attempt += 1) {
+    const name = `${target}.${randomBytes(8).toString("hex")}.tmp`;
+
+    try {
+      // oxlint-disable-next-line no-await-in-loop -- a name is tried only once the one before it is taken
+      return { path: name, handle: await fs.open(name, "wx") };
+    } catch (error) {
+      if ((error as { code?: string }).code !== "EEXIST" || attempt === 5) {
+        throw error;
+      }
+    }
+  }
+}
+
 /* The stylesheet is renamed over the output, so it would come out with the mode
-   and owner of a new file: a `0640` file of the web server's group would come
-   back `0644` and the runner's. The temporary file takes the permission bits,
-   owner, and group of the file it replaces first. Only root can give a file to
-   another user, and only to a group its owner is in, so a runner without that
-   right keeps the group when it is in it, and says what changed on stderr
-   rather than fail a build that wrote the stylesheet. Windows keeps neither:
-   its mode is only the read-only attribute, which a rename over the file
-   refuses, and a new file takes its folder's permissions. */
-async function keepOwnership(temporary: string, target: string, output: string, io: CliIo): Promise<void> {
+   of a new file: a `0640` file would come back `0644`, readable by everyone.
+   The temporary file takes the permission bits of the file it replaces first.
+   Windows keeps none: its mode is only the read-only attribute, which a rename
+   over the file refuses. */
+async function keepModeOf(handle: fs.FileHandle, target: string): Promise<void> {
   if (process.platform === "win32") {
     return;
   }
@@ -233,52 +368,9 @@ async function keepOwnership(temporary: string, target: string, output: string, 
     throw error;
   });
 
-  if (previous === undefined) {
-    return;
+  if (previous !== undefined) {
+    await handle.chmod(previous.mode & 0o777);
   }
-
-  const created = await fs.stat(temporary);
-
-  if (previous.uid !== created.uid || previous.gid !== created.gid) {
-    const kept = await chownAllowed(temporary, previous.uid, previous.gid);
-
-    if (kept === "group") {
-      io.stderr(
-        `${BIN}: warning: --output ${output} now belongs to user ${created.uid}, not ${previous.uid}, since only root can give a file to another user; its group and mode are kept.`,
-      );
-    } else if (kept === "neither") {
-      io.stderr(
-        `${BIN}: warning: --output ${output} now belongs to user ${created.uid} and group ${created.gid}, not ${previous.uid} and ${previous.gid}, since only root can give a file to another user or to a group you are not in; its mode is kept.`,
-      );
-    }
-  }
-  // After the owner: changing it can clear the set-user-ID and set-group-ID bits.
-  await fs.chmod(temporary, previous.mode & 0o777);
-}
-
-/* Gives the file to the user and group, or to the group alone when only root
-   could give it to the user. Any failure but that refusal is thrown. */
-async function chownAllowed(file: string, uid: number, gid: number): Promise<"both" | "group" | "neither"> {
-  const isRefused = (error: unknown) => (error as { code?: string }).code === "EPERM";
-
-  try {
-    await fs.chown(file, uid, gid);
-    return "both";
-  } catch (error) {
-    if (!isRefused(error)) {
-      throw error;
-    }
-  }
-  try {
-    await fs.chown(file, -1, gid);
-    return "group";
-  } catch (error) {
-    if (!isRefused(error)) {
-      throw error;
-    }
-  }
-
-  return "neither";
 }
 
 /* Node.js names the path a system call failed on, and here that is mostly the
@@ -386,20 +478,38 @@ function kindOf(stats: { isDirectory(): boolean; isFIFO(): boolean; isSocket(): 
    from missing content fails rather than writing a stylesheet without its
    classes. The output is left out: it names every class it keeps, so a glob
    that matches it would keep last build's classes, and the stylesheet would
-   grow with each build instead of following the templates. `path.relative` is
-   empty for the same file, in the case Windows ignores. A wildcard stays out
-   of `node_modules` unless the entry names it: a dependency's demo page, or
-   this package's own list of every class, would keep classes no template uses. */
-function readContent(entries: readonly string[], cwd: string, output: string): Generator<string> {
-  try {
-    const files = findFiles(entries, { cwd, failOnUnmatched: true, skipNodeModules: true }).filter(
-      (file) => path.relative(realPathSyncOf(file), output) !== "",
-    );
+   grow with each build instead of following the templates. An entry is checked
+   once the output is left out, so one that matched only the output, as
+   `public/*.css` does after a build into `public/`, fails rather than build
+   from nothing. `path.relative` is empty for the same file, in the case
+   Windows ignores. A wildcard stays out of `node_modules` unless the entry
+   names it: a dependency's demo page, or this package's own list of every
+   class, would keep classes no template uses. */
+function readContent(entries: readonly string[], cwd: string, output: string, given: string): Generator<string> {
+  const files = new Set<string>();
 
-    return readFiles(files, { cwd, failOnUnreadable: true });
-  } catch (error) {
-    throw error instanceof UnmatchedEntryError ? new Error(`--content ${error.message}`) : error;
+  for (const entry of entries) {
+    let matched: string[];
+
+    try {
+      matched = findFiles([entry], { cwd, failOnUnmatched: true, failOnUnreadable: true, skipNodeModules: true });
+    } catch (error) {
+      throw error instanceof UnmatchedEntryError ? new Error(`--content ${error.message}`) : error;
+    }
+
+    const content = matched.filter((file) => path.relative(realPathSyncOf(file), output) !== "");
+
+    if (content.length === 0) {
+      throw new Error(
+        `--content "${entry}" matches only --output ${given}, which is never read for classes; name the templates to scan.`,
+      );
+    }
+    for (const file of content) {
+      files.add(file);
+    }
   }
+
+  return readFiles(files, { cwd, failOnUnreadable: true });
 }
 
 /* Content is read as text and never run, as Tailwind reads it: every run of
@@ -484,9 +594,7 @@ function assertNodeVersion(nodeVersion: string): void {
   }
 }
 
-/* The file a link leads to, or the path itself while nothing is there yet. A
-   link whose target does not exist yet still leads there: the stylesheet is
-   written where it points rather than over the link. */
+/* The path as the system resolves it, or as given while nothing is there yet. */
 async function realPathOf(file: string): Promise<string> {
   try {
     return await fs.realpath(file);
@@ -495,80 +603,8 @@ async function realPathOf(file: string): Promise<string> {
       throw error;
     }
 
-    return process.platform === "win32" ? windowsTargetOf(file) : posixTargetOf(file);
+    return file;
   }
-}
-
-/* Windows collapses a `..` before it follows any link, as `path.resolve` does. */
-async function windowsTargetOf(file: string): Promise<string> {
-  const link = await fs.readlink(file).catch(() => undefined);
-
-  return link === undefined ? file : realPathOf(path.resolve(path.dirname(file), link));
-}
-
-/* POSIX follows each name in turn, a link included, before the `..` after it,
-   so `alias/../real.css` with `alias` a link into another folder is a
-   `real.css` there. `path.resolve` collapses the `..` first and named another
-   file, which the build overwrote without checking it. The walk does what the
-   system does: a link's target replaces it, and a `..` steps out of the folder
-   reached so far. A folder that does not exist yet is created by the write, so
-   the names after it are taken as written; a `..` after one has no folder to
-   step out of, and the system refuses the path, so this does too. */
-async function posixTargetOf(file: string): Promise<string> {
-  const names = (value: string) => value.split("/").filter((name) => name !== "" && name !== ".");
-  const pending = names(file);
-  let current = "/";
-  let missing = false;
-  let links = 0;
-
-  for (let name = pending.shift(); name !== undefined; name = pending.shift()) {
-    if (name === "..") {
-      if (missing) {
-        throw new Error(`cannot follow the --output link at ${file}: it leads out of a folder that does not exist.`);
-      }
-      current = path.dirname(current);
-      continue;
-    }
-
-    const next = path.join(current, name);
-
-    if (missing) {
-      current = next;
-      continue;
-    }
-
-    let link: string | undefined;
-
-    try {
-      // oxlint-disable-next-line no-await-in-loop -- each name is read from the folder the one before it reached
-      link = await fs.readlink(next);
-    } catch (error) {
-      const { code } = error as { code?: string };
-
-      if (code === "ENOENT") {
-        missing = true;
-      } else if (code !== "EINVAL") {
-        throw error;
-      }
-    }
-
-    if (link === undefined) {
-      current = next;
-      continue;
-    }
-
-    // The system's own limit is 40 on Linux; past it, a chain of links is a loop.
-    links += 1;
-    if (links > 40) {
-      throw new Error(`cannot follow the --output link at ${file}: its links lead in a loop.`);
-    }
-    if (path.isAbsolute(link)) {
-      current = "/";
-    }
-    pending.unshift(...names(link));
-  }
-
-  return current;
 }
 
 /* The native resolver, as `fs.realpath` above uses: on Windows the JavaScript

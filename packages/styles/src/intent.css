@@ -30,6 +30,19 @@
    `.neobrutalism` drew a grey line and a grey slab beside a `.neutral`
    sibling's black ink. Its readers -- `box`, `.quote`, `.data-table` -- fall
    back to the same chain on the element instead. */
+/* A named intent's strong line, for the one component that draws its line
+   in it at rest: an unchecked toggle, whose line is the only thing showing it
+   (docs/guidelines/accessibility.md, "A control's boundary"). The intent's own
+   tone measured 2.7:1 for warning in light and 2.9:1 for info in dark against
+   the page. Not an intent slot, and not inherited: written by the intent class
+   and the invalid state on the element itself, so it travels with
+   `@apply checkbox warning` and never reaches a toggle from a `.card.warning`
+   around it. Unset, a toggle keeps `--intent-border`. See `text-control`. */
+@property --_line-strong {
+  syntax: "*";
+  inherits: false;
+}
+
 @layer components {
   :root {
     --intent-color: var(--color-text);
@@ -68,6 +81,7 @@
       --intent-strong: var(--color-primary-strong);
       --intent-subtle: var(--color-primary-subtle);
       --intent-border: var(--color-primary);
+      --_line-strong: var(--color-primary-strong);
       --intent-fill-max: 100%;
       /* With more contrast asked for, an intent's line is its strong tone, in
          this and every intent below. `box` fades a line by the fill under it, so
@@ -92,6 +106,7 @@
       --intent-strong: var(--color-accent-strong);
       --intent-subtle: var(--color-accent-subtle);
       --intent-border: var(--color-accent);
+      --_line-strong: var(--color-accent-strong);
       --intent-fill-max: 100%;
       @media (prefers-contrast: more) {
         &:not(:where(:root[data-contrast="standard"] *)) {
@@ -112,6 +127,7 @@
       --intent-strong: var(--color-success-strong);
       --intent-subtle: var(--color-success-subtle);
       --intent-border: var(--color-success);
+      --_line-strong: var(--color-success-strong);
       --intent-fill-max: 100%;
       @media (prefers-contrast: more) {
         &:not(:where(:root[data-contrast="standard"] *)) {
@@ -132,6 +148,7 @@
       --intent-strong: var(--color-warning-strong);
       --intent-subtle: var(--color-warning-subtle);
       --intent-border: var(--color-warning);
+      --_line-strong: var(--color-warning-strong);
       --intent-fill-max: 100%;
       @media (prefers-contrast: more) {
         &:not(:where(:root[data-contrast="standard"] *)) {
@@ -152,6 +169,7 @@
       --intent-strong: var(--color-destructive-strong);
       --intent-subtle: var(--color-destructive-subtle);
       --intent-border: var(--color-destructive);
+      --_line-strong: var(--color-destructive-strong);
       --intent-fill-max: 100%;
       @media (prefers-contrast: more) {
         &:not(:where(:root[data-contrast="standard"] *)) {
@@ -172,6 +190,7 @@
       --intent-strong: var(--color-info-strong);
       --intent-subtle: var(--color-info-subtle);
       --intent-border: var(--color-info);
+      --_line-strong: var(--color-info-strong);
       --intent-fill-max: 100%;
       @media (prefers-contrast: more) {
         &:not(:where(:root[data-contrast="standard"] *)) {

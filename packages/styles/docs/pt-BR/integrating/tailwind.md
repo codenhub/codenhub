@@ -2,7 +2,7 @@
 title: Tailwind CSS v4
 description: Como usar os entrypoints de código-fonte /tw num projeto com Tailwind CSS v4.
 order: 1
-source: edba47101bea9d5a24d7cf881035a4c3ffc22d3a
+source: 751c07d0ead1796ffb06aa5b463f6da775741485
 ---
 
 # Tailwind CSS v4
@@ -21,7 +21,7 @@ Os entrypoints `/tw` publicam uma cópia do código-fonte não compilado da past
 @source "./src";
 ```
 
-O `/tw` importa o próprio Tailwind, então ele substitui o seu `@import "tailwindcss"` em vez de se somar a ele: com os dois, o Preflight do Tailwind é emitido duas vezes. Todos os outros entrypoints `/*/tw` esperam que o seu import venha antes; veja [Usando um entrypoint específico](#usando-um-entrypoint-específico).
+O `/tw` importa o próprio Tailwind, então ele substitui o seu `@import "tailwindcss"` em vez de se somar a ele. Com os dois, o build ainda emite o Preflight e o tema do Tailwind uma vez só, e repete apenas um pequeno bloco de `::placeholder`, mas o seu import não acrescenta nada que o `/tw` não traga. Todos os outros entrypoints `/*/tw` esperam que o seu import venha antes; veja [Usando um entrypoint específico](#usando-um-entrypoint-específico).
 
 O Tailwind CSS v4 varre o seu projeto automaticamente — a maioria dos projetos não precisa de nada além do import acima. Os caminhos de `@source` são resolvidos a partir do arquivo CSS que os declara, não da raiz do projeto, então `./src` aqui significa "o `src/` ao lado desta folha de estilos"; ajuste para onde a sua folha de estilos global realmente está. Adicione `@source` só para markup que a varredura automática do Tailwind não alcança sozinha: um caminho excluído por padrão (listado no `.gitignore`, ou dentro de `node_modules` — uma biblioteca de componentes externa, por exemplo) ou, num monorepo, um caminho fora da árvore de diretórios deste arquivo. Aponte para o markup da sua aplicação, não para este pacote: o código-fonte do pacote nomeia todas as classes que ele define, então varrê-lo emite todas elas, quer as suas páginas as usem ou não.
 
@@ -46,6 +46,8 @@ Diferente do `/tw`, os entrypoints específicos e o `/native/tw` não importam o
 @import "tailwindcss";
 @import "@codenhub/styles/button/tw";
 ```
+
+Um entrypoint específico é para uma família só. Cada um traz o tema e as regras compartilhadas em que as classes dele se apoiam, então dois deles trazem isso duas vezes, e o Tailwind mantém as duas cópias. Com o Tailwind 4.3.2, `/button/tw`, `/form/tw`, `/surface/tw` e `/feedback/tw` juntos compilaram uma página pequena para 85.192 bytes minificados, enquanto o `/components/tw`, que traz os quatro e ainda os tooltips, compilou a mesma página para 82.915. Para duas famílias ou mais, importe o `/components/tw`, ou o `/tw`.
 
 ## Construa seus próprios componentes com `@apply`
 
@@ -108,9 +110,9 @@ As cores do próprio pacote não mudam, e você ainda pode acrescentar cores sua
 
 O bloco deixa de fora `neutral`, `emerald`, `amber`, `rose`, `indigo` e `white` de propósito: o tema constrói as cores dele a partir deles.
 
-- **Não limpe o namespace inteiro.** `--color-*: initial` também remove as cores semânticas do pacote, e o build para com um erro como `Cannot apply unknown utility class`.
+- **Não limpe o namespace inteiro.** `--color-*: initial` também remove as cores semânticas do pacote, como `--color-primary`, porque elas também são variáveis do tema. O build termina mesmo assim, sem nenhum aviso, e todo componente que as lê é desenhado sem cor.
 - **Não limpe uma escala que o tema lê.** Limpar `--color-emerald-*` compila sem erro, mas as cores de sucesso feitas com ela se perdem.
-- **Não limpe os namespaces de tipo, fonte ou espaçamento.** Os componentes aplicam os utilitários `text-*` e `font-*` do Tailwind e a função `--spacing()` dele, então `--text-*: initial`, `--font-*: initial`, `--spacing: initial` ou `--*: initial` interrompe a compilação com `Cannot apply unknown utility class` ou `The --spacing(…) function requires that the --spacing theme variable exists`. Sobrescreva valores isolados, como `--text-sm`. Limpar `--radius-*` é seguro.
+- **Não limpe os namespaces de tipo, fonte ou espaçamento.** Os componentes aplicam os utilitários `text-*` e `font-*` do Tailwind e a função `--spacing()` dele, então `--text-*: initial`, `--font-*: initial`, `--spacing: initial` ou `--*: initial` remove os valores que eles leem. O build termina mesmo assim, sem nenhum aviso: os componentes mantêm as referências a `--text-sm`, `--font-default` ou `--spacing`, que já não nomeiam nada, então o texto deles assume o tamanho e a fonte herdados, e o preenchimento e os espaçamentos caem para zero. Sobrescreva valores isolados, como `--text-sm`. Limpar `--radius-*` é seguro: os cantos dos componentes vêm de `--radius-control`, `--radius-small` e `--radius-surface`, que são do pacote.
 
 ## Solução de problemas
 
@@ -123,8 +125,20 @@ O bloco deixa de fora `neutral`, `emerald`, `amber`, `rose`, `indigo` e `white` 
 **Regras de token e de reset duplicadas**
 
 - **O que aconteceu:** a folha de estilos gerada está maior do que o esperado, e as devtools do navegador mostram as mesmas custom properties ou regras de reset definidas duas vezes.
-- **Por quê:** uma de duas coisas. Importar um entrypoint compilado (`@codenhub/styles`) e um entrypoint `/tw` (`@codenhub/styles/tw`) no mesmo build compila os mesmos tokens e o mesmo reset a partir de duas fontes independentes; o build do Tailwind não tem como saber que elas descrevem o mesmo pacote. Ou então a sua folha de estilos importa `tailwindcss` ao lado do `/tw`, que já o importa, e o Preflight é emitido duas vezes.
-- **Como resolver:** escolha um caminho por projeto — entrypoints `/tw` para um projeto que roda Tailwind CSS v4, entrypoints compilados em todos os outros — e remova o seu próprio `@import "tailwindcss"` quando importar o `/tw`.
+- **Por quê:** importar um entrypoint compilado (`@codenhub/styles`) e um entrypoint `/tw` (`@codenhub/styles/tw`) no mesmo build compila os mesmos tokens e o mesmo reset a partir de duas fontes independentes; o build do Tailwind não tem como saber que elas descrevem o mesmo pacote.
+- **Como resolver:** escolha um caminho por projeto — entrypoints `/tw` para um projeto que roda Tailwind CSS v4, entrypoints compilados em todos os outros.
+
+**Uma variante depois de `before:` ou `placeholder:` ignora a configuração do app**
+
+- **O que aconteceu:** `before:motion-reduce:hidden` ou `placeholder:dark:text-white` não segue `data-motion` nem `data-theme` no `<html>`, ou nunca se aplica, enquanto `motion-reduce:hidden` no próprio elemento funciona.
+- **Por quê:** a variante do pacote vem depois de uma variante de pseudoelemento, e o Tailwind então escreve a condição dela onde os navegadores a rejeitam.
+- **Como resolver:** escreva a variante do pacote primeiro: `motion-reduce:before:hidden`, `dark:placeholder:text-white`. [Variantes de contraste e movimento](#variantes-de-contraste-e-movimento) tem os detalhes.
+
+**Uma sobrescrita de token para num shadow root**
+
+- **O que aconteceu:** `--color-primary` definido em `:root` na sua folha de estilos colore os botões da página, mas um botão dentro de um shadow root que carrega a mesma folha mantém a cor do pacote.
+- **Por quê:** o Tailwind escreve o tema em `:root, :host`, então a cópia da folha no shadow root declara cada token de novo no host, e o valor da página não é herdado além dele. Os entrypoints compilados declaram os tokens só em `:root`, então ali o valor da página atravessa.
+- **Como resolver:** defina a sobrescrita em `@theme`, como `@theme { --color-primary: oklch(49% 0.24 293); }`, que o Tailwind também escreve em `:root, :host`, ou escreva sua própria regra em `:root, :host`.
 
 **Uma classe montada em tempo de execução fica sem estilo**
 
@@ -138,7 +152,7 @@ O bloco deixa de fora `neutral`, `emerald`, `amber`, `rose`, `indigo` e `white` 
 @source inline("btn alert badge primary destructive soft");
 ```
 
-Todo entrypoint `/tw` exige Tailwind CSS 4.3.2 ou mais recente, abaixo da 5 (`>=4.3.2 <5`).
+Todo entrypoint `/tw` exige Tailwind CSS 4.3.2 ou mais recente, abaixo da 5 (`>=4.3.2 <5`), a faixa com que o CI os compila. O pacote não declara o Tailwind como peer dependency, então o seu gerenciador de pacotes não confere a versão por você; `npm ls tailwindcss` mostra a sua. Uma peer opcional conferiria, mas aí o npm se recusava a instalar o pacote em qualquer projeto com um Tailwind mais antigo, mesmo num que só referencia o CSS compilado.
 
 ## A variante `dark:`
 
@@ -158,6 +172,8 @@ Os entrypoints `/tw` também substituem `contrast-more:`, `contrast-less:`, `mot
 `data-motion="none"` conta como movimento reduzido, então `motion-reduce:` se aplica com ele. Como nas regras do próprio pacote, os atributos são lidos só no `<html>` e não de dentro de um shadow root.
 
 O Tailwind não consegue negar uma variante que é ao mesmo tempo um seletor e uma media query, então com um entrypoint `/tw` `not-motion-safe:`, `not-motion-reduce:`, `not-contrast-more:` e `not-dark:` não compilam para nada, e o Tailwind não avisa. Escreva a variante oposta: `motion-reduce:` no lugar de `not-motion-safe:` e `motion-safe:` no lugar de `not-motion-reduce:`, que são opostas exatas. Para as outras, escreva o utilitário sem prefixo e desfaça-o com a variante positiva: `border-4 contrast-more:border-2` no lugar de `not-contrast-more:border-4`, e `bg-white dark:bg-black` no lugar de `not-dark:bg-white`. `not-contrast-less:` compila normalmente.
+
+Escreva essas variantes, `dark:` inclusive, antes de uma variante de pseudoelemento como `before:`, `after:`, `placeholder:` ou `file:`: `motion-reduce:before:hidden` e `dark:placeholder:text-white`, não `before:motion-reduce:hidden` nem `placeholder:dark:text-white`. O Tailwind coloca uma variante de seletor que vem depois de uma variante de pseudoelemento depois do pseudoelemento, onde os navegadores a rejeitam, e não avisa. O utilitário então ignora `data-theme`, `data-contrast` e `data-motion` e, conforme o navegador e o pseudoelemento, segue a configuração do sistema ou nunca se aplica. As variantes de seletor do próprio Tailwind, como `rtl:` e `aria-checked:`, precisam da mesma ordem.
 
 ## A seguir
 

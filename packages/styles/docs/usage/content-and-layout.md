@@ -47,7 +47,9 @@ The two largest sizes grow at Tailwind's `md` breakpoint, 48rem by default. With
 
 `.text-body` is 0.875rem, smaller than the 1rem page text; use it for secondary or dense copy, not for the page's main text. `/native` is the exception: it sets `.text-body` on `body`, so there it is the page text, and paragraphs and list items inherit it from whatever they sit in. See [Classless HTML](../setup.md#classless-html).
 
-`.selection-contrast` on an element swaps the colors of selected text inside it to `--color-primary` on `--color-primary-contrast`. Use it on a `.solid.primary` area, where the default selection color would match the background.
+The tracking in the table is `normal` in a language whose script joins its letters: Arabic, Persian, Urdu, Pashto, Sindhi, Uyghur, Sorani Kurdish, Kashmiri, Syriac, N'Ko, Mongolian in its own script (`mn-Mong`), Adlam (`ff-Adlm`), and regional languages in Arabic script: Egyptian and Moroccan Arabic (`arz`, `ary`), Western Punjabi (`pnb`), Dari (`prs`), South Azerbaijani (`azb`), Saraiki (`skr`), Balochi (`bal`, `bcc`, `bgn`), Mazanderani (`mzn`), Gilaki (`glk`), Luri (`lrc`, `luz`), Southern Kurdish (`sdh`), Bakhtiari (`bqi`), Hindko (`hno`), Khowar (`khw`), and Brahui (`brh`), and Rohingya (`rhg`), in Hanifi Rohingya. Spacing letters apart breaks the joins between them, and a ligature such as "الله". It is `normal` too in a language written in a script that hangs its letters from a headstroke, Devanagari, Bengali, or Gurmukhi: Hindi, Marathi, Nepali, Sanskrit, Maithili, Bhojpuri, Konkani, Dogri, Bodo, Newari, Bengali, Assamese, and Punjabi. Spacing there cuts the line along the top of a word into pieces, and can set a vowel sign apart from its letter. The same holds for the tracking of a field's `.label` and `.hint`, and for the label tracking an aesthetic gives buttons and badges, chunky tile's solo class included. The language comes from `lang`, on the element or one around it, so set it: on `<html>` for a page in that language, and on a passage in it inside a page in another. A language written in such a script only sometimes needs the script subtag, and the package names the common ones: `ku-Arab`, `ms-Arab`, `kk-Arab`, `az-Arab`, `uz-Arab`, `tg-Arab`, `sat-Deva`, and `mni-Beng`. A language or subtag it does not name, such as `ha-Arab`, keeps the tracking; give that text `tracking-normal`. Under `/native`, such a passage also takes no tracking from the page around it. Your own `tracking-*` utility still applies.
+
+Selected text is `--color-primary-contrast` on `--color-primary`. On a solid plate, such as a `.solid.primary` button or a `.solid` card and the text inside it, the selection inverts the plate instead: the plate's text color as the highlight and the plate's color as the text, so it stands out on every intent.
 
 ## Surfaces
 
@@ -110,7 +112,7 @@ A disabled `.interactive` or `.pressable` card shows the not-allowed cursor inst
 The settings screen lists API keys in a table:
 
 ```html
-<div class="table-wrap">
+<div class="table-wrap" tabindex="0" role="region" aria-label="API keys">
   <table class="data-table">
     <caption class="visually-hidden">
       API keys
@@ -195,6 +197,8 @@ A table takes the surface corner, like a card beside it. The corner cells carry 
 - Shadows, such as a `.raised` table's, get no room and are cut off.
 
 Keep the wrapper on any table that could be wider than its container; without it, a wide table widens the whole page.
+
+Make the wrapper focusable with `tabindex="0"`, and name it as a region with `role="region"` and an `aria-label`, as the example does. Someone using a keyboard scrolls a wide table by focusing the wrapper and using the arrow keys; Firefox, and Chrome from version 130, let them focus a scrolling element on their own, but Safari and older Chrome do not, so without `tabindex` a keyboard user there cannot reach the columns that are cut off. The name tells a screen reader user what the focused region holds. A focused wrapper draws the focus ring every element does.
 
 ## Quotes, code, and keys
 

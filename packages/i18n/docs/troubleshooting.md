@@ -94,12 +94,12 @@ An empty dictionary is accepted.
 
 The configuration is invalid. Most messages have the form `[I18n] Invalid configuration: <option>: <problem>`, so the option to fix is the first thing after the colon. Check that:
 
-- `locales` is a non-empty list with no duplicates, ignoring case, and each locale is ASCII letters and digits separated by hyphens, such as `pt-BR`.
+- `locales` is a non-empty list with no duplicates, ignoring case, and each locale is a language tag `Intl` accepts, such as `pt-BR`, or a private-use tag, such as `x-pirate`. A typo such as `en-US-US` fails with `Must be a language tag Intl accepts`.
 - `defaultLocale` is one of `locales`.
 - `loadLocale` is a function.
 - `timeZone`, when set, is one `Intl` knows. A typo gives `timeZone: Must be a time zone Intl supports, such as "America/Sao_Paulo" or "UTC"`.
 - `dictionaryLimits` names only known limits, each a positive whole number. `maxKeys` gives `dictionaryLimits.maxKeys: Is not a recognized limit`, and `maxDepth: 0` gives `dictionaryLimits.maxDepth: Must be a positive whole number`. [Size limits](translations.md#size-limits) lists the names.
-- `isSilent`, when set, is a boolean. `isSilent: "true"` gives `isSilent: Expected boolean, received string`.
+- `isSilent`, when set, is a boolean. `isSilent: "true"` gives `isSilent: Expected boolean, received "true"`.
 - `getLocaleDirection` and `onMissingKey`, when set, are functions, or the message says `getLocaleDirection: Must be a function` or `onMissingKey: Must be a function`.
 - The configuration is a plain object. A class instance, or an object that inherits its options, is rejected so that inherited values can't slip in.
 
@@ -121,12 +121,12 @@ The same goes for `localePrefix` in a routing configuration kept in a variable, 
 
 ## A message shows its raw text
 
-You see `{count, plural, one {# item} other {# items}` or `{first-name}` on screen, and the console warns about an invalid message. The text isn't valid message syntax, so it is shown as written, with only its plain `{name}` placeholders filled, rather than half formatted. The warning appears once per text and locale.
+You see `{count, plural, one {# item} other {# items}` or `{first-name}` on screen, and the console warns about an invalid message. The text isn't valid message syntax, so it is shown as written, with only its plain `{name}` placeholders filled, rather than half formatted. The warning appears once per text and locale in each process, however many managers show it.
 
 Common causes:
 
 - **A brace is missing or extra.** Count them; every `{` needs its `}`.
-- **A placeholder name has other characters.** Names are ASCII letters, digits, and underscores, so `{first-name}` and `{nome_ç}` are shown as written. Use `{firstName}` or `{nome}`.
+- **A placeholder name has other characters.** Names are letters, digits, and underscores, in any script, so `{first-name}` and `{price€}` are shown as written. Use `{firstName}` or `{price}`.
 - **A format this package doesn't support**, such as `{n, number, currency}` or a `::` skeleton. Format the value with `formatNumber()` and pass the result as a plain placeholder.
 - **Nesting deeper than 10 levels**, or the same `=1` option twice. Simplify the message.
 
@@ -136,7 +136,7 @@ Common causes:
 
 From `parse()`, the value is not a URL's pathname: it doesn't start with `/`, or it contains `?` or `#`. Pass `url.pathname` rather than the full URL or a path with its query string, such as Node's `request.url`. A path that is a pathname but contains something routing refuses, such as `//` or a dot segment, makes `parse()` return `undefined` instead, so a visitor's odd URL becomes a 404 rather than a crash.
 
-From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. [Paths it accepts](localized-urls.md#paths-it-accepts) has the full list, with the fix for each.
+From `localize()` or `localizeAll()`, the path is one of those, or contains something routing refuses. The message names the rule the path breaks and quotes the path, such as `[I18n] pathname "/help/../admin" must not contain a dot segment, . or ..`, except a query or a fragment, which can hold a token: a path with `?` or `#` is quoted only up to it. [Paths it accepts](localized-urls.md#paths-it-accepts) has the full list, with the fix for each.
 
 ## `localize()` throws `RangeError`: "would be read as"
 
@@ -147,7 +147,7 @@ The path `localize()` would build opens a different page, or the same page in an
 
 ## `localize()` throws `RangeError`: "would be longer than 8,192 characters or 100 segments"
 
-The path you passed is valid, but the locale prefix or the translated words make the result longer than `parse()` accepts. Shorten the path; a link that long is also likely to be cut off by servers and proxies long before anyone reads it.
+The path you passed is valid, but the locale prefix or the translated words make the result longer than `parse()` accepts. The message ends with the length the URL would have, such as `its URL there would have 8,198 characters in 2 segments`. Shorten the path; a link that long is also likely to be cut off by servers and proxies long before anyone reads it.
 
 ## A placeholder shows as written and nothing warns
 
@@ -155,20 +155,21 @@ You see `Ouvrir l{app}` where you expected `Ouvrir l'éditeur`, and the console 
 
 ## The browser binding warns or rejects
 
-- **"Document synchronization requires a page document"**: `initializeBrowserI18n()` ran without a `document`, as in a Web Worker, and threw `TypeError: [I18n] Document synchronization requires a page document; pass syncDocument: false without one.` before starting the manager. Pass `syncDocument: false` and no `root`; see [In a Web Worker](browser.md#in-a-web-worker).
+- **"Document synchronization requires a page document"**: `initializeBrowserI18n()` ran without a `document`, as in a Web Worker, and rejected with `TypeError: [I18n] Document synchronization requires a page document; pass syncDocument: false without one.` before starting the manager. Pass `syncDocument: false` and no `root`; see [In a Web Worker](browser.md#in-a-web-worker).
 - **"The manager already has a browser binding"**: you called `initializeBrowserI18n()` twice for the same manager. Call `disconnect()` on the first binding, or keep one.
 - **"Browser initialization was superseded before its locale became active"**: your code called `i18n.init()` while the binding was starting the manager, or `i18n.setLocale()` on a manager that was already initialized, even to the locale already showing. The manager keeps your call's result and the binding is not connected. Let the binding start the manager, and switch languages after its promise resolves.
 - **"Browser observation requires a root"**: `observe: true` needs a `root` to watch.
-- **"root must be an element, a document, or a shadow root, such as document.body."**: `root` was something else, usually the `null` that `document.querySelector("#app")` returns on a page without `#app`. The binding throws before starting the manager. Check that the element exists on every page that runs the script, or pass `document`.
-- **`onMissingKey` threw**: the binding still translates every other element, then rejects with the first error on the first initialization, or reports it as an uncaught error after a later language switch. Only the text or attribute whose key was missing keeps its value. A first initialization that rejects this way leaves the manager started but the binding disconnected, so later language switches don't translate the page; fix the callback and call `initializeBrowserI18n()` again.
-- **"Could not read persisted locale", "Could not persist locale", or "Could not forget persisted locale"**: `localStorage` is unavailable, as in some private browsing modes or a Web Worker. The visitor's choice is not saved, or after `switchToSystemLocale()`, not forgotten; everything else works. Pass `persistLocale: false` where there is no storage to start quietly.
+- **"root must be an element, a document, or a shadow root, such as document.body."**: `root` was something else, usually the `null` that `document.querySelector("#app")` returns on a page without `#app`. The binding rejects before starting the manager. Check that the element exists on every page that runs the script, or pass `document`.
+- **`onMissingKey` threw**: the binding still translates every other element, then rejects with the first error on the first initialization, or reports it as an uncaught error after a later language switch. The text or attribute whose key was missing shows the HTML's value, as a missing key does. A first initialization that rejects this way leaves the manager started but the binding disconnected, so later language switches don't translate the page; fix the callback and call `initializeBrowserI18n()` again.
+- **"Could not read persisted locale", "Could not persist locale", or "Could not forget persisted locale"**: `localStorage` is unavailable, as in some private browsing modes or a Web Worker, or a method of your [`storage`](server-rendering.md#hand-the-locale-to-the-browser) threw. The visitor's choice is not saved, or after `switchToSystemLocale()`, not forgotten; everything else works. Pass `persistLocale: false` where there is no storage to start quietly, or fix the `storage` method that threw.
+- **"storage replaces storageKey", "storage requires persistLocale", or "storage must be an object with get(), set(), and remove() methods"**: `initializeBrowserI18n()` rejected with a `TypeError` before starting the manager. Pass `storage` alone, with saving left on, and give it all three methods.
 - **"Could not switch to the detected locale"**: the browser's language changed while the binding [followed the system](browser.md#offer-a-system-choice), and the loader failed for the newly detected locale. The page keeps its current language. Fix the loader.
 - **"switchToSystemLocale() requires a connected browser binding"**: you called `switchToSystemLocale()` after `disconnect()`. Call it on the binding that is connected.
 - **`Could not load locale "pt"; using "es".`** or **`Could not load locale "pt"; using the default locale.`**: the loader failed for a saved or detected locale other than the default, so the visitor got the next one instead: the locale detected from the browser after a saved one, then the default. Fix the loader; the saved choice is kept for next time. If the default locale itself fails to load, there is nothing left to fall back to, and initialization rejects with `Failed to load translations for locale "en".`
 - **"Skipping translation on <p> because translated elements must be leaves"**: the element with `data-i18n` has child elements. Put the key on an element that contains only text, or translate it with `t()`.
 - **"Skipping translation on <style> because the element can run, hide, or reparse its text as HTML"**: a `data-i18n` key is on a `<script>`, `<style>`, `<noscript>`, `<template>`, `<iframe>`, `<noembed>`, `<noframes>`, `<xmp>`, or `<plaintext>` element, whose text runs as code, decides what shows, or is written back unescaped when the page is saved as HTML. The warning names the key and passes the element, so the console points to it. Move the key to an ordinary element. Its `data-i18n-<attribute>` keys, such as an `<iframe>`'s `data-i18n-title`, are still translated.
-- **"Skipping translation because data-i18n contains an invalid key"**, or the same for a `data-i18n-<attribute>`: the key is blank, longer than 1,000 characters, or contains an ASCII control character, so no dictionary can hold it. The element keeps its current text. Fix the key in the HTML.
-- **`data-i18n` text shows `{name}`**: HTML translation can't fill placeholders. Render that text with `t()` and pass the values.
+- **"Skipping translation because data-i18n contains an invalid key"**, or the same for a `data-i18n-<attribute>`: the key is blank, longer than 1,000 characters, or contains an ASCII control character, so no dictionary can hold it. The element shows its HTML text, as for a key no dictionary has, including after a key it showed a translation for changes to an invalid one. Fix the key in the HTML.
+- **"Skipping translation because data-i18n names a message that needs values"**: the message has a placeholder, a plural, or a select, and HTML translation has no values to fill them. The element keeps its HTML text, and the warning appears once per key. Render that text with `t()` and pass the values.
 - **A `data-i18n-href` attribute does nothing**: only text attributes can be translated. See [Translate HTML without a framework](browser.md#translate-html-without-a-framework).
 
 The browser warnings are silenced along with the rest when the manager has `isSilent: true`.

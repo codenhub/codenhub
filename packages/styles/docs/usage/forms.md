@@ -41,10 +41,12 @@ The corners scale with the size, as a button's do. A `.textarea` keeps its 7rem 
 
 ```html
 <div class="cluster tight">
-  <input class="ipt sm" aria-label="Coupon code" />
+  <input class="ipt sm" aria-label="Coupon code" style="flex: 1 1 0" />
   <button class="btn sm" type="button">Apply</button>
 </div>
 ```
+
+A text control takes the full width of its container, so in a row it would push the button onto the next line. `flex: 1 1 0` lets it share the row instead, taking what the button leaves.
 
 ## Show a validation error
 
@@ -140,7 +142,7 @@ A `.select` works in a group too. The group removes the control's side padding, 
 
 Any element works as the adornment: an icon class, an inline `<svg>`, an `<img>`, or text. The package ships no icons for fields, because a built-in image could not follow your text color, theme, or aesthetic.
 
-The group reads intent and presentation the way a lone `.ipt` does: `.input-group.primary` colors the border and the typed text, and `.input-group.soft.edgeless` is a field sunk into the page. Put the intent on the group, not on the control inside: the group draws the field, so the control's text takes the group's intent and an intent class on the control has no effect. `aria-invalid="true"` or `disabled` on the control inside applies to the whole group, and so does either on the group itself. The group's focus ring appears when its field has focus, so unlike a lone field it also shows after a mouse click. A button inside the group, such as a clear button, draws its own ring when it has focus, and the group draws none: one ring always marks the one control that has focus.
+The group reads intent and presentation the way a lone `.ipt` does: `.input-group.primary` colors the border and the typed text, and `.input-group.soft.edgeless` is a field sunk into the page. Put the intent on the group, not on the control inside: the group draws the field, so the control's text takes the group's intent and an intent class on the control has no effect. `aria-invalid="true"` on the control inside applies to the whole group, and so does disabling it by any of `disabled`, `aria-disabled="true"`, `data-disabled`, or `.disabled`: the group dims and stops reacting to hover. Either state on the group itself does the same. The group's focus ring appears when its field has focus, so unlike a lone field it also shows after a mouse click. A button inside the group, such as a clear button, draws its own ring when it has focus, and the group draws none: one ring always marks the one control that has focus.
 
 ## Browser decorations
 
@@ -196,6 +198,7 @@ The settings screen has three kinds of toggle: a checkbox to opt into invoice em
 
 - `.checkbox` goes on `type="checkbox"`, `.radio` on `type="radio"`, and `.switch` on `type="checkbox"`. Give a switch `role="switch"` yourself, so it is announced as on or off rather than checked.
 - `.cluster.tight` on the `<label>` lines the control up with its text and leaves a 0.5rem gap.
+- A `<legend>` in a `.stack` fieldset is spaced from the first option by the stack's gap, as the options are from each other. A browser draws a legend outside its fieldset's layout, so the gap alone never reached it.
 - A checkbox whose `indeterminate` property is set, for a group where only some items are checked, shows a dash, and keeps the dash while also `checked`, as the browser's own checkbox does. Set it from script (`input.indeterminate = true`); there is no attribute for it.
 
 ### Checked and unchecked colors
@@ -245,6 +248,17 @@ At rest, a field's border is deliberately lighter than 3:1 against the page, so 
 ## Disabled controls
 
 `disabled`, `aria-disabled="true"`, `data-disabled`, or `.disabled` on a control draws it at reduced opacity with a not-allowed cursor. As with buttons, only the `disabled` attribute stops input; the others change the look only.
+
+## Read-only fields
+
+`readonly` on an `.ipt` or a `.textarea` keeps its value from being edited but leaves it focusable, selectable, and submitted with the form. The field rests on the quiet field color, `--color-foreground`, does not change under the pointer, and keeps its full-strength text and its focus ring, so it reads as a value to read rather than a place to type. It is not dimmed: dimming says a control is unavailable, and a read-only value is still there to read and copy. An `.input-group` whose field is read-only rests the same way.
+
+```html
+<div class="field">
+  <label class="label" for="account-id">Account ID</label>
+  <input class="ipt" id="account-id" name="account-id" value="acct_4821" readonly />
+</div>
+```
 
 ## Building your own control
 

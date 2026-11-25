@@ -26,6 +26,7 @@ Before judging anything, establish:
 - **Stage.** Unreleased, experimental, or stable. The stage decides what a breaking change costs and which surface is about to freeze; it never turns a defect into a non-defect.
 - **Recorded decisions** in the area, with their reasons and the alternatives they rejected.
 - **Recent history.** Commits, pull requests, and earlier audit results that touched the area, and why. An audit that undoes last week's fix, or reopens a decision on arguments already heard, is the failure this skill exists to prevent.
+- **Earlier fixes, first.** When the target was audited before, check each fix merged since then before auditing the rest: whether it covers every member of its finding's class (see "Evidence"), whether the same pattern survives elsewhere, and whether each claim its docs and changelog added holds beyond the case its test used. A fix covers the example it was given far more often than the class, so this is where a re-audit finds the most.
 
 ## Questions
 
@@ -48,12 +49,14 @@ Every finding states a case:
 - **Input or calling code:** concrete and minimal.
 - **Result:** what happens, and what should happen.
 - **Reach:** who hits it (see the severity table).
+- **Class:** every input, call site, and code location that shares the case's cause, so the fix removes the cause rather than the example. Find it from the rule of the code that reads the value, not from the example's spelling: a URL parser reads `//`, `/\`, and `/` plus any run of tabs plus `/` alike as the start of a host; a serializer re-reads the content of raw-text elements and of `textarea` and `title` alike. Search the codebase for the same pattern, such as another process-wide record keyed by unbounded text, and list each place. A member outside the scope audited, such as another package or a dependency, is listed as work for its own change, never folded into this finding's fix. Run each member you can.
 
 Run the case when you can; a failing test or a script settles what reasoning cannot. Mark a finding `verified` only when you executed its case in this session and saw the result, and `traced` otherwise; without a way to run code, every finding is `traced`. A `traced` finding stands when the code you read and the language or a documented API contract settle its result, such as a call to a function that does not exist. A concern you cannot turn into a case is a question, and so is a `traced` case whose result rests on tool behavior you assumed rather than read or ran, such as whether a compiler reports an error or how a third-party library handles an input.
 
 Do not report:
 
-- A preference with no consequence you can show.
+- A preference with no consequence you can show. That includes a name, option, or design you would have chosen differently: "a clearer name exists" is a preference until you show the code a consumer writes that goes wrong because of the current one.
+- A missing feature that no consumer is shown to need. That the target could do more is true of every target.
 - A future risk with no present case ("if someone later...").
 - Style that a formatter or linter owns.
 - A difference between code and documentation without saying which side is right.
@@ -64,15 +67,15 @@ Every finding gets one kind and, except a `question`, one severity.
 
 ### Kind
 
-| Kind            | Use when                                                                                                                                             |
-| --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `vulnerability` | Someone who controls input can cause harm: crash or hang a process, exhaust memory, bypass a check, read or change what they should not.             |
-| `defect`        | Behavior is wrong for a case a consumer can reach, whatever the documentation says.                                                                  |
-| `contract`      | The public surface itself is wrong or costly: a name, option, default, type, or error shape that misleads consumers or will force a breaking change. |
-| `decision`      | A recorded decision is wrong on merit. Requires naming what the decision did not weigh (see "Decisions").                                            |
-| `drift`         | Documentation and code disagree and the decision itself is right. Say which side changes.                                                            |
-| `gap`           | Something the target's stated purpose needs is missing, including a test for relied-upon behavior.                                                   |
-| `question`      | A concern you could not ground. Say what would settle it. Questions have no severity.                                                                |
+| Kind            | Use when                                                                                                                                                                                        |
+| --------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `vulnerability` | Someone who controls input can cause harm: crash or hang a process, exhaust memory, bypass a check, read or change what they should not.                                                        |
+| `defect`        | Behavior is wrong for a case a consumer can reach, whatever the documentation says.                                                                                                             |
+| `contract`      | The public surface itself is wrong or costly: a name, option, default, type, or error shape that misleads consumers or will force a breaking change. The case is the consumer code it misleads. |
+| `decision`      | A recorded decision is wrong on merit. Requires naming what the decision did not weigh (see "Decisions").                                                                                       |
+| `drift`         | Documentation and code disagree and the decision itself is right. Say which side changes.                                                                                                       |
+| `gap`           | Something the target's stated purpose needs is missing, shown by a consumer who needs it, including a test for relied-upon behavior.                                                            |
+| `question`      | A concern you could not ground. Say what would settle it. Questions have no severity.                                                                                                           |
 
 When more than one kind fits, take the first in the table. Behavior that is wrong is a `defect` even when it is public surface, such as a validator that accepts a schema mistake it should reject; `contract` is for surface that behaves as designed when the design is the problem.
 
@@ -103,7 +106,7 @@ Read severity from reach and impact. Use only the values below; when a case fits
 Then apply, in order:
 
 1. A `vulnerability` is at least `major`.
-2. A `contract` finding on surface that freezes with the next release goes one step up (`note` to `minor`, `minor` to `major`, `major` to `blocker`): it is the last cheap moment to change it.
+2. A `contract` finding on surface that freezes with the next release goes one step up (`note` to `minor`, `minor` to `major`, `major` to `blocker`): it is the last cheap moment to change it. The step applies only to a finding whose case shows consumer code going wrong; the cost of a change is never a reason by itself.
 
 **Verdict:** any `blocker` means not ready. Otherwise any `major` means ready with caveats. Otherwise ready. The verdict follows from these counts alone; put any reservation that does not change them in a finding or a question.
 
@@ -122,7 +125,7 @@ When the audit is split across workers, or results from another audit are in han
 
 ## Report
 
-Open with the verdict and the counts, then the scope. List findings by severity, `blocker` first. Number them so the user can answer by number.
+Open with the verdict and the counts, then the scope. When the target was audited before, say next how many findings trace to a fix merged since then, naming the commits: a high share means the fixes, not the code, are where the next audit's findings come from. List findings by severity, `blocker` first. Write each title and case in plain words for someone who did not run the audit: what a consumer does and what goes wrong. A specification or framework name is evidence after the case, never the case. Number findings and questions in one sequence, so the user answers every item the same way, by number. End with how to reply: which findings you recommend fixing, as in "Reply 'go' to fix 1, 2, and 4 as recommended, or name the numbers to change."
 
 ```markdown
 **Verdict: not ready.** 1 blocker, 1 major, 1 question.
@@ -132,14 +135,15 @@ Open with the verdict and the counts, then the scope. List findings by severity,
 
 1. **`parseCsv()` hangs on an unterminated quote.** `vulnerability` · `blocker` · `default` · `verified` · `src/csv.ts:88`
    - Case: a 40 KB upload whose first field opens a quote and never closes it takes 90 seconds in `parseCsv(text)`, blocking the event loop.
+   - Class: every scan that looks for a closing character: the quote scan in `parseCsv` and the same loop copied into `parseTsv` (`src/tsv.ts:52`).
    - Why: one upload stalls every other request on the server.
-   - Fix: stop at the end of input and report the unterminated quote.
+   - Fix: stop each scan at the end of input and report the unterminated quote.
 
 2. **Retrying every request method.** `decision` · `major` · `default` · `traced` · `src/retry.ts:41`
    - Problem: `fetchJson` retries a timed-out request whatever its method, so a `POST` that reached the server is sent twice and creates a duplicate order.
    - Not weighed: the recorded decision chose retries on by default for resilience, and considered only idempotent reads.
-   - Options: (a) retry only idempotent methods by default; (b) keep retrying all methods and document it; (c) make all retries opt-in.
-   - Recommendation: (a). Why: it removes the duplicates for the common case and needs no new option.
+   - Options: (a) retry only idempotent methods by default: a timed-out `POST` fails once instead of ordering twice, and the caller decides whether to send it again; (b) keep retrying all methods and document it: no code changes, and the duplicates stay; (c) make all retries opt-in: no duplicates by default, though a caller who opts a `POST` in can still get one, and every caller relying on retried reads must add the option.
+   - Recommendation: (a). Why: it removes the duplicates for the common case, keeps retried reads working, and needs no new option.
 
 ### Ruled out
 
@@ -147,11 +151,15 @@ Open with the verdict and the counts, then the scope. List findings by severity,
 
 ### Questions
 
-- Whether `formatMoney` should round half to even: it depends on whether consumers use it for accounting totals. Asking them would settle it.
+3. **Rounding half-cent prices.** `formatMoney(2.345)` shows `$2.35`; accounting software that rounds half to even shows `$2.34`, so a total built from our prices can be a cent off an invoice. (a) Change nothing: it matches `Intl.NumberFormat`. (b) Round half to even by default: breaking, about half of the half-cent prices change in every app, such as `$2.35` to `$2.34`. Recommendation: (a) until a consumer reports a mismatch.
+
+Reply "go" to fix 1 and 2 and keep the rounding in 3 as recommended, or name the numbers to change.
 ```
 
 - **Title:** what is wrong, in plain words.
-- **Tag line:** kind, severity, reach, `verified` or `traced`, and location, in that order. Add `pre-existing` when it applies.
+- **Tag line:** kind, severity, reach, `verified` or `traced`, and location, in that order. Add `pre-existing` when it applies, and `from <commit>` when an earlier fix introduced the finding or left it incomplete.
+- **Class** is required for every finding except a question. Write "only this case" when the search found no other member, so the reader knows the search ran.
+- **Fix** may be "change nothing", with its reason. Recommend it when the fix costs consumers more than the problem does, such as a breaking rename for a `contrived` case, and say so rather than proposing a change.
 - **`decision` findings** always give the problem, what was not weighed, the options, the recommendation, and why.
 - **Ruled out** lists what you checked and found sound that a reader might expect to see flagged, with the reason. It keeps the next audit from raising it again. Write "None" when empty.
 - Leave out praise, summaries of what the code does, and hedging. When unsure, write a question.
@@ -160,11 +168,13 @@ Open with the verdict and the counts, then the scope. List findings by severity,
 
 When asked for comments to post on a pull request, write one line per finding, ready to paste:
 
-`<file>:L<line>: <severity> <kind>: <problem>. <fix>.`
+`<file>:L<line>: <severity> <kind>: <problem>. <fix>. Class: <class>.`
+
+Append `From <commit>.` when an earlier fix introduced the finding or left it incomplete.
 
 ```text
-csv.ts:L120: major defect: a trailing empty field is dropped. Keep it as an empty string.
-retry.ts:L57: minor defect: the delay ignores a Retry-After header. Use it when present.
+csv.ts:L120: major defect: a trailing empty field is dropped. Keep it as an empty string. Class: only this case.
+retry.ts:L57: minor defect: the delay ignores a Retry-After header. Use it when present. Class: the delay in poll.ts:L30 too.
 ```
 
 Write `vulnerability` and `decision` findings as a short paragraph instead, since their reasoning is the point.
@@ -172,6 +182,7 @@ Write `vulnerability` and `decision` findings as a short paragraph instead, sinc
 ## After the Report
 
 - Fix only the findings the user approves.
+- Fix the finding's cause for its whole class, not the case that illustrated it. Test every member of the class, as a table where they share one assertion; where the class has no end, test each distinct form and its boundaries, and name the members left out. Search again for the pattern before calling the fix complete. Fix the members within the scope audited; report each member outside it, with its location, for its own change.
 - Give each fix that changes behavior a test that fails before it and passes after. When no test can be written, ask the user before shipping the fix without one, and say so in the report.
 - When a fix turns out to need new public surface, stop and bring it back as a decision.
 - Record each decision the user takes where the project records decisions, with its reason and the alternatives rejected.

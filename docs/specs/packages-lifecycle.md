@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-16
+last_updated: 2026-11-22
 scope: Public workspace packages.
 ---
 
@@ -48,7 +48,8 @@ Public packages SHOULD also ship a `LICENSE` file at the package root, carrying 
 A public package that runs on Node.js, whether as a library, a CLI, or a build-time plugin, MUST declare `engines.node` as `>=<major>`, where `<major>` is a Node.js major line CI tests: the one pinned in `.nvmrc`, today 26, or, while the root `.node-floor` exists, the one it names, today 24. Its README `Requirements` section and public docs MUST state the same floor.
 
 - **Floor tracks what CI tests.** CI runs the repository on the pinned version, and the `floor` job runs the packages that keep the `.node-floor` line on the version `.node-floor` names (`docs/ci.md`, "Jobs"), so those two majors are the only lines a floor can name and still be tested. A floor below them is a claim no run checks.
-- **The floor job is a transition.** A package on the `.node-floor` line raises its floor to the pinned major in its next breaking release, and SHOULD do so at the earliest release that can carry the break. Type checking uses the pinned line's `@types/node`, so it accepts an API the floor lacks; the `floor` job's runtime failure is what catches it. Once no package declares the old line, `.node-floor` and the job are deleted together.
+- **The floor job is a transition.** A package on the `.node-floor` line raises its floor to the pinned major in its next breaking release, unless the next item exempts it, and SHOULD do so at the earliest release that can carry the break. The floor CI tests is what the repository supports; the pinned major is what it recommends, and moving to it once a breaking release carries the change costs less than an old floor kept open, with its job and its issue, until someone remembers it. Rejected: keeping each package on the old line until a release needs an API it lacks, which keeps the floor job and its tracking issue indefinitely for consumers who can move to a supported LTS. Type checking uses the pinned line's `@types/node`, so it accepts an API the floor lacks; the `floor` job's runtime failure is what catches it. Once no package but an exempt one declares the old line, `.node-floor` and the job are deleted together, and the exempt packages move to the pinned major in that change, which makes their next release breaking.
+- **A package whose main deliverable needs no Node.js keeps the lowest floor.** When most consumers install a package for something that runs without Node.js, such as `@codenhub/styles`, whose stylesheets a page links and whose `chs` command is one route among several, its floor turns away consumers who never run its Node.js part: Yarn 1, and npm or pnpm with `engine-strict`, refuse the whole install. Such a package SHOULD declare the lowest line CI tests, the one `.node-floor` names while it exists, and is exempt from raising it in its next breaking release; it moves to the pinned major last, in the change that deletes `.node-floor` and the `floor` job. Its Node.js code SHOULD also check the version itself where it runs, so a consumer the floor does not stop still gets a clear message. Rejected: declaring no `engines.node`, as a browser-only package does, which turns away no one but leaves a CLI's floor unstated where package managers read it, so a consumer learns it only from a failed run.
 - **The major, not the patch.** The floor names the line, `>=24`, not the pinned patch, `>=24.14.1`. The patch is a toolchain choice, not something a package needs, so naming it would turn away consumers on earlier 24.x releases for no reason. The cost is that CI tests one patch of the line, not its first.
 - **A higher floor needs a reason.** A package MAY declare a higher floor when it needs an API the pinned major lacks. It MUST name that API next to the floor in its README `Requirements`, so the next person can tell when the reason no longer applies.
 - **No upper bound.** Packages declare no `<25`. CI does not test a newer major either, but blocking an install on one would only break a consumer whose code most likely works. The repository root keeps its upper bound, because the root bound guards the toolchain, not a consumer.
@@ -262,6 +263,10 @@ Every release SHOULD aim to be the last before its next breaking change, whateve
 
 The same holds for planned features. Every release is an attempt at 1.0, so a feature on the package's roadmap ships in the release being prepared rather than in a later one. Deferring it is the exception, for when shipping it now is not a plausible option, such as a feature that waits on a runtime, a dependency, or a decision outside the package. The package's roadmap then says what it waits on, so the deferral can be judged and lifted when that changes. Rejected: deferring a feature because it is additive or needs its own design, which is true of most features and would leave a 1.0 short of what its consumers were promised.
 
+A patch release is the exception to both. It ships a fix as soon as the fix is ready, without waiting for other known changes or planned features, because a patch cannot change the public surface, and the surface is what the two rules above protect. Rejected: holding a fix until the rest of the package is settled, which makes consumers wait on work that has nothing to do with the defect they hit.
+
+Reaching 1.0 is a promotion, not a plan. No release is prepared as the 1.0, and no roadmap schedules it: each release is prepared as an attempt at it, and 1.0 is declared afterwards, about a release already in use, once what its consumers did with it shows its surface holds. The evidence is observed behavior: real consumers built on that release, used it long enough to find where it was wrong, and nothing they found needed a breaking change. A reading of the code, however thorough, is not that evidence; it shows that the package looks finished, not that the people using it found it so. The 1.0.0 release therefore publishes the surface that was proven, with no change to behavior or public API from the release it promotes. A change that cannot wait is released first and proven like any other. Rejected: preparing the next release as the 1.0 because the code looks finished, which promises a stable surface no consumer has tested. Rejected: a fixed waiting period, which measures time rather than use.
+
 Packages are also encouraged to track release history following `docs/specs/packages-changelog.md`, which requires a changelog once the documentation site keeps an earlier release of the package; it does not replace the README and `docs/` updates required above. A package that has one MUST keep it in step with its version, which `hub check` enforces.
 
 `hub release --cut=<version|major|minor|patch>` raises the version and scaffolds that entry in one step, and prints the sequence that follows. It writes only; committing and tagging stay with a person, for the reason "Who publishes" gives above.
@@ -272,12 +277,19 @@ A release has to meet rules spread across this spec and the metadata, README, do
 
 ### Every release
 
-"Versioning" makes every release an attempt at 1.0, so every release meets the same bar, whatever its version. There is no lighter bar before 1.0.
-
 Checked by tools:
 
 - `pnpm hub release <package>` passes: `pnpm verify`, including `hub check`, and the version, worktree, and tarball preconditions under "Publishing".
 - No `hub check` warning remains that this release could fix. A warning that has to stay is waived in `docs/specs/packages-exceptions.md`, with its reason. The warnings include a missing `description`, `license`, `repository`, `homepage`, or `keywords`, a `homepage` other than the one "Package metadata" names, and a README `License` section that does not link the package's `LICENSE` file.
+
+- **Record.** The version was cut with `hub release --cut`, so the changelog entry, when the package keeps a changelog, and `size.json` describe this release.
+- **Nothing stale.** The package's internal docs and roadmap no longer describe this release as upcoming, nor behavior the package no longer has, as "Source of truth" in `docs/guidelines/documentation.md` requires.
+
+That is the whole bar for a patch release, which "Versioning" lets ship a fix without waiting for anything else.
+
+### A minor or major release
+
+"Versioning" makes every minor and major release an attempt at 1.0, so each meets the bar above and the one below, whatever its version. There is no lighter bar before 1.0.
 
 Checked by review:
 
@@ -285,23 +297,29 @@ Checked by review:
 - **Status.** `codenhub.status` is accurate (`docs/specs/packages-metadata.md`), and an experimental notice names what has not been proven yet (`docs/specs/packages-readme.md`), not a version by which it will change.
 - **README.** It follows the required structure in `docs/specs/packages-readme.md`, and its `Requirements` section states the Node.js floor when there is one.
 - **Public surface.** Every export is meant for consumers, as "Public API discipline" in `docs/specs/packages-documentation.md` requires.
-- **Public docs.** They are complete and read as a path, under "Completeness" and "Reading path" in `docs/specs/packages-documentation.md`, and they have the playful voice its "Tone" section asks for. A page that leaves the voice out does so for a reason, not by default. Once people use the package, which can happen while it is still `experimental`, the docs are finished writing, not a draft to improve later: they are what those people learn the package from.
-- **Translations.** Each translation the package has is current, with no `translation/stale` warning. Once people use the package, its README and every public document are translated into every supported locale (`docs/specs/packages-translations.md`).
+- **Public docs.** They are complete and read as a path, under "Completeness" and "Reading path" in `docs/specs/packages-documentation.md`, and they have the playful voice its "Tone" section asks for. A page that leaves the voice out does so for a reason, not by default.
+- **Translations.** They meet `docs/specs/packages-translations.md`: each one the package has is current, and a package people use is translated into every supported locale.
 - **Scope.** Nothing known to need changing is left for a later version, and each roadmap item either ships in this release or names what it waits on, as "Versioning" requires.
-- **Record.** The version was cut with `hub release --cut`, so the changelog entry, when the package keeps a changelog, and `size.json` describe this release.
 
 ### Leaving experimental
 
 A package changes `codenhub.status` from `experimental` to `active` once what its experimental notice named has been proven. A 1.0 release is `active`: the major version promises a stable surface, and `experimental` says that part of it is not.
 
-That release meets the bar above, and also:
+That release meets the bars above, and also:
 
 - **Proven in use.** Each part the experimental notice named has been used by a real consumer, such as an app in `apps/` or another package, and the pull request links where.
 - **Notice removed.** The README's experimental notice is removed in the same change as the status, which the `readme` rule enforces.
-- **Translated.** The README and every public document are translated into every supported locale, which the `translation` rule enforces once the status is `active`. Whether people use a package is a judgment; this is the point where the translation requirement is checked for certain, not the point where it starts.
+- **Translated.** Every supported locale, as `docs/specs/packages-translations.md` requires, which the `translation` rule enforces once the status is `active`.
 - **Roadmap settled.** No roadmap item is still deferred for a reason that no longer holds. A consumer adopting 1.0 should get what the roadmap promised them, or know what it waits on.
 
-Rejected: a list that restates each rule in short. It would be easier to read, but it would drift from the specs it summarizes, and a short version of a rule is not the rule: "set `engines.node`" would lead a browser-only package to declare a floor that "Node.js support" forbids. Rejected: a bar for 1.0 alone. It would let a 0.x release skip the bar, which is the deferral "Versioning" rejects.
+### Promoting to 1.0
+
+The 1.0.0 release meets the bars above, and also, as "Versioning" requires:
+
+- **Promotes a release in use.** The pull request names the release it promotes, the consumers that use it, and what their use found.
+- **Unchanged surface.** Its diff from that release changes no behavior and no public API, only the version, the status, the release record the cut writes, and the documentation the bars above ask for.
+
+Rejected: a list that restates each rule in short. It would be easier to read, but it would drift from the specs it summarizes, and a short version of a rule is not the rule: "set `engines.node`" would lead a browser-only package to declare a floor that "Node.js support" forbids. Rejected: a bar for 1.0 alone. It would let a 0.x minor release skip the bar, which is the deferral "Versioning" rejects. Rejected: the full bar for a patch release, which held a fix back behind docs and translation work unrelated to it.
 
 ## Documentation relationship
 

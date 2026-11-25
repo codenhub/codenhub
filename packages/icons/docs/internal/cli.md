@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-16
+last_updated: 2026-11-22
 scope: Design decisions, options, limits, and failure modes of the `chi` build command in `@codenhub/icons`, and the private scanner it shares with `@codenhub/styles`.
 ---
 
@@ -10,7 +10,7 @@ scope: Design decisions, options, limits, and failure modes of the `chi` build c
 
 `chi build` writes a stylesheet holding the icons a project's files use, for a project that runs neither Tailwind CSS, Vite, nor PostCSS. Without it, such a project has one route: a complete family stylesheet, such as `@codenhub/icons/lucide` at about 1.3 MB, where the plugins write about 10 KB for a page with three icons. The stroke-width modifier, `ic-lucide-heart/1.5`, also needs a plugin today. The command closes both gaps with what the package already has: the scanner, the registry, and the generator the plugins use. It makes Tailwind CSS one adapter among three build integrations, as [Few dependencies](../../../../docs/guidelines/code.md#few-dependencies) asks, rather than the shortest route to small output.
 
-It lands in 0.4.0, the release being prepared, and adds a `bin` to the package. It mirrors `chs build` in `@codenhub/styles`, whose [Build command](../../../styles/docs/internal/cli.md) records the decisions this one shares: one command inside the package, no configuration file, Node.js built-ins only, and one line on stderr for each failure.
+It is the package's `bin`. It mirrors `chs build` in `@codenhub/styles`, whose [Build command](../../../styles/docs/internal/cli.md) records the decisions this one shares: one command inside the package, no configuration file, Node.js built-ins only, and one line on stderr for each failure.
 
 ## One package, one `bin`
 

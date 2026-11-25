@@ -206,10 +206,10 @@ export function createTheme<
       return activeName;
     },
     get preference() {
-      return readPreference()?.name ?? null;
+      return readChoice()?.name ?? null;
     },
     get followsSystem() {
-      return readPreference()?.followSystem ?? false;
+      return readChoice()?.followSystem ?? false;
     },
     get system() {
       return readSystem();

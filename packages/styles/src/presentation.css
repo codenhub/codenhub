@@ -43,6 +43,14 @@
   initial-value: transparent;
 }
 
+/* The colour of that plate, opaque, so selected text on it can take the
+   plate's colour while the highlight takes its ink. See `reset.rules.css`. */
+@property --_held-plate {
+  syntax: "<color>";
+  inherits: true;
+  initial-value: transparent;
+}
+
 @property --_held-on {
   syntax: "<percentage>";
   inherits: true;
@@ -52,6 +60,16 @@
 @property --_own-hold {
   syntax: "<percentage>";
   inherits: false;
+  initial-value: 0%;
+}
+
+/* Whether a plate lies beneath, as `--_held-on` says before a surface
+   restates that as its own hold to block the ink. A surface reads it to set
+   a translucent ground opaque on a plate. Registered and inheriting, for
+   the same pass-through. */
+@property --_on-plate {
+  syntax: "<percentage>";
+  inherits: true;
   initial-value: 0%;
 }
 

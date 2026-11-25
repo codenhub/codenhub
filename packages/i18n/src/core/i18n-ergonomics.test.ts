@@ -206,6 +206,18 @@ describe("subscribe", () => {
 
     expect(listener).toHaveBeenCalledOnce();
   });
+
+  it("should be typed as a function property, so a lint rule against unbound methods accepts it detached", () => {
+    // A method's parameters are checked bivariantly and a property's strictly, so only a property rejects a subscribe
+    // that needs more of its listener. A listener of another return type would not tell them apart, since TypeScript
+    // checks a callback parameter strictly in a method too.
+    type Manager = ReturnType<typeof createTypedI18n>;
+    type WithSubscribe<T> = Omit<Manager, "subscribe"> & { subscribe: T };
+    expectTypeOf<WithSubscribe<Manager["subscribe"]>>().toExtend<Manager>();
+    expectTypeOf<
+      WithSubscribe<(listener: (() => void) & { readonly isTagged: true }) => () => void>
+    >().not.toExtend<Manager>();
+  });
 });
 
 describe("init", () => {

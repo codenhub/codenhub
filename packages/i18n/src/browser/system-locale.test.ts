@@ -471,6 +471,38 @@ describe("initializeBrowserI18n subscribe", () => {
     expect(listener).not.toHaveBeenCalled();
   });
 
+  it("works detached from the binding, as useSyncExternalStore() calls it", async () => {
+    setNavigatorLocales(["fr"]);
+    const i18n = createManager();
+    const { subscribe } = await bind({ i18n });
+    const listener = vi.fn();
+    const unsubscribe = subscribe(listener);
+
+    await i18n.setLocale("ar");
+    await flushPromises();
+    unsubscribe();
+    await i18n.setLocale("fr");
+    await flushPromises();
+
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
+  it("is typed as a function property, so a lint rule against unbound methods accepts it detached", () => {
+    // A method's parameters are checked bivariantly and a property's strictly, so only a property rejects this.
+    const narrower = (listener: (() => void) & { readonly tagged: true }) => () => listener;
+    const replaceSubscribe = (binding: BrowserI18nBinding): BrowserI18nBinding => ({
+      get isUsingSystemLocale() {
+        return binding.isUsingSystemLocale;
+      },
+      switchToSystemLocale: binding.switchToSystemLocale,
+      disconnect: binding.disconnect,
+      // @ts-expect-error -- a listener that must carry a tag is narrower than `() => void`.
+      subscribe: narrower,
+    });
+
+    expect(typeof replaceSubscribe).toBe("function");
+  });
+
   it("stops after its unsubscribe function or disconnect()", async () => {
     setNavigatorLocales(["fr"]);
     const i18n = createManager();

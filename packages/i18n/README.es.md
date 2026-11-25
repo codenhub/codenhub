@@ -1,4 +1,4 @@
-<!-- source: 3d7826bf052864f0c1f742d6b46e0f247726a390 -->
+<!-- source: ea7ff0aee43744868631acc059c3f98eaeba1ff0 -->
 
 # @codenhub/i18n
 
@@ -19,8 +19,8 @@ pnpm add @codenhub/i18n
 import { createI18n } from "@codenhub/i18n";
 
 const dictionaries = {
-  en: { home: { title: "Welcome", greeting: "Hello, {name}!" }, cart: { items: { one: "{count} item", other: "{count} items" } } },
-  pt: { home: { title: "Bem-vindo", greeting: "Olá, {name}!" }, cart: { items: { one: "{count} item", other: "{count} itens" } } },
+  en: { home: { title: "Welcome", greeting: "Hello, {name}!" }, cart: { items: { one: "{count, number} item", other: "{count, number} items" } } },
+  pt: { home: { title: "Bem-vindo", greeting: "Olá, {name}!" }, cart: { items: { one: "{count, number} item", other: "{count, number} itens" } } },
 } as const;
 
 export const i18n = createI18n({
@@ -67,7 +67,7 @@ Dos puntos de entrada opcionales cubren lo que cambia según el entorno:
 - Node.js 26 o posterior, o un navegador Chromium, Firefox o WebKit actual, o un Web Worker.
 - Ninguna dependencia de runtime.
 
-En un Web Worker, el punto de entrada raíz y `@codenhub/i18n/routing` funcionan igual que en cualquier otro lugar. `@codenhub/i18n/browser` solo funciona con `syncDocument: false` y sin `root`, porque un worker no tiene página; con los valores por defecto lanza un `TypeError` antes de arrancar el gestor. Consulta [En un Web Worker](docs/es/browser.md#en-un-web-worker).
+En un Web Worker, el punto de entrada raíz y `@codenhub/i18n/routing` funcionan igual que en cualquier otro lugar. `@codenhub/i18n/browser` solo funciona con `syncDocument: false` y sin `root`, porque un worker no tiene página; con los valores por defecto rechaza con un `TypeError` antes de arrancar el gestor. Consulta [En un Web Worker](docs/es/browser.md#en-un-web-worker).
 
 ## Notas
 

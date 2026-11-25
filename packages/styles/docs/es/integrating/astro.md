@@ -2,7 +2,7 @@
 title: Astro
 description: Cargar la hoja de estilos en una aplicación Astro.
 order: 5
-source: 4f93b3a6e0d1cd24a0b7d0eb6050cc98690cd598
+source: c7853c0ec1141933cf8683494691ec331a07ccc6
 ---
 
 # Astro
@@ -24,11 +24,22 @@ import "@codenhub/styles";
 </html>
 ```
 
-Cada página que usa este layout carga la hoja de estilos una vez. ¿Usas Tailwind CSS v4? Importa en su lugar `@codenhub/styles/tw` a través de la integración de Tailwind para Astro; consulta [Tailwind CSS v4](./tailwind.md), incluido cuándo hace falta realmente un `@source` explícito.
+Cada página que usa este layout carga la hoja de estilos una vez. La plantilla mínima de Astro no crea ningún layout; si tu proyecto no tiene uno, crea este y envuelve tus páginas en él.
+
+¿Usas Tailwind CSS v4? Configúralo con `npx astro add tailwind`, que en Astro 5.2 y posteriores añade el plugin `@tailwindcss/vite` y un `src/styles/global.css`; en una versión anterior configura Tailwind CSS v3. Sustituye el `@import "tailwindcss"` de ese archivo por `@import "@codenhub/styles/tw"`, e importa el archivo en el layout en lugar de `@codenhub/styles`:
+
+```astro
+---
+// src/layouts/Layout.astro
+import "../styles/global.css";
+---
+```
+
+Consulta [Tailwind CSS v4](./tailwind.md), incluido cuándo hace falta realmente un `@source` explícito.
 
 ## Forzar un tema
 
-Aplica `.dark` o `.light` en `<html>` para forzar un tema en lugar de seguir la preferencia del sistema; consulta [Temas → Claro y oscuro](../usage/theming.md#claro-y-oscuro).
+Aplica `data-theme="light"` o `data-theme="dark"` en `<html>` para forzar un tema en lugar de seguir la preferencia del sistema; consulta [Temas → Claro y oscuro](../usage/theming.md#claro-y-oscuro).
 
 ## Siguiente paso
 

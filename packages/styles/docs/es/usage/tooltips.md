@@ -2,7 +2,7 @@
 title: Tooltips
 description: Ayuda de campo que se abre con hover y con foco, cómo conectarla para los lectores de pantalla y la tecla Escape, y dónde queda recortado un tooltip.
 order: 4
-source: e9dba9085f67616a424f7cd1da1ddde579829945
+source: 21c659e5fa3a03d415871b88dbb718873aa7aa77
 ---
 
 # Tooltips
@@ -26,7 +26,7 @@ El switch "Perfil público" de la pantalla de ajustes merece una breve explicaci
 
 Las tres partes:
 
-- `.tooltip` envuelve el disparador y el mensaje. Posiciona el mensaje y no pinta nada por sí mismo.
+- `.tooltip` envuelve el disparador y el mensaje. Posiciona el mensaje y no pinta nada por sí mismo. Toma el tamaño de su disparador en cualquier layout, así que un `.stack`, un `.field` o una cuadrícula no lo estiran ni alejan el mensaje del disparador. Alrededor de un componente que llena su línea, como un `.ipt`, un `.select`, un `.progress` o un `.skeleton`, conserva el ancho que le da el layout, así que el componente sigue ocupando todo el ancho. Alrededor de un elemento propio que llena su línea, pon `width: auto` en el `.tooltip`.
 - `.tooltip-bubble` es el mensaje. Es un elemento real, así que puede tener un `id` al que apunte el disparador.
 - `.tooltip-icon` es un pequeño disparador redondo, para un mensaje que no tiene otra cosa a la que asociarse. Cualquier elemento que pueda recibir el foco puede ser el disparador: envuelve un `.btn` existente en `.tooltip` y conserva su propio aspecto.
 
@@ -56,17 +56,18 @@ Una burbuja es tan ancha como su texto, hasta 18rem, y a partir de ahí el texto
 
 ### Dónde queda recortado un tooltip
 
-La burbuja se posiciona solo con CSS, en el lado que elegiste. Nada mide la página: no se desplaza para quedarse dentro de la ventana, no cambia al otro lado cuando no hay espacio y no pasa a la capa superior de la página. Eso tiene tres consecuencias:
+La burbuja se posiciona solo con CSS, en el lado que elegiste. Nada mide la página: no se desplaza para quedarse dentro de la ventana, no cambia al otro lado cuando no hay espacio y no pasa a la capa superior de la página. Eso tiene cuatro consecuencias:
 
 - **Un contenedor con scroll o con recorte la corta.** Un ancestro con `overflow: hidden`, `auto` o `scroll` recorta la burbuja en su borde. La tabla de claves de API de la pantalla de ajustes está dentro de un `.table-wrap`, que tiene scroll, así que un tooltip superior en la primera fila queda recortado en la parte de arriba del contenedor. Subir el `z-index` no ayuda: cambia sobre qué se pinta la burbuja, no si el contenedor la recorta.
 - **El borde de la ventana la corta.** Un tooltip superior en la primera línea de una página, o uno a la derecha cerca del borde derecho, se sale de la pantalla.
 - **Izquierda y derecha son lados físicos.** En una página de derecha a izquierda, `"left"` sigue significando el lado izquierdo de la pantalla.
+- **La tarjeta siguiente puede taparla, por un momento.** Bajo `.glass`, cada tarjeta, panel, alerta y tabla es su propia capa, así que una burbuja se pinta sobre las superficies que siguen a la suya solo mientras su superficie está elevada. Bajo glass esas superficies tienen `position: relative` en reposo, salvo un `<dialog>` o `[popover]`, que conserva la ubicación que le da el navegador, así que un hijo con posición absoluta se ubica respecto de su superficie. El paquete eleva un paso, con `z-index: 1`, un `.card`, `.panel`, `.alert`, `.surface` o `.data-table` mientras contiene un tooltip fijado abierto, o un popover abierto o un elemento `[open]`, o contiene el foco, o mientras tiene el puntero encima con un tooltip dentro. Un paso alcanza para pasar por encima de las superficies vecinas y queda por debajo de tus propias capas, como un encabezado sticky o un menú abierto. Fuera de glass una superficie no es una capa propia y no se eleva nada. Una superficie que hayas posicionado tú, o a la que hayas dado su propio `z-index`, lo conserva, con una excepción bajo glass: una posición que defines en tu propio `@layer components` sobre un elemento que también lleva una clase de superficie del paquete, como en `class="panel my-header"`, pierde ante el `relative` del paquete. Define esa posición con una utilidad como `sticky`, o en una regla fuera de toda capa. El desenfoque también convierte cada superficie de vidrio en el bloque contenedor de un hijo con `position: fixed`, así que una burbuja fija dentro de una tarjeta se ubica respecto de la tarjeta; una burbuja abierta como `popover` la ubica en cambio la capa superior del navegador. Cuando el puntero sale de la superficie, la elevación termina al instante, así que una burbuja que sobresale sobre la tarjeta siguiente se desvanece debajo de ella durante `--tooltip-linger`.
 
 Qué hacer:
 
 - Elige un lado con espacio: en la primera fila de una tabla, usa `data-tooltip-position="bottom"`.
 - Saca el disparador del tooltip del contenedor que recorta, o quita el `overflow` de un contenedor que no lo necesita.
-- Si la posición del disparador no se puede saber de antemano, como en una lista con scroll o en un panel redimensionable, usa una librería de posicionamiento o el componente de popover de tu framework, que pueden medir y cambiar de lado. Puedes seguir dando a su elemento de mensaje las clases `.tooltip-bubble` para el aspecto, pero entonces mostrar, ocultar y posicionar, como se describe en esta página, lo hace esa librería, no `.tooltip`.
+- Si la posición del disparador no se puede saber de antemano, como en una lista con scroll o en un panel redimensionable, usa una librería de posicionamiento o el componente de popover de tu framework, que pueden medir y cambiar de lado. Puedes seguir dando a su elemento de mensaje las clases `.tooltip-bubble` para el aspecto. Fuera de `.tooltip`, la clase es solo el aspecto: sin estado oculto en reposo, posición ni escala, así que un popover que abre la librería, como `<div popover class="tooltip-bubble primary">`, se ve en cuanto se abre. Mostrar, ocultar y posicionar, como se describe en esta página, lo hace entonces esa librería.
 
 ## Hover, permanencia y Escape
 
@@ -111,14 +112,14 @@ document.addEventListener("keydown", (event) => {
 
 ## Cómo se ve la burbuja
 
-Sin clase de intención, la burbuja usa `--color-tooltip`, un fondo elegido para cada tema: casi blanco en una página clara y gris medio en una oscura, con `--color-tooltip-contrast` como color de texto. El casi blanco mide solo 1.04:1 frente a una página clara, así que la burbuja también dibuja un borde fino, y el `.edgeless` de un contenedor no puede quitarlo. Un `.edgeless` en la propia burbuja sí puede. El fondo sigue siendo opaco con cualquier presentación, así que la burbuja sigue siendo legible sobre lo que tape.
+Sin clase de intención, la burbuja usa `--color-tooltip`, un fondo elegido para cada tema: casi blanco en una página clara y gris medio en una oscura, con `--color-tooltip-contrast` como color de texto. El casi blanco mide solo 1.04:1 frente a una página clara, así que la burbuja también dibuja un borde fino, y el `.edgeless` de un contenedor no puede quitarlo. Un `.edgeless` en la propia burbuja sí puede. El fondo es opaco con cualquier presentación, así que la burbuja sigue siendo legible sobre lo que tape, salvo una burbuja `.soft` o `.ghost` bajo `.glass`, descrita más abajo.
 
 Una clase de intención rellena la burbuja con el color de esa intención y cambia el texto al color de contraste correspondiente:
 
 - `.tooltip-bubble.primary` tiene un fondo casi negro con texto casi blanco en una página clara, y un fondo casi blanco con texto casi negro en una oscura.
 - `.tooltip-bubble.destructive` tiene un fondo rojo con texto claro en ambos temas.
 
-Pon las clases de intención, presentación, estética y elevación en `.tooltip-bubble`, el elemento que se pinta, no en `.tooltip`. La burbuja es plana por defecto, incluso bajo una estética que dibuja profundidad; añade `.raised` o `.floating` a la burbuja para elevarla. `.glass` es la excepción: su sombra es un único valor completo que la elevación no puede escalar, así que una burbuja de vidrio conserva esa sombra, y `.flat` tampoco la quita. Una estética en el ámbito da forma a la burbuja como a cualquier otro componente; bajo `.glass` es esmerilada como una tarjeta. `.tooltip-icon` toma la esquina de la estética: cuadrada bajo `.neobrutalism` y `.pixel`, un rombo bajo `.cyber`.
+Pon las clases de intención, presentación, estética y elevación en `.tooltip-bubble`, el elemento que se pinta, no en `.tooltip`. La burbuja es plana por defecto, incluso bajo una estética que dibuja profundidad; añade `.raised` o `.floating` a la burbuja para elevarla. `.glass` es la excepción: su sombra es un único valor completo que la elevación no puede escalar, así que una burbuja de vidrio conserva esa sombra, y `.flat` tampoco la quita. Una estética en el ámbito da forma a la burbuja como a cualquier otro componente; bajo `.glass`, una burbuja `.soft` o `.ghost` es esmerilada como una tarjeta y deja ver la página, mientras que una burbuja por defecto, `.solid` o rellena con una intención sigue siendo opaca. `.tooltip-icon` toma la esquina de la estética: cuadrada bajo `.neobrutalism` y `.pixel`, un rombo bajo `.cyber`.
 
 La burbuja aparece sin el efecto de escala cuando el usuario pide movimiento reducido, ya sea con el ajuste del sistema o con `data-motion="reduce"` en `<html>`. Con `data-motion="none"` su fundido también termina al instante, después de la espera, y `data-motion="full"` mantiene la escala aunque el sistema pida menos movimiento. [Ajustes de la app](../accessibility.md#ajustes-de-la-app) describe el atributo.
 

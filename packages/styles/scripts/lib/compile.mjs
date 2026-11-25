@@ -270,14 +270,14 @@ function dropRepeatedDeclarations(root) {
 }
 
 /* Tailwind writes all its theme values, then the package's tokens, as one
-   `:root, :host` rule in `theme`. The two files write a rule each. */
+   rule in `theme`. The two files write a `:root` rule each. */
 function mergeThemeBlocks(root) {
   const blocks = [];
 
   root.walkRules((rule) => {
     const file = rule.source?.input.file;
 
-    if (/^:root,\s*:host$/.test(rule.selector) && file && isThemeFile(file)) {
+    if (rule.selector === ":root" && file && isThemeFile(file)) {
       blocks.push(rule);
     }
   });
