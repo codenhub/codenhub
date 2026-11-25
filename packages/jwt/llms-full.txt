@@ -1151,7 +1151,7 @@ const body = JSON.stringify(await ring.jwks());
 ```
 
 - **`activeFrom`** is when a key starts signing, in seconds since the Unix epoch, like `exp`. A key signs until the next key's `activeFrom`. **`retiredAt`**, optional, stops it earlier, when it must leave service with no successor yet.
-- **`signingKey()`** returns the key whose `activeFrom` came last, unless it is retired. It never falls back to a key a later one replaced. When no key signs, because every `activeFrom` is still to come or the newest active key is retired, it throws a `TypeError`: signing with no key is a configuration mistake, not something a request can recover from.
+- **`signingKey()`** returns the key whose `activeFrom` came last, unless it is retired. It never falls back to a key a later one replaced. Call it for each token, just before `sign`, rather than keeping the key: one kept past its signing window signs tokens that can outlive its place in the JWKS. When no key signs, because every `activeFrom` is still to come or the newest active key is retired, it throws a `TypeError`: signing with no key is a configuration mistake, not something a request can recover from.
 - **`jwks()`** resolves to the frozen JWKS of every key published now: from `publishAhead` seconds before its `activeFrom` until `publishAfter` seconds after it stops signing. It holds public keys only, also for keys that are not extractable.
 - **The ring is a key set.** Its `select` chooses from the same keys `jwks()` publishes, so your own services accept exactly the keys other verifiers can see. Pass `issuer` to bind them, as [key sets](docs/key-sets.md#keys-of-several-issuers) explains.
 
@@ -1163,7 +1163,7 @@ The ring stores nothing and reads the clock, `now`, at every call. Keep your key
 
 **`publishAhead`** must cover every copy of your JWKS a verifier may hold: the `max-age` you serve it with, plus any shared cache in between, plus how long a verifier keeps using a JWKS it cannot refresh. For this package's remote key sets that last part is `maxStale`, one hour by default. A day is a comfortable value for scheduled rotation.
 
-**`publishAfter`** must outlast every token the key signed: your longest token lifetime plus the clock tolerance of your verifiers. A key that leaves the JWKS sooner makes its last tokens fail with `unknown_kid` before they expire.
+**`publishAfter`** must outlast every token the key signed: your longest token lifetime plus the clock tolerance of your verifiers and how far their clocks may lag yours. A key that leaves the JWKS sooner makes its last tokens fail with `unknown_kid` before they expire.
 
 Serve the JWKS with a `max-age` well below `publishAhead`:
 
@@ -1185,7 +1185,7 @@ An `activeFrom` already in the past is accepted, since the ring cannot know when
 
 ## Replacing a leaked key
 
-A leaked key must stop signing and stop verifying now, not after `publishAfter`. Delete it from your storage and add a new key with `activeFrom` of the current time. Tokens the leaked key signed stop verifying with your ring at once, and with other verifiers when their copy of your JWKS expires. The new key is not in those copies, so expect `unknown_kid` failures for up to your `max-age` from verifiers that do not refetch for an unknown `kid`; that is the price of the emergency path.
+A leaked key must stop signing and stop verifying now, not after `publishAfter`. Delete it from your storage, add a new key with `activeFrom` of the current time, and rebuild the ring on every instance that signs, verifies or serves the JWKS: a ring keeps the keys it was created with. Tokens the leaked key signed stop verifying with your ring at once, and with other verifiers when their copy of your JWKS expires. The new key is not in those copies, so expect `unknown_kid` failures for up to your `max-age` from verifiers that do not refetch for an unknown `kid`; that is the price of the emergency path.
 
 <!-- Source: docs/errors.md -->
 
@@ -1336,7 +1336,7 @@ Three things propagate rather than becoming a result: an exception thrown by you
 ## Changed
 
 - **Breaking.** A `claims` schema's failure is `schema_failed`, not `invalid_claims`, which was one letter from `invalid_claim`, the code for a registered claim of the wrong type. Rename the code in any `switch` or log filter.
-- **Breaking.** A JWKS fetch that imports no usable key, such as `{"keys":[]}` or a JWKS of keys only for other algorithms, fails with `{ reason: "no_usable_keys" }` and keeps the cached keys, instead of replacing them with none. An issuer that empties its JWKS to revoke every key has its old keys trusted until the cache stops being usable, at most `cacheTtl` plus `maxStale` after the last fetch that succeeded.
+- **Breaking.** A JWKS fetch that imports no usable key, such as `{"keys":[]}` or a JWKS of keys only for other algorithms, fails with `{ reason: "no_usable_keys" }` and keeps the cached keys, instead of replacing them with none. An issuer that empties its JWKS to revoke every key has its old keys trusted until the cache stops being usable, at most `cacheTtl` plus `maxStale` after the last fetch that succeeded, or a minute more when the clock steps back.
 - A remote key set fetches with `cache: "no-cache"`, so a browser's HTTP cache revalidates the JWKS instead of answering a refetch for a new `kid` with the old document; a runtime that refuses the member, as Cloudflare Workers before compatibility date 2025-08-07 do, is retried without it. A response's `Cache-Control: max-age` shorter than `cacheTtl` shortens the TTL, never below `cooldown`, and `no-store` or `no-cache` gives `cooldown`. One leading UTF-8 byte order mark is dropped from a JWKS response.
 - `onFetchError` is also called for a failed fetch that a newer fetch replaced.
 - `SignHeader` types `crit`, `b64`, `jwk`, `jku`, `x5u` and `x5c` as `never`, so passing them, which `sign` throws for at run time, is a compile error too.

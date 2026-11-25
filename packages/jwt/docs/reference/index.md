@@ -150,7 +150,9 @@ const { sub } = result.value.payload;
 The verified payload's type comes from `options.claims` when it is given: `createVerifier({ keys, claims: schema })` returns a `Verifier` whose payload is the schema's input type. Without a schema, a type argument names it: `createVerifier<AccessClaims>({ keys })`, with `AccessClaims` any object type, an `interface` included, whose registered claims have their RFC 7519 types. That type is not checked at runtime: only the registered claims are, so a claim the token lacks or holds with another type still reaches your code as typed. Give a schema when the payload's other claims must be checked.
 
 ```ts
-export declare function createVerifier<TPayload extends JwtRegisteredClaims = JwtPayload>(options: VerifierOptions<StandardSchemaV1 | undefined>): Verifier<TPayload>;
+export declare function createVerifier<TPayload extends object & {
+    readonly [K in keyof TPayload & keyof JwtRegisteredClaims]?: JwtRegisteredClaims[K];
+} = JwtPayload>(options: VerifierOptions<StandardSchemaV1 | undefined>): Verifier<TPayload>;
 ```
 
 Creates a verifier whose payload type is given rather than inferred from a `claims` schema; see the overload above for everything it checks. Options whose `claims` may or may not be set also come here.
@@ -1323,7 +1325,7 @@ Selects from the keys `KeyRing.jwks` publishes now, as `KeySet.select` describes
 signingKey(): PrivateKey;
 ```
 
-The key to sign with now: of the keys whose `activeFrom` has come, the one with the latest, unless its `retiredAt` has come too. A ring never falls back to a key a later one replaced.
+The key to sign with now: of the keys whose `activeFrom` has come, the one with the latest, unless its `retiredAt` has come too. A ring never falls back to a key a later one replaced. Call it for each token, just before `sign`: a key kept past its signing window signs tokens that can outlive its place in the JWKS.
 
 **Throws** — TypeError when no key signs now: every `activeFrom` is still to come, or the newest active key is retired; or when `now` returns something other than a finite number.
 
@@ -1413,7 +1415,7 @@ The current time in milliseconds, as `Date.now` returns it. Read at every call o
 readonly publishAfter: number;
 ```
 
-Seconds a key stays published after it stops signing. At least your longest token lifetime plus the clock tolerance of your verifiers, so every token it signed expires before it leaves. A whole number from 0 to 315360000.
+Seconds a key stays published after it stops signing. At least your longest token lifetime plus the clock tolerance of your verifiers and how far their clocks may lag yours, so every token it signed expires before it leaves. A whole number from 0 to 315360000.
 
 #### KeyRingOptions › publishAhead
 
@@ -1421,7 +1423,7 @@ Seconds a key stays published after it stops signing. At least your longest toke
 readonly publishAhead: number;
 ```
 
-Seconds before its `activeFrom` that a key is published. At least as long as verifiers may keep an older copy of your JWKS: your JWKS response's `max-age` plus the `maxStale` of the remote key sets reading it. A whole number from 0 to 315360000.
+Seconds before its `activeFrom` that a key is published. At least as long as verifiers may keep an older copy of your JWKS: your JWKS response's `max-age` plus the `maxStale` of the remote key sets reading it, with a margin for the time a response takes to reach them. A whole number from 0 to 315360000.
 
 ### KeySet
 
@@ -2763,7 +2765,9 @@ Result produced by Standard Schema validation.
 ### VerifiedJwt
 
 ```ts
-export interface VerifiedJwt<TPayload extends JwtRegisteredClaims = JwtPayload> {
+export interface VerifiedJwt<TPayload extends object & {
+    readonly [K in keyof TPayload & keyof JwtRegisteredClaims]?: JwtRegisteredClaims[K];
+} = JwtPayload> {
     readonly header: JwtHeader;
     readonly payload: TPayload;
     readonly key: VerificationKey;
@@ -3120,7 +3124,9 @@ The payload type a verifier with the given schema returns.
 ### Verifier
 
 ```ts
-export type Verifier<TPayload extends JwtRegisteredClaims = JwtPayload> = (token: unknown) => Promise<JwtResult<VerifiedJwt<TPayload>>>;
+export type Verifier<TPayload extends object & {
+    readonly [K in keyof TPayload & keyof JwtRegisteredClaims]?: JwtRegisteredClaims[K];
+} = JwtPayload> = (token: unknown) => Promise<JwtResult<VerifiedJwt<TPayload>>>;
 ```
 
 A configured verifier. Call it with any value; it never throws for a token, whatever its content. `TPayload` is the payload type [`createVerifier`](#createverifier) gave it, from its `claims` schema or its type argument. Only caller code makes its promise reject: a `claims` schema that throws or rejects, or an `options.now` that returns something other than a finite number.

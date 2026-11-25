@@ -34,13 +34,15 @@ export interface KeyRingOptions {
   readonly keys: readonly KeyRingEntry[];
   /**
    * Seconds before its `activeFrom` that a key is published. At least as long as verifiers may keep an older
-   * copy of your JWKS: your JWKS response's `max-age` plus the `maxStale` of the remote key sets reading it.
+   * copy of your JWKS: your JWKS response's `max-age` plus the `maxStale` of the remote key sets reading it,
+   * with a margin for the time a response takes to reach them.
    * A whole number from 0 to 315360000.
    */
   readonly publishAhead: number;
   /**
    * Seconds a key stays published after it stops signing. At least your longest token lifetime plus the
-   * clock tolerance of your verifiers, so every token it signed expires before it leaves. A whole number from
+   * clock tolerance of your verifiers and how far their clocks may lag yours, so every token it signed expires
+   * before it leaves. A whole number from
    * 0 to 315360000.
    */
   readonly publishAfter: number;
@@ -72,7 +74,8 @@ export interface PublicJwks {
 export interface KeyRing extends KeySet {
   /**
    * The key to sign with now: of the keys whose `activeFrom` has come, the one with the latest, unless its
-   * `retiredAt` has come too. A ring never falls back to a key a later one replaced.
+   * `retiredAt` has come too. A ring never falls back to a key a later one replaced. Call it for each token,
+   * just before `sign`: a key kept past its signing window signs tokens that can outlive its place in the JWKS.
    *
    * @throws TypeError when no key signs now: every `activeFrom` is still to come, or the newest active key is
    * retired; or when `now` returns something other than a finite number.
