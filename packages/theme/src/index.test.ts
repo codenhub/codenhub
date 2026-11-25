@@ -810,6 +810,36 @@ describe("Theme behavior", () => {
     }
   });
 
+  it("should report the choice made on this page when storage is unavailable", () => {
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const restore = replaceLocalStorage({
+      get: () => {
+        throw new Error("blocked");
+      },
+    });
+
+    try {
+      const theme = createTheme().init();
+      expect(theme.preference).toBeNull();
+
+      theme.set("light");
+      expect(theme.preference).toBe("light");
+      expect(theme.followsSystem).toBe(false);
+
+      theme.toggle();
+      expect(theme.preference).toBe("dark");
+
+      theme.clearPreference();
+      expect(theme.preference).toBeNull();
+
+      theme.set("dark");
+      theme.destroy();
+      expect(theme.preference).toBeNull();
+    } finally {
+      restore();
+    }
+  });
+
   it("should log each kind of storage failure once per manager", () => {
     const consoleErrorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     const restore = replaceLocalStorage({
@@ -1289,6 +1319,30 @@ describe("Theme following the system within a pair", () => {
       expect(theme.name).toBe("ocean-dark");
       mediaQueryList.dispatch(false);
       expect(theme.name).toBe("ocean-light");
+    } finally {
+      restore();
+    }
+  });
+
+  it("should report whether this page's choice follows the system when storage is unavailable", () => {
+    createMatchMedia(true);
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const restore = replaceLocalStorage({
+      get() {
+        throw new Error("blocked");
+      },
+    });
+    try {
+      const theme = createTheme({ themes: familyThemes }).init();
+      theme.set("ocean-light");
+      expect(theme.name).toBe("ocean-light");
+      expect(theme.preference).toBe("ocean-light");
+      expect(theme.followsSystem).toBe(false);
+
+      theme.set("ocean-light", { followSystem: true });
+      expect(theme.name).toBe("ocean-dark");
+      expect(theme.preference).toBe("ocean-light");
+      expect(theme.followsSystem).toBe(true);
     } finally {
       restore();
     }

@@ -2,7 +2,7 @@
 title: Guardar y sincronizar
 description: Cómo se guarda la elección, qué pasa cuando falla el almacenamiento, cómo se mantienen de acuerdo las pestañas y cómo reaccionar a los cambios de tema.
 order: 4
-source: 245715937679f2121508ba1cefebffc20f345a48
+source: bd179af0830a6695fed60fffad67913ab98a35de
 ---
 
 # Guardar y sincronizar
@@ -27,7 +27,7 @@ Los navegadores pueden rechazar `localStorage`: una ventana privada puede bloque
 - **Una escritura fallida** conserva lo que estuviera guardado antes, si había algo. La nueva elección del usuario sigue funcionando mientras la página esté abierta: después de `set()` o `toggle()`, el tema elegido se mantiene, y los cambios del sistema operativo no lo reemplazan. Al recargar, vuelve a aplicarse el tema guardado antes, o la configuración del sistema operativo. La única excepción es una elección hecha antes de `init()`: `init()` lee primero el almacenamiento, así que un tema guardado antes la reemplaza.
 - **Un borrado fallido** en `clearPreference()` deja guardada la elección anterior. La página cambia al tema del sistema, pero al recargar se restaura la elección guardada, y los cambios del sistema operativo se siguen ignorando mientras esté ahí.
 
-`theme.preference` informa la elección guardada cuando nombra uno de tus temas, y `null` en caso contrario, así que en esa situación puede no coincidir con el tema activo: se queda en `null` cuando el almacenamiento no se puede leer en absoluto, y conserva el tema guardado antes cuando solo falla el guardado, como con la cuota llena.
+`theme.preference` y `theme.followsSystem` informan la elección guardada cuando nombra uno de tus temas. Cuando el almacenamiento no se puede leer en absoluto, informan en su lugar la elección hecha en esta página, y `null` y `false` antes de cualquier elección o una vez que se ejecuta `clearPreference()`. Cuando solo falla el guardado, como con la cuota llena, informan el tema guardado antes si lo hay, que es también el que siguen los cambios del sistema operativo y una recarga, así que pueden no coincidir con el tema activo.
 
 ## Mantener las pestañas de acuerdo
 

@@ -356,13 +356,13 @@ The active theme is now `ocean-light` or `ocean-dark`, whichever has the operati
 
 The theme menu needs to show which entry is selected. The manager answers five questions:
 
-| Member                | Answers                                                                                                                                 |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `theme.name`          | Which theme is active, such as `"dim"`.                                                                                                 |
-| `theme.get()`         | Everything about the active theme: `name`, `colorScheme`, `tokens`, and `pairedTheme`.                                                  |
-| `theme.preference`    | Which theme the user saved, or `null` when nothing is saved, storage cannot be read, or the saved name is no longer one of your themes. |
-| `theme.followsSystem` | Whether the saved choice follows the operating system within its pair, as `set(name, { followSystem: true })` saves it.                 |
-| `theme.system`        | Which theme the operating system's setting maps to right now, whether or not it is shown.                                               |
+| Member                | Answers                                                                                                                 |
+| --------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `theme.name`          | Which theme is active, such as `"dim"`.                                                                                 |
+| `theme.get()`         | Everything about the active theme: `name`, `colorScheme`, `tokens`, and `pairedTheme`.                                  |
+| `theme.preference`    | Which theme the user saved, or `null` when nothing is saved or the saved name is no longer one of your themes.          |
+| `theme.followsSystem` | Whether the saved choice follows the operating system within its pair, as `set(name, { followSystem: true })` saves it. |
+| `theme.system`        | Which theme the operating system's setting maps to right now, whether or not it is shown.                               |
 
 `preference` is what makes the "Auto" entry possible: the menu shows "Auto" as selected while it is `null`. Run that on every change too, so the menu keeps up when the toggle or another tab changes the theme behind its back:
 
@@ -377,7 +377,7 @@ showSelection();
 theme.subscribe(showSelection);
 ```
 
-`preference` reads what is actually saved. While the browser blocks `localStorage`, it stays `null` even after the user picks a theme, although the choice is still applied for as long as the page runs; [Saving and syncing](docs/persistence-and-sync.md#when-storage-fails) covers that case.
+`preference` reads what is actually saved. While the browser blocks `localStorage`, it reports the choice the user made on this page instead, which applies for as long as the page runs, so the menu still marks it; [Saving and syncing](docs/persistence-and-sync.md#when-storage-fails) covers that case.
 
 `get()` returns an `ActiveTheme`: a frozen object, and the same object until the theme next changes. That makes it safe to hand to a UI framework as a store snapshot, which [Frameworks](docs/frameworks.md#react) relies on.
 
@@ -513,7 +513,7 @@ Browsers can refuse `localStorage`: a private window may block it, a user may di
 - **A failed write** keeps whatever was saved before, if anything. The user's new choice still works for as long as the page is open: after `set()` or `toggle()`, the chosen theme stays, and operating-system changes do not override it. On reload, the previously saved theme, or the operating system's setting, applies again. The one exception is a choice made before `init()`: `init()` reads storage first, so a previously saved theme replaces it.
 - **A failed delete** in `clearPreference()` leaves the old choice saved. The page switches to the system theme, but a reload restores the saved choice, and operating-system changes stay ignored while it is there.
 
-`theme.preference` reports the saved choice when it names one of your themes, and `null` otherwise, so in that situation it can disagree with the active theme: it stays `null` when storage cannot be read at all, and keeps the previously saved theme when only saving fails, as with a full quota.
+`theme.preference` and `theme.followsSystem` report the saved choice when it names one of your themes. When storage cannot be read at all, they report the choice made on this page instead, and `null` and `false` once `clearPreference()` runs or before any choice. When only saving fails, as with a full quota, they report the previously saved theme if there is one, which is also the one operating-system changes and a reload go by, so they can disagree with the active theme.
 
 ## Keeping tabs in agreement
 
@@ -873,7 +873,7 @@ The pre-paint script is missing, blocked, or out of step with your app. In order
 
 ## The theme ignores the operating system
 
-The user made a choice, which always wins. `theme.preference` shows a saved one; a choice the browser could not save, because storage is blocked or full, still wins while the page is open, unless another tab changes the theme, although `theme.preference` then shows `null` or an older saved choice. A choice made before `init()` is the exception; see [When storage fails](docs/persistence-and-sync.md#when-storage-fails). Call `theme.clearPreference()`, from an "Auto" or "System" option in your UI, to follow the operating system again. If the browser refuses to delete the saved choice, the console shows a `[theme]` error, the system theme applies once, and operating-system changes stay ignored while the choice remains saved.
+The user made a choice, which always wins. `theme.preference` shows a saved one; a choice the browser could not save, because storage is blocked or full, still wins while the page is open, unless another tab changes the theme. `theme.preference` shows that choice while storage is blocked, but an older saved choice, if there is one, while storage is full. A choice made before `init()` is the exception; see [When storage fails](docs/persistence-and-sync.md#when-storage-fails). Call `theme.clearPreference()`, from an "Auto" or "System" option in your UI, to follow the operating system again. If the browser refuses to delete the saved choice, the console shows a `[theme]` error, the system theme applies once, and operating-system changes stay ignored while the choice remains saved.
 
 ## `createTheme()` throws
 
