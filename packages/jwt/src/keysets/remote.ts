@@ -3,10 +3,8 @@ import { quietly } from "../core/hooks";
 import { rejectUnknownOptions } from "../core/options";
 import type { AsymmetricAlgorithm, JwtIssue, JwtResult, KeySet } from "../core/types";
 import { parseJsonObject } from "../encoding";
-import { importEncryptionKeys, readEncryptionAlgorithms, type ImportEncryptionKeySetOptions } from "../jwe/keyset";
-import type { EncryptionKeySet } from "../jwe/types";
 import { readIssuer } from "../keys/registry";
-import { importKeys, readAlgorithms, readEntries } from "./local";
+import { importKeys, readAlgorithms } from "./local";
 import { lacksKid, selectKey, type SelectableKey, type SelectionQuery } from "./select";
 
 /**
@@ -117,14 +115,6 @@ export interface RemoteKeySetOptions {
   readonly waitUntil?: (promise: Promise<unknown>) => void;
 }
 
-/**
- * How {@link createRemoteEncryptionKeySet} fetches a recipient's JWKS of encryption keys, such as an OpenID
- * client's `jwks_uri` an OpenID Provider encrypts ID tokens to. Every option of {@link RemoteKeySetOptions}
- * applies but `issuer`, and `algorithms` lists key management algorithms, as for `importEncryptionKeySet`.
- */
-export interface RemoteEncryptionKeySetOptions
-  extends Omit<RemoteKeySetOptions, "algorithms" | "issuer">, ImportEncryptionKeySetOptions {}
-
 /** A fetched JWKS, where from and when, as {@link RemoteKeySetOptions.onFetch} receives it. */
 export interface RemoteKeySetSnapshot {
   /** The URL the JWKS was fetched from, as `URL.href` normalizes it; a seed from another URL is ignored. */
@@ -135,8 +125,8 @@ export interface RemoteKeySetSnapshot {
   readonly fetchedAt: number;
 }
 
-/** The options both kinds of remote key set take; typed so a new one fails to compile until listed. */
-const SHARED_OPTIONS: Readonly<Record<keyof Omit<RemoteKeySetOptions, "algorithms" | "issuer">, true>> = {
+/** Every option, typed so a new one fails to compile until listed. */
+const KNOWN_OPTIONS: Readonly<Record<keyof RemoteKeySetOptions, true>> = {
   url: true,
   fetch: true,
   cacheTtl: true,
@@ -149,17 +139,8 @@ const SHARED_OPTIONS: Readonly<Record<keyof Omit<RemoteKeySetOptions, "algorithm
   onFetch: true,
   onFetchError: true,
   waitUntil: true,
-};
-
-const KNOWN_OPTIONS: Readonly<Record<keyof RemoteKeySetOptions, true>> = {
-  ...SHARED_OPTIONS,
   algorithms: true,
   issuer: true,
-};
-
-const KNOWN_ENCRYPTION_OPTIONS: Readonly<Record<keyof RemoteEncryptionKeySetOptions, true>> = {
-  ...SHARED_OPTIONS,
-  algorithms: true,
 };
 
 const MS_PER_SECOND = 1000;
@@ -180,15 +161,15 @@ const CLOCK_STEP_BACK_TOLERANCE_MS = 60_000;
 type FetchFailureReason = "timeout" | "network" | "status" | "too_large" | "invalid_response" | "no_usable_keys";
 
 /**
- * Imports a fetched JWKS. The keys come back as what selection reads of them, since a remote key set handles
- * verification and encryption keys alike; each public function types its set's `select` with its own kind.
+ * Imports a fetched JWKS. The keys come back as what selection reads of them; `createRemoteKeySet` types its
+ * set's `select` as a `KeySet`'s.
  */
 type KeyImporter = (jwks: unknown) => Promise<JwtResult<readonly SelectableKey[]>>;
 
 interface RemoteConfig {
   readonly url: string;
   readonly fetch: JwksFetch | undefined;
-  /** Imports a fetched JWKS, as verification keys or as encryption keys. */
+  /** Imports a fetched JWKS as verification keys. */
   readonly importKeys: KeyImporter;
   readonly cacheTtlMs: number;
   readonly cooldownMs: number;
@@ -295,43 +276,7 @@ export function createRemoteKeySet(options: RemoteKeySetOptions): KeySet {
   return createRemoteSet({ ...config, importKeys: async (jwks) => importKeys(jwks, algorithms, issuer) }) as KeySet;
 }
 
-/**
- * Builds an encryption key set that fetches a recipient's public encryption keys from a JWKS URL, such as the
- * `jwks_uri` of an OpenID client that wants its ID tokens encrypted, caches them, and refetches on expiry or on
- * an unknown `kid`.
- *
- * @remarks
- * It fetches, caches, refetches and fails exactly as {@link createRemoteKeySet} does, with the same options but
- * `issuer`. The JWKS is imported as `importEncryptionKeySet` imports one: only a JWK that says it encrypts is
- * imported, bound to each allowed key management algorithm it fits, so a JWKS without one is `no_usable_keys`.
- * Its `select` takes `{ alg, kid }`.
- *
- * @example
- * ```ts
- * const recipientKeys = createRemoteEncryptionKeySet({ url: client.jwks_uri, algorithms: ["ECDH-ES+A256KW"] });
- * const key = await recipientKeys.select({ alg: "ECDH-ES+A256KW" });
- * if (key.ok) token = await encrypt({ plaintext, key: key.value, enc: "A256GCM" });
- * ```
- *
- * @param options - Where to fetch the JWKS from, how to cache it, and which key management algorithms keys may be
- * bound to.
- * @returns A frozen encryption key set, whose `select` resolves as {@link createRemoteKeySet}'s does.
- * @throws TypeError as {@link createRemoteKeySet} does, except that `issuer` is not an option and `algorithms`
- * must be a non-empty array of asymmetric key management algorithms.
- */
-export function createRemoteEncryptionKeySet(options: RemoteEncryptionKeySetOptions): EncryptionKeySet {
-  const config = readRemoteOptions(options, KNOWN_ENCRYPTION_OPTIONS, "createRemoteEncryptionKeySet");
-  const algorithms = readEncryptionAlgorithms(options, "createRemoteEncryptionKeySet");
-  return createRemoteSet({
-    ...config,
-    importKeys: async (jwks) => {
-      const entries = readEntries(jwks);
-      return entries.ok ? ok(await importEncryptionKeys(entries.value, algorithms)) : entries;
-    },
-  }) as EncryptionKeySet;
-}
-
-/** The fetching, caching key set both public functions build, over keys of either kind. */
+/** The fetching, caching key set `createRemoteKeySet` builds. */
 function createRemoteSet(config: RemoteConfig): {
   readonly select: (query: SelectionQuery) => Promise<JwtResult<SelectableKey>>;
 } {
@@ -797,8 +742,8 @@ function fetchFailure(reason: FetchFailureReason, extra?: { readonly status: num
 
 /** Checks every option once, so a misconfiguration throws when the key set is created. */
 /**
- * Reads the options both kinds of remote key set share. Each caller then reads `algorithms`, and `issuer` where
- * it has one, and builds its importer.
+ * Reads the options of a remote key set but `algorithms` and `issuer`, which the caller reads before building
+ * its importer.
  *
  * @throws TypeError, its message naming `caller`, as {@link createRemoteKeySet} describes.
  */

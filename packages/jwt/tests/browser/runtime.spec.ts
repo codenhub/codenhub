@@ -46,7 +46,7 @@ test("the page offers every scenario", async ({ page }) => {
  * build CI runs are expected to pass.
  */
 function expectedOutcome(name: string, browserName: string): string {
-  if (browserName !== "webkit" || process.platform !== "win32" || !/^(EdDSA |Ed25519 |JWE .*X25519)/.test(name)) {
+  if (browserName !== "webkit" || process.platform !== "win32" || !/^(EdDSA |Ed25519 )/.test(name)) {
     return "ok";
   }
   return name.includes("leading zero byte")

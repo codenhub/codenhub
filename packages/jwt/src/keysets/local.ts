@@ -120,7 +120,7 @@ export function createKeySet(keys: readonly VerificationKey[], options?: CreateK
  * `oct` keys and the HMAC algorithms (secrets never come from a JWKS), keys for encryption, keys carrying
  * private members, weak or malformed keys, and keys whose `alg` is not allowed. A JWKS with no usable key gives an empty set, whose `select`
  * always fails. Two usable keys with the same `kid` and `alg` are kept; selecting them fails with
- * `ambiguous_key` rather than picking one. {@link importEncryptionKeySet} imports a JWKS's encryption keys.
+ * `ambiguous_key` rather than picking one.
  *
  * @example
  * ```ts

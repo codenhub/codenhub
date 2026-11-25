@@ -184,7 +184,7 @@ function materialFor(members: Members, alg: JwsAlgorithm, role: KeyRole): Materi
     case "EC":
       return curveMaterial(members, ["x", "y"], role, params);
     case "OKP":
-      // An OKP key has no y (RFC 8037 §2); the JWE X25519 import refuses one too.
+      // An OKP key has no y (RFC 8037 §2).
       return members.y === undefined ? curveMaterial(members, ["x"], role, params) : issue("invalid_key", "y");
     case "RSA":
       return rsaMaterial(members, role);

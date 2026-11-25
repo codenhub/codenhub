@@ -1,7 +1,7 @@
 import { fail, ok } from "../core";
 import type { JwtResult } from "../core/types";
 
-/** What selection reads of a key: a JWS verification key, or a JWE key, of either kind. */
+/** What selection reads of a key. */
 export interface SelectableKey {
   readonly alg: string;
   readonly kid?: string;

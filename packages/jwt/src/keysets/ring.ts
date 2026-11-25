@@ -2,11 +2,7 @@ import { deepFreeze } from "../core";
 import { MAX_DURATION_SECONDS, MAX_NUMERIC_DATE } from "../core/limits";
 import { rejectUnknownOptions } from "../core/options";
 import type { JwtHeader, JwtResult, KeySet, PrivateKey, PublicJwk, PublicKey, VerificationKey } from "../core/types";
-import { exportJwePublicJwk, getJwePublicKey } from "../jwe/keys";
-import { isJweKey } from "../jwe/registry";
-import type { JweDecryptionKey, JweHeader, JweJwk, JweKeySet, JwePrivateKey, JwePublicKey } from "../jwe/types";
 import { bindIssuer, exportPublicJwk, getKeyEntry, getPublicKey, readIssuer } from "../keys";
-import { isEncryptionKey } from "../keys/registry";
 import { MAX_JWKS_KEYS } from "./local";
 import { selectKey } from "./select";
 
@@ -99,75 +95,11 @@ export interface KeyRing extends KeySet {
   select(header: JwtHeader): Promise<JwtResult<VerificationKey>>;
 }
 
-/** One encryption key of an {@link EncryptionKeyRing} and when senders encrypt to it, as for a signing key. */
-export interface EncryptionKeyRingEntry extends Omit<KeyRingEntry, "key"> {
-  /** A JWE private key from `generateJweKeyPair`, `importJwePrivateKey` or `importJweKeyPair`, with a unique `kid`. */
-  readonly key: JwePrivateKey;
-}
-
-/**
- * How {@link createEncryptionKeyRing} schedules a recipient's encryption keys: as {@link KeyRingOptions}, without
- * `issuer`, which concerns who signs, and without `publishAhead`, since only the current key is published.
- */
-export interface EncryptionKeyRingOptions extends Omit<
-  KeyRingOptions,
-  "keys" | "issuer" | "publishAhead" | "publishAfter"
-> {
-  /** The keys, in any order. Between 1 and 100. */
-  readonly keys: readonly EncryptionKeyRingEntry[];
-  /**
-   * Seconds a key keeps decrypting after senders should stop encrypting to it: at least the `max-age` of your
-   * JWKS, plus how long senders keep a JWKS they cannot refresh, plus how long a token may take to reach you. A
-   * whole number from 0 to 315360000.
-   */
-  readonly publishAfter: number;
-}
-
-/**
- * A recipient's encryption keys over time: which one senders encrypt to now, the JWKS that publishes it, and a key
- * set that decrypts every token senders may still encrypt to an older key. Frozen, and stateless as a
- * {@link KeyRing} is.
- */
-export interface EncryptionKeyRing extends JweKeySet {
-  /**
-   * The public key to encrypt to now, as {@link KeyRing.signingKey} picks a signing key: of the keys whose
-   * `activeFrom` has come, the one with the latest, unless its `retiredAt` has come too. The same object at
-   * every call that picks the same key.
-   *
-   * @throws TypeError when no key encrypts now, or when `now` returns something other than a finite number.
-   */
-  encryptionKey(): JwePublicKey;
-  /**
-   * The JWKS to serve where senders read your encryption keys, such as your `jwks_uri`: only the key
-   * {@link EncryptionKeyRing.encryptionKey} returns, exported as `exportJwePublicJwk` exports it, with
-   * `use: "enc"`. One key, so a sender that picks a key by its algorithm never finds two.
-   *
-   * @returns A frozen JWKS, with no key when none is active.
-   * @throws TypeError, as a rejected promise, when `now` returns something other than a finite number.
-   */
-  jwks(): Promise<{ readonly keys: readonly JweJwk[] }>;
-  /**
-   * Selects the private key for a token's header from every key that decrypts now: from its `activeFrom` until
-   * `publishAfter` seconds after the next key's `activeFrom` or its own `retiredAt`. A sender holding an older
-   * copy of your JWKS still encrypts to the key it replaced, and its tokens decrypt until then; a key not yet
-   * active decrypts nothing, since no sender has been given it.
-   *
-   * @throws TypeError, as a rejected promise, when `now` returns something other than a finite number.
-   */
-  select(header: JweHeader): Promise<JwtResult<JweDecryptionKey>>;
-}
-
 const KNOWN_OPTIONS: Readonly<Record<keyof KeyRingOptions, true>> = {
   keys: true,
   publishAhead: true,
   publishAfter: true,
   issuer: true,
-  now: true,
-};
-
-const KNOWN_ENCRYPTION_OPTIONS: Readonly<Record<keyof EncryptionKeyRingOptions, true>> = {
-  keys: true,
-  publishAfter: true,
   now: true,
 };
 
@@ -185,7 +117,7 @@ interface Scheduled<TPrivate, TPublic> {
   readonly publishedUntil: number;
 }
 
-/** What tells the two kinds of ring apart: the caller's name, and how a key is read and its public half made. */
+/** What a ring is built over: the caller's name, and how a key is read and its public half made. */
 interface RingKind<TPrivate, TPublic> {
   readonly name: string;
   /** Checks an entry's `key`, throwing a TypeError naming `path`. */
@@ -195,7 +127,7 @@ interface RingKind<TPrivate, TPublic> {
   readonly publishesAhead: boolean;
 }
 
-/** The schedule both kinds of ring read their keys from. */
+/** The schedule a ring reads its keys from. */
 interface Schedule<TPrivate, TPublic> {
   /** The newest key whose `activeFrom` has come, or why none is current: no key is active yet, or it is retired. */
   readonly current: () => Scheduled<TPrivate, TPublic> | "none" | "retired";
@@ -263,60 +195,6 @@ export function createKeyRing(options: KeyRingOptions): KeyRing {
   });
 }
 
-/**
- * Builds a key ring from a recipient's encryption keys and when senders encrypt to each one, for rotating the keys
- * tokens are encrypted to without a window in which a token arrives for a key the recipient dropped.
- *
- * @remarks
- * `encryptionKey()` picks the key to encrypt to as {@link createKeyRing}'s `signingKey()` picks the key to sign
- * with, and `jwks()` publishes that key alone, so a sender choosing by algorithm never meets two. A key decrypts
- * from its `activeFrom` until `publishAfter` seconds after the next key's `activeFrom` or its own `retiredAt`, for
- * senders that still hold an older JWKS and tokens still on their way. The ring is the decryption key set: pass it
- * as `createDecrypter`'s `keys`. Signing and encryption keys rotate in separate rings, so a signing ring's bundle
- * carries no JWE code.
- * [Key rotation](https://github.com/codenhub/codenhub/blob/main/packages/jwt/docs/rotation.md) gives the steps.
- *
- * @example
- * ```ts
- * const ring = createEncryptionKeyRing({
- *   keys: [
- *     { key: currentKey, activeFrom: 1_798_761_600 },
- *     { key: nextKey, activeFrom: 1_801_440_000 },
- *   ],
- *   publishAfter: 172_800,
- * });
- * const decrypt = createDecrypter({ keys: ring });
- * ```
- *
- * @param options - The keys and their times, how long a key decrypts after it is replaced, and the clock.
- * @returns The frozen ring.
- * @throws TypeError as {@link createKeyRing} does, with `issuer` and `publishAhead` not options and a `key` that
- * must be a JWE private key created by this package; a signing key's message names `createKeyRing`.
- */
-export function createEncryptionKeyRing(options: EncryptionKeyRingOptions): EncryptionKeyRing {
-  readRingOptions(options, KNOWN_ENCRYPTION_OPTIONS, "createEncryptionKeyRing");
-  const schedule = readRing(options, {
-    name: "createEncryptionKeyRing",
-    readKey: readEncryptionKey,
-    publicHalf: getJwePublicKey,
-    publishesAhead: false,
-  });
-  const exported = exportOnce(exportJwePublicJwk);
-
-  return Object.freeze({
-    encryptionKey: (): JwePublicKey => currentOf(schedule, "createEncryptionKeyRing", "encryption").publicKey,
-    jwks: async (): Promise<{ readonly keys: readonly JweJwk[] }> => {
-      const current = schedule.current();
-      return deepFreeze({ keys: typeof current === "string" ? [] : [await exported(current)] });
-    },
-    select: async (header: JweHeader): Promise<JwtResult<JweDecryptionKey>> =>
-      selectKey(
-        schedule.published().map((entry) => entry.key),
-        header,
-      ),
-  });
-}
-
 /** Checks that `options` is an object of known members, and returns it. */
 function readRingOptions(options: unknown, known: Readonly<Record<string, true>>, name: string): object {
   if (typeof options !== "object" || options === null) {
@@ -326,7 +204,7 @@ function readRingOptions(options: unknown, known: Readonly<Record<string, true>>
   return options;
 }
 
-/** Reads the options both kinds of ring share, checked by `readRingOptions` first, into their schedule. */
+/** Reads a ring's options, checked by `readRingOptions` first, into its schedule. */
 function readRing<TPrivate, TPublic>(options: object, kind: RingKind<TPrivate, TPublic>): Schedule<TPrivate, TPublic> {
   const { name } = kind;
   const source = options as Record<string, unknown>;
@@ -361,7 +239,7 @@ function readRing<TPrivate, TPublic>(options: object, kind: RingKind<TPrivate, T
   };
 }
 
-/** The current key of a ring, for `signingKey()` or `encryptionKey()`, which throw when there is none. */
+/** The current key of a ring, for `signingKey()`, which throws when there is none. */
 function currentOf<TPrivate, TPublic>(
   schedule: Schedule<TPrivate, TPublic>,
   name: string,
@@ -466,11 +344,6 @@ function readSchedule<TPrivate, TPublic>(
 
 /** Reads a signing ring entry's `key`: a private key this package created, with a `kid`. */
 function readSigningKey(value: unknown, path: string): PrivateKey {
-  if (isEncryptionKey(value)) {
-    throw new TypeError(
-      `createKeyRing: ${path}.key is an encryption (JWE) key; rotate encryption keys with createEncryptionKeyRing.`,
-    );
-  }
   let isPrivate: boolean;
   try {
     getKeyEntry(value);
@@ -486,29 +359,4 @@ function readSigningKey(value: unknown, path: string): PrivateKey {
     throw new TypeError(`createKeyRing: ${path}.key must have a kid.`);
   }
   return key;
-}
-
-/** Reads an encryption ring entry's `key`: a JWE private key this package created, with a `kid`. */
-function readEncryptionKey(value: unknown, path: string): JwePrivateKey {
-  if (!isJweKey(value)) {
-    let isSigningKey: boolean;
-    try {
-      getKeyEntry(value);
-      isSigningKey = true;
-    } catch {
-      isSigningKey = false;
-    }
-    if (isSigningKey) {
-      throw new TypeError(
-        `createEncryptionKeyRing: ${path}.key is a signing (JWS) key; rotate signing keys with createKeyRing.`,
-      );
-    }
-  }
-  if (!isJweKey(value) || value.kind !== "jwe-private") {
-    throw new TypeError(`createEncryptionKeyRing: ${path}.key must be a JWE private key created by this package.`);
-  }
-  if (value.kid === undefined) {
-    throw new TypeError(`createEncryptionKeyRing: ${path}.key must have a kid.`);
-  }
-  return value;
 }

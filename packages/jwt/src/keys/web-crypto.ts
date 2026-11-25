@@ -1,6 +1,6 @@
 /**
- * Web Crypto helpers that the JWS and JWE keys share. This module imports neither family's algorithm tables, so
- * either can use it without carrying the other's code into a bundle.
+ * Web Crypto helpers for keys. This module imports no algorithm table, so a module can use it without carrying
+ * the tables into a bundle.
  */
 import { isCryptoKey } from "./exported-jwk";
 

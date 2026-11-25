@@ -19,8 +19,8 @@ export async function exportWebCryptoJwk(cryptoKey: CryptoKey, alg: JwsAlgorithm
 
 /**
  * Pads an exported JWK's private scalar `d` with leading zero bytes to `coordinateBytes`, for the WebKit export
- * {@link exportWebCryptoJwk} records. Shared by the JWS and JWE keys, so it takes the length rather than an
- * algorithm.
+ * {@link exportWebCryptoJwk} records. It takes the length rather than an algorithm, so it needs no algorithm
+ * table.
  *
  * @param coordinateBytes - The curve's coordinate length, or undefined for a key without one, which is returned
  * as it is.

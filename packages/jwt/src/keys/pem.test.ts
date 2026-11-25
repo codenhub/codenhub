@@ -3,7 +3,6 @@ import { createPublicKey, generateKeyPairSync, randomUUID } from "node:crypto";
 import { describe, expect, it } from "vitest";
 
 import type { AsymmetricAlgorithm } from "../core/types";
-import { importJwePublicKey } from "../jwe/keys";
 import { createKeySet } from "../keysets/local";
 import { sign } from "../sign/sign";
 import { createVerifier } from "../verify/create-verifier";
@@ -522,18 +521,12 @@ describe("PEM import of a key whose inner DER is not strict", () => {
     expect(issuesOf(await importPrivateKey(pemOfBytes("EC PRIVATE KEY", der), { alg: "ES256" }))).toEqual(invalid);
   });
 
-  it("should refuse a JWE PEM whose RSA modulus is negative as invalid_key", async () => {
-    const pem = pemOfBytes("PUBLIC KEY", rsaSpkiWithModulus(asNegative));
-    expect(await importJwePublicKey(pem, { alg: "RSA-OAEP-256" })).toEqual({ ok: false, error: { issues: invalid } });
-  });
-
   it("should still import the strict DER of each, and a PKCS#8 version 2 key with its public key", async () => {
     const rsa = pemOfBytes(
       "PUBLIC KEY",
       rsaSpkiWithModulus((n) => n),
     );
     expect((await importPublicKey(rsa, { alg: "RS256" })).ok).toBe(true);
-    expect((await importJwePublicKey(rsa, { alg: "RSA-OAEP-256" })).ok).toBe(true);
     const ec = pemOfBytes(
       "PUBLIC KEY",
       ecSpkiWithAlgorithm((algorithm) => algorithm),

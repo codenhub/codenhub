@@ -911,7 +911,7 @@ describe("importPrivateKey RSA member sizes and n", () => {
 });
 
 describe("importPublicKey and importPrivateKey for an OKP JWK with y", () => {
-  it("should report invalid_key with path y, as the JWE X25519 import does", async () => {
+  it("should report invalid_key with path y", async () => {
     const y = ED25519_PUBLIC_JWK.x;
     expect(issuesOf(await importPublicKey({ ...ED25519_PUBLIC_JWK, y }, { alg: "Ed25519" }))).toEqual([
       { code: "invalid_key", path: ["y"] },
