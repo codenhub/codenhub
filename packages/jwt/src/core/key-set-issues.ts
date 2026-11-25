@@ -1,7 +1,7 @@
 import type { JwtIssue, JwtPathSegment } from "./types";
 
 /**
- * Reads the issues of a failure a caller's key set returned, copied, for a verifier or decrypter to pass on. A
+ * Reads the issues of a failure a caller's key set returned, copied, for a verifier to pass on. A
  * Proxy's traps can still throw from here; callers already catch whatever a key set does.
  *
  * @returns The copied issues, or `undefined` unless `issues` is a non-empty array whose every entry is an issue as

@@ -32,12 +32,6 @@ export const isJwsAlgorithm = (value: unknown): value is JwsAlgorithm =>
   typeof value === "string" && (JWS_ALGORITHMS as readonly string[]).includes(value);
 
 /**
- * Most signatures a general JWS JSON serialization may hold, when signing and when verifying: each one costs a
- * key selection and a signature check.
- */
-export const MAX_JWS_SIGNATURES = 8;
-
-/**
  * Header parameter names RFC 7515 and RFC 7518 define, which a `crit` list must not name (RFC 7515 §4.1.11):
  * `crit` is for extensions.
  */
