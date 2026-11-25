@@ -1,4 +1,4 @@
-<!-- source: 00f452e1e5431e9ffa6b95a5b5ca1454b2aa2987 -->
+<!-- source: e2a6fdb145d6f8327b8f0dff701a92aad2134aee -->
 
 # @codenhub/styles
 
@@ -59,4 +59,4 @@ Este paquete no tiene comportamiento en JavaScript. No incluye alias de compatib
 
 ## Licencia
 
-Este proyecto tiene licencia [Apache-2.0](LICENSE). Los valores del tema, el Preflight y los registros de propiedades de Tailwind, incluidos en las hojas de estilos compiladas de `dist/`, y los registros de propiedades de `tw/theme.css` provienen de [Tailwind CSS](https://tailwindcss.com) (MIT). Consulta [NOTICE](NOTICE) para los avisos obligatorios. `LICENSE` termina con los mismos avisos, así que el `build.license` de Vite, que lista el `LICENSE` de cada paquete, los lleva.
+Este proyecto tiene licencia [Apache-2.0](LICENSE). Los valores del tema, el Preflight y los registros de propiedades de Tailwind, incluidos en las hojas de estilos compiladas de `dist/`, y los registros de propiedades de `tw/theme.css` provienen de [Tailwind CSS](https://tailwindcss.com) (MIT). Consulta [NOTICE](NOTICE) para los avisos obligatorios. `LICENSE` termina con los mismos avisos, así que el `build.license` de Vite, que lista el `LICENSE` de cada paquete, los lleva cuando JavaScript importa el paquete; deja fuera un paquete al que solo llega un `@import` de CSS ([vitejs/vite#24111](https://github.com/vitejs/vite/issues/24111)). Para esa vía, y para otros bundlers, sirve `NOTICE` con tu app o añade su texto a la página de licencias de tu app.
