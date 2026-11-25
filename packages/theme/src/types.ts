@@ -221,12 +221,16 @@ export interface ThemeSetOptions {
 export interface Theme<TName extends string = string, TSchema extends Record<string, string> = Record<string, string>> {
   /** Active theme name. `defaultTheme` until `init()` or another change runs. */
   readonly name: TName;
-  /** Explicit preference stored in `localStorage`, or `null` when none is stored, the stored name is not configured, or storage is unavailable. */
+  /**
+   * Explicit preference stored in `localStorage` when it names a configured theme. Otherwise the explicit choice made
+   * with `set()` or `toggle()` that storage could not keep, until `clearPreference()` or `destroy()`, or `null` when
+   * there is none.
+   */
   readonly preference: TName | null;
   /**
    * Whether the stored preference follows the OS color scheme within its pair, as `set(name, { followSystem: true })`
-   * stores it. `false` when there is no stored preference, or its theme no longer has a `pairedTheme` of the opposite
-   * `colorScheme`, in which case the preference stays fixed on that theme.
+   * stores it, read from the same choice as `preference`. `false` when there is no preference, or its theme no longer
+   * has a `pairedTheme` of the opposite `colorScheme`, in which case the preference stays fixed on that theme.
    */
   readonly followsSystem: boolean;
   /** Theme matching the current OS color-scheme preference, or `defaultTheme` when `matchMedia` is unavailable. */

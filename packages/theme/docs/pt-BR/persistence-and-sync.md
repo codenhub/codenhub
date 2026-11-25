@@ -2,7 +2,7 @@
 title: Salvar e sincronizar
 description: Como a escolha é salva, o que acontece quando o armazenamento falha, como as abas ficam de acordo e como reagir a mudanças de tema.
 order: 4
-source: 245715937679f2121508ba1cefebffc20f345a48
+source: bd179af0830a6695fed60fffad67913ab98a35de
 ---
 
 # Salvar e sincronizar
@@ -27,7 +27,7 @@ Navegadores podem recusar o `localStorage`: uma janela anônima pode bloqueá-lo
 - **Uma escrita que falha** mantém o que estava salvo antes, se havia algo. A nova escolha do usuário continua funcionando enquanto a página estiver aberta: depois de `set()` ou `toggle()`, o tema escolhido fica, e as mudanças do sistema operacional não o sobrescrevem. Ao recarregar, volta a valer o tema salvo antes, ou a configuração do sistema operacional. A única exceção é uma escolha feita antes de `init()`: `init()` lê o armazenamento primeiro, então um tema salvo antes a substitui.
 - **Uma remoção que falha** em `clearPreference()` deixa a escolha antiga salva. A página muda para o tema do sistema, mas recarregar restaura a escolha salva, e as mudanças do sistema operacional continuam ignoradas enquanto ela estiver lá.
 
-`theme.preference` informa a escolha salva quando ela nomeia um dos seus temas, e `null` caso contrário, então nessa situação ele pode discordar do tema ativo: ele fica `null` quando o armazenamento não pode ser lido de jeito nenhum, e mantém o tema salvo antes quando só a gravação falha, como com a cota cheia.
+`theme.preference` e `theme.followsSystem` informam a escolha salva quando ela nomeia um dos seus temas. Quando o armazenamento não pode ser lido de jeito nenhum, eles informam no lugar a escolha feita nesta página, e `null` e `false` antes de qualquer escolha ou depois que `clearPreference()` roda. Quando só a gravação falha, como com a cota cheia, eles informam o tema salvo antes, se houver, que também é o que as mudanças do sistema operacional e um recarregamento seguem, então podem discordar do tema ativo.
 
 ## Mantendo as abas de acordo
 

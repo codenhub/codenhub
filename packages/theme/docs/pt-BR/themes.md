@@ -2,7 +2,7 @@
 title: Definir temas
 description: Adicione os seus próprios temas, escolha o que a configuração do sistema e o toggle selecionam, leia o estado atual e veja cada opção com o seu padrão.
 order: 2
-source: 6d7b1264bdc3a212421a468d818b0ab6cdcf26ff
+source: 5ce85549a6d39ce29bd216b61aa8ae6277c6ece1
 ---
 
 # Definir temas
@@ -122,13 +122,13 @@ Agora o tema ativo é `ocean-light` ou `ocean-dark`, o que tiver o color scheme 
 
 O menu de temas precisa mostrar qual opção está selecionada. O gerenciador responde a cinco perguntas:
 
-| Membro                | Responde                                                                                                                                      |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `theme.name`          | Qual tema está ativo, como `"dim"`.                                                                                                           |
-| `theme.get()`         | Tudo sobre o tema ativo: `name`, `colorScheme`, `tokens` e `pairedTheme`.                                                                     |
-| `theme.preference`    | Qual tema o usuário salvou, ou `null` quando nada está salvo, o armazenamento não pode ser lido ou o nome salvo não é mais um dos seus temas. |
-| `theme.followsSystem` | Se a escolha salva segue o sistema operacional dentro do par, como `set(name, { followSystem: true })` a salva.                               |
-| `theme.system`        | Para qual tema a configuração do sistema operacional aponta agora, esteja ele à mostra ou não.                                                |
+| Membro                | Responde                                                                                                                                                                                                                  |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme.name`          | Qual tema está ativo, como `"dim"`.                                                                                                                                                                                       |
+| `theme.get()`         | Tudo sobre o tema ativo: `name`, `colorScheme`, `tokens` e `pairedTheme`.                                                                                                                                                 |
+| `theme.preference`    | Qual tema o usuário escolheu: o salvo, ou o escolhido nesta página quando o armazenamento não conseguiu salvá-lo. `null` quando não há nenhum dos dois; um nome salvo que não é mais um dos seus temas conta como nenhum. |
+| `theme.followsSystem` | Se essa escolha segue o sistema operacional dentro do par, como `set(name, { followSystem: true })` a faz.                                                                                                                |
+| `theme.system`        | Para qual tema a configuração do sistema operacional aponta agora, esteja ele à mostra ou não.                                                                                                                            |
 
 `preference` é o que torna possível a opção "Automático": o menu mostra "Automático" como selecionado enquanto ele for `null`. Rode isso também a cada mudança, para o menu acompanhar quando o toggle ou outra aba trocam o tema pelas costas dele:
 
@@ -143,7 +143,7 @@ showSelection();
 theme.subscribe(showSelection);
 ```
 
-`preference` lê o que está de fato salvo. Enquanto o navegador bloqueia o `localStorage`, ele continua `null` mesmo depois que o usuário escolhe um tema, embora a escolha continue aplicada enquanto a página estiver rodando; [Salvar e sincronizar](persistence-and-sync.md#quando-o-armazenamento-falha) cobre esse caso.
+`preference` lê o que está de fato salvo. Enquanto o navegador bloqueia o `localStorage`, ele informa no lugar a escolha que o usuário fez nesta página, que continua aplicada enquanto a página estiver rodando, então o menu continua marcando ela; [Salvar e sincronizar](persistence-and-sync.md#quando-o-armazenamento-falha) cobre esse caso.
 
 `get()` devolve um `ActiveTheme`: um objeto congelado, e o mesmo objeto até a próxima mudança de tema. Isso o torna seguro para entregar a um framework de UI como snapshot de uma store, e é nisso que [Frameworks](frameworks.md#react) se apoia.
 

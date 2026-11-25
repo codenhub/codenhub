@@ -26,7 +26,7 @@ Browsers can refuse `localStorage`: a private window may block it, a user may di
 - **A failed write** keeps whatever was saved before, if anything. The user's new choice still works for as long as the page is open: after `set()` or `toggle()`, the chosen theme stays, and operating-system changes do not override it. On reload, the previously saved theme, or the operating system's setting, applies again. The one exception is a choice made before `init()`: `init()` reads storage first, so a previously saved theme replaces it.
 - **A failed delete** in `clearPreference()` leaves the old choice saved. The page switches to the system theme, but a reload restores the saved choice, and operating-system changes stay ignored while it is there.
 
-`theme.preference` reports the saved choice when it names one of your themes, and `null` otherwise, so in that situation it can disagree with the active theme: it stays `null` when storage cannot be read at all, and keeps the previously saved theme when only saving fails, as with a full quota.
+`theme.preference` and `theme.followsSystem` report the saved choice when it names one of your themes. When storage cannot be read at all, they report the choice made on this page instead, and `null` and `false` once `clearPreference()` runs or before any choice. When only saving fails, as with a full quota, they report the previously saved theme if there is one, which is also the one operating-system changes and a reload go by, so they can disagree with the active theme.
 
 ## Keeping tabs in agreement
 
