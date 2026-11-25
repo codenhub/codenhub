@@ -63,7 +63,7 @@ The trimmed stylesheet holds what [`chs build`](./without-a-bundler.md#options) 
 
 ## Which files are read
 
-Everything under Vite's root is read, the folder that holds `index.html` unless your configuration sets [`root`](https://vite.dev/config/shared-options.html#root). Tailwind's automatic source detection reads a project the same way. A few things are left out, each because reading it would keep classes your pages do not use:
+Everything under Vite's root is read: the folder you run Vite in, unless the command names another, as in `vite build apps/web`, or your configuration sets [`root`](https://vite.dev/config/shared-options.html#root). Tailwind's automatic source detection reads a project the same way. A few things are left out, each because reading it would keep classes your pages do not use:
 
 - **What your `.gitignore` excludes.** The `.gitignore` in the root, in every folder below it, and in every folder above it up to the one that holds `.git`, with git's rules: the last matching line wins, and a deeper file overrides a higher one. The root itself is never left out, even when the repository ignores it with a line such as `playground/`. A line that names the files under the root rather than the folder, such as `playground/**`, does leave them out; name them in [`content`](#files-outside-the-root), as in `content: ["index.html", "src/**/*"]`, or change the line to the folder's own name. `.git/info/exclude` and a global excludes file are not read, and matching is case-sensitive on every system, so every machine builds the same stylesheet.
 - **`node_modules` and `.git`**, at any depth. A dependency's files name classes no page of yours uses.
@@ -96,7 +96,7 @@ The dev server follows your files as they change, with no reload by hand:
 - **Saving a file that names a new class** updates the stylesheet in place. Removing the last use of a class drops its rule.
 - **Creating or deleting a file** counts as a change to its classes.
 - **Saving an HTML file** reloads the page, as Vite does for HTML, and the page it reloads gets the new stylesheet.
-- **Changing a `.gitignore`** reads the whole root again, since it changes what is read.
+- **Changing a `.gitignore`**, under the root or above it, reads the whole root again, since it changes what is read. A `.gitignore` created above the root while Vite runs is read at the next start.
 - **A file a `content` entry names** is followed too, and so is a file created in a folder an entry reads from.
 
 The stylesheet a server-side render loads follows the same changes, and a server-side rendering build inlines the trimmed stylesheet where it inlines CSS.
@@ -130,9 +130,9 @@ Every message the plugin prints starts with `@codenhub/styles/vite:`, and a fail
 - **`this plugin needs Node.js 24 or newer; this is Node.js <version>`.** Update Node.js on the machine that runs Vite.
 - **`content must be an array of paths or globs`.** The option was given something other than a list of strings, such as `content: "../shared/**/*.html"`. Put the glob in a list, as in `content: ["../shared/**/*.html"]`.
 - **`content holds an empty entry`.** An entry is empty or only spaces, as an unset environment variable gives. Remove it, or name a path or glob.
-- **`content "<entry>" matches no file in <root>`.** The entry is read from the Vite root, not from the folder that holds the configuration file or the one you ran Vite in, so check the path from the root. When a likelier cause is known, the message names it instead: a `*` or `**` that matched files only inside `node_modules`, which it does not enter, or a `[` read as the start of a set of characters, where `[[]` would match the bracket.
+- **`content "<entry>" matches no file in <root>`.** The entry is read from the Vite root the message names, which need not be the folder that holds the configuration file, so check the path from there. When a likelier cause is known, the message names it instead: a `*` or `**` that matched files only inside `node_modules`, which it does not enter, or a `[` read as the start of a set of characters, where `[[]` would match the bracket.
 - **`content "<entry>" is a folder in <root>, not a file`.** Name the files in it, as in `../shared/**/*`.
-- **`cannot read "<path>" (<code>)`.** The plugin could not read a file or list a folder, usually for its permissions, with Node.js's code, such as `EACCES`. Building without it would drop its classes, so the plugin stops instead. Fix its permissions, or, as the message says, add it to `.gitignore` when it is under the root, or change `content` when an entry names it.
+- **`cannot read "<path>" (<code>)`.** The plugin could not read a file or list a folder, usually for its permissions, with Node.js's code, such as `EACCES`. Building without it would drop its classes, so the plugin stops instead. Fix its permissions, or, as the message says, add it to `.gitignore` when it is under the root, or change `content` when an entry names it. A `.gitignore` is read before any rule applies, so for one the message says to remove it instead.
 - **`cannot write to "<path>": <reason> (<code>); fix that, or set cacheDir to a folder you can write to`.** The plugin could not write the trimmed stylesheet into Vite's cache folder. `<reason>` and `<code>` are Node.js's own; `EACCES` or `EPERM` means you cannot write there, and `ENOSPC` that the disk is full.
 - **`a file changed before the plugin read the project; restart Vite`.** Restart Vite.
 

@@ -29,6 +29,21 @@ export function* walkProject(options: WalkOptions): Generator<string, void, unde
   yield* walkFolder(options, options.root, entries, IgnoreRules.forRoot(options.root));
 }
 
+/* Where the walk reads a `.gitignore` above the root, whether or not one is
+   there: nothing under the root reaches these, so a change to one is watched
+   for on its own. */
+export function ignoreFilesAbove(root: string): string[] {
+  const top = findRepository(root) ?? root;
+  const files: string[] = [];
+
+  for (let folder = root; folder !== top;) {
+    folder = path.dirname(folder);
+    files.push(path.join(folder, IGNORE_FILE));
+  }
+
+  return files;
+}
+
 // Whether the walk from `root` reaches `file`, which may have been created or deleted since.
 export function isWalked(options: WalkOptions, file: string): boolean {
   if (!isInside(options.root, file)) {
@@ -214,6 +229,11 @@ function readPatterns(file: string): Pattern[] {
   let bytes: Buffer;
 
   try {
+    // git does not follow a `.gitignore` that is a link.
+    if (fs.lstatSync(file).isSymbolicLink()) {
+      return [];
+    }
+
     bytes = fs.readFileSync(file);
   } catch (error) {
     const { code } = error as { code?: string };
@@ -223,7 +243,8 @@ function readPatterns(file: string): Pattern[] {
       return [];
     }
 
-    throw unreadable(file, error);
+    // Read before any rule applies, so no `.gitignore` can leave it out.
+    throw cannotRead({ file, error, remedy: "remove it" });
   }
 
   let text = bytes.toString("latin1");

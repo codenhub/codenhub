@@ -2,7 +2,7 @@
 title: Vite
 description: Entregar só as classes que as suas páginas usam a partir de um projeto Vite que não usa Tailwind, com o plugin de Vite do pacote.
 order: 6
-source: 93a413c9ccfa6828fe7deb241c7da0ba39aee2e3
+source: 0f469456ec2da35eeaacd597532087ca4e99a23e
 ---
 
 # Vite
@@ -64,7 +64,7 @@ A folha de estilos reduzida traz o que o [`chs build`](./without-a-bundler.md#op
 
 ## Quais arquivos são lidos
 
-Tudo o que está sob a raiz do Vite é lido, a pasta que contém o `index.html`, a menos que a sua configuração defina [`root`](https://vite.dev/config/shared-options.html#root). A detecção automática de fontes do Tailwind lê um projeto do mesmo jeito. Algumas coisas ficam de fora, cada uma porque lê-la manteria classes que as suas páginas não usam:
+Tudo o que está sob a raiz do Vite é lido: a pasta em que você roda o Vite, a menos que o comando nomeie outra, como em `vite build apps/web`, ou que a sua configuração defina [`root`](https://vite.dev/config/shared-options.html#root). A detecção automática de fontes do Tailwind lê um projeto do mesmo jeito. Algumas coisas ficam de fora, cada uma porque lê-la manteria classes que as suas páginas não usam:
 
 - **O que o seu `.gitignore` exclui.** O `.gitignore` da raiz, o de cada pasta abaixo dela e o de cada pasta acima dela até a que contém o `.git`, com as regras do git: vale a última linha que casa, e um arquivo mais fundo prevalece sobre um mais alto. A raiz nunca fica de fora, mesmo quando o repositório a ignora com uma linha como `playground/`. Uma linha que nomeia os arquivos sob a raiz, e não a pasta, como `playground/**`, deixa esses arquivos de fora; nomeie-os em [`content`](#arquivos-fora-da-raiz), como em `content: ["index.html", "src/**/*"]`, ou mude a linha para o nome da própria pasta. O `.git/info/exclude` e um arquivo global de exclusões não são lidos, e a comparação diferencia maiúsculas em todos os sistemas, então todas as máquinas geram a mesma folha de estilos.
 - **`node_modules` e `.git`**, em qualquer profundidade. Os arquivos de uma dependência nomeiam classes que nenhuma página sua usa.
@@ -97,7 +97,7 @@ O servidor de desenvolvimento acompanha os seus arquivos conforme eles mudam, se
 - **Salvar um arquivo que nomeia uma classe nova** atualiza a folha de estilos no lugar. Remover o último uso de uma classe tira a regra dela.
 - **Criar ou apagar um arquivo** conta como uma mudança nas classes dele.
 - **Salvar um arquivo HTML** recarrega a página, como o Vite faz com HTML, e a página que ele recarrega recebe a folha de estilos nova.
-- **Mudar um `.gitignore`** lê a raiz inteira de novo, já que isso muda o que é lido.
+- **Mudar um `.gitignore`**, sob a raiz ou acima dela, lê a raiz inteira de novo, já que isso muda o que é lido. Um `.gitignore` criado acima da raiz enquanto o Vite roda é lido no próximo início.
 - **Um arquivo que uma entrada de `content` nomeia** também é acompanhado, e também um arquivo criado numa pasta em que uma entrada lê.
 
 A folha de estilos que uma renderização no servidor carrega acompanha as mesmas mudanças, e um build de renderização no servidor embute a folha de estilos reduzida onde embute CSS.
@@ -131,9 +131,9 @@ Toda mensagem que o plugin imprime começa com `@codenhub/styles/vite:`, e uma f
 - **`this plugin needs Node.js 24 or newer; this is Node.js <version>`.** Atualize o Node.js na máquina que roda o Vite.
 - **`content must be an array of paths or globs`.** A opção recebeu algo que não é uma lista de strings, como `content: "../shared/**/*.html"`. Ponha o glob numa lista, como em `content: ["../shared/**/*.html"]`.
 - **`content holds an empty entry`.** Uma entrada está vazia ou só tem espaços, como a que uma variável de ambiente não definida dá. Remova-a, ou nomeie um caminho ou um glob.
-- **`content "<entry>" matches no file in <root>`.** A entrada é lida a partir da raiz do Vite, não da pasta que contém o arquivo de configuração nem daquela em que você rodou o Vite, então confira o caminho a partir da raiz. Quando uma causa mais provável é conhecida, a mensagem a nomeia no lugar: um `*` ou um `**` que só casou com arquivos dentro de `node_modules`, onde não entra, ou um `[` lido como o início de um conjunto de caracteres, onde `[[]` casaria com o colchete.
+- **`content "<entry>" matches no file in <root>`.** A entrada é lida a partir da raiz do Vite que a mensagem nomeia, que pode não ser a pasta que contém o arquivo de configuração, então confira o caminho a partir dela. Quando uma causa mais provável é conhecida, a mensagem a nomeia no lugar: um `*` ou um `**` que só casou com arquivos dentro de `node_modules`, onde não entra, ou um `[` lido como o início de um conjunto de caracteres, onde `[[]` casaria com o colchete.
 - **`content "<entry>" is a folder in <root>, not a file`.** Nomeie os arquivos dentro dela, como em `../shared/**/*`.
-- **`cannot read "<path>" (<code>)`.** O plugin não conseguiu ler um arquivo ou listar uma pasta, normalmente pelas permissões dele, com o código do Node.js, como `EACCES`. Gerar sem ele tiraria as classes dele, então o plugin para. Corrija as permissões dele ou, como a mensagem diz, adicione-o ao `.gitignore` quando ele está sob a raiz, ou mude o `content` quando uma entrada o nomeia.
+- **`cannot read "<path>" (<code>)`.** O plugin não conseguiu ler um arquivo ou listar uma pasta, normalmente pelas permissões dele, com o código do Node.js, como `EACCES`. Gerar sem ele tiraria as classes dele, então o plugin para. Corrija as permissões dele ou, como a mensagem diz, adicione-o ao `.gitignore` quando ele está sob a raiz, ou mude o `content` quando uma entrada o nomeia. Um `.gitignore` é lido antes de qualquer regra se aplicar, então para um deles a mensagem diz para removê-lo.
 - **`cannot write to "<path>": <reason> (<code>); fix that, or set cacheDir to a folder you can write to`.** O plugin não conseguiu escrever a folha de estilos reduzida na pasta de cache do Vite. `<reason>` e `<code>` são os do Node.js; `EACCES` ou `EPERM` significa que você não pode escrever ali, e `ENOSPC` que o disco está cheio.
 - **`a file changed before the plugin read the project; restart Vite`.** Reinicie o Vite.
 

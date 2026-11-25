@@ -2,7 +2,7 @@
 title: Vite
 description: Incluir solo las clases que usan tus páginas desde un proyecto Vite que no usa Tailwind, con el plugin de Vite del paquete.
 order: 6
-source: 93a413c9ccfa6828fe7deb241c7da0ba39aee2e3
+source: 0f469456ec2da35eeaacd597532087ca4e99a23e
 ---
 
 # Vite
@@ -64,7 +64,7 @@ La hoja de estilos recortada contiene lo que escribe [`chs build`](./without-a-b
 
 ## Qué archivos se leen
 
-Se lee todo lo que hay bajo la raíz de Vite, la carpeta que contiene `index.html` salvo que tu configuración defina [`root`](https://vite.dev/config/shared-options.html#root). La detección automática de fuentes de Tailwind lee un proyecto de la misma manera. Se dejan fuera unas pocas cosas, cada una porque leerla conservaría clases que tus páginas no usan:
+Se lee todo lo que hay bajo la raíz de Vite: la carpeta en la que ejecutas Vite, salvo que el comando nombre otra, como en `vite build apps/web`, o que tu configuración defina [`root`](https://vite.dev/config/shared-options.html#root). La detección automática de fuentes de Tailwind lee un proyecto de la misma manera. Se dejan fuera unas pocas cosas, cada una porque leerla conservaría clases que tus páginas no usan:
 
 - **Lo que excluye tu `.gitignore`.** El `.gitignore` de la raíz, el de cada carpeta por debajo y el de cada carpeta por encima hasta la que contiene `.git`, con las reglas de git: gana la última línea que coincide, y un archivo más profundo prevalece sobre uno más alto. La raíz nunca se deja fuera, aunque el repositorio la ignore con una línea como `playground/`. Una línea que nombra los archivos bajo la raíz y no la carpeta, como `playground/**`, sí los deja fuera; nómbralos en [`content`](#archivos-fuera-de-la-raíz), como en `content: ["index.html", "src/**/*"]`, o cambia la línea al nombre de la propia carpeta. No se leen `.git/info/exclude` ni un archivo de exclusiones global, y la coincidencia distingue mayúsculas en todos los sistemas, así que todas las máquinas generan la misma hoja de estilos.
 - **`node_modules` y `.git`**, a cualquier profundidad. Los archivos de una dependencia nombran clases que ninguna de tus páginas usa.
@@ -97,7 +97,7 @@ El servidor de desarrollo sigue tus archivos a medida que cambian, sin recargar 
 - **Guardar un archivo que nombra una clase nueva** actualiza la hoja de estilos en el sitio. Quitar el último uso de una clase elimina su regla.
 - **Crear o borrar un archivo** cuenta como un cambio en sus clases.
 - **Guardar un archivo HTML** recarga la página, como hace Vite con el HTML, y la página que recarga recibe la hoja de estilos nueva.
-- **Cambiar un `.gitignore`** vuelve a leer toda la raíz, porque cambia lo que se lee.
+- **Cambiar un `.gitignore`**, bajo la raíz o por encima de ella, vuelve a leer toda la raíz, porque cambia lo que se lee. Un `.gitignore` creado por encima de la raíz mientras Vite se ejecuta se lee en el siguiente arranque.
 - **Un archivo que nombra una entrada de `content`** también se sigue, y también un archivo creado en una carpeta en la que lee una entrada.
 
 La hoja de estilos que carga un renderizado en el servidor sigue los mismos cambios, y un build de renderizado en el servidor incrusta la hoja de estilos recortada donde incrusta CSS.
@@ -131,9 +131,9 @@ Cada mensaje que imprime el plugin empieza por `@codenhub/styles/vite:`, y un fa
 - **`this plugin needs Node.js 24 or newer; this is Node.js <version>`.** Actualiza Node.js en la máquina que ejecuta Vite.
 - **`content must be an array of paths or globs`.** La opción recibió algo que no es una lista de cadenas, como `content: "../shared/**/*.html"`. Pon el glob en una lista, como en `content: ["../shared/**/*.html"]`.
 - **`content holds an empty entry`.** Una entrada está vacía o tiene solo espacios, como la que da una variable de entorno sin definir. Quítala, o nombra una ruta o un glob.
-- **`content "<entry>" matches no file in <root>`.** La entrada se lee desde la raíz de Vite, no desde la carpeta que contiene el archivo de configuración ni desde la que ejecutaste Vite, así que comprueba la ruta desde la raíz. Cuando se conoce una causa más probable, el mensaje la nombra en su lugar: un `*` o un `**` que solo coincidió con archivos dentro de `node_modules`, donde no entra, o un `[` leído como el inicio de un conjunto de caracteres, donde `[[]` coincidiría con el corchete.
+- **`content "<entry>" matches no file in <root>`.** La entrada se lee desde la raíz de Vite que nombra el mensaje, que puede no ser la carpeta que contiene el archivo de configuración, así que comprueba la ruta desde ahí. Cuando se conoce una causa más probable, el mensaje la nombra en su lugar: un `*` o un `**` que solo coincidió con archivos dentro de `node_modules`, donde no entra, o un `[` leído como el inicio de un conjunto de caracteres, donde `[[]` coincidiría con el corchete.
 - **`content "<entry>" is a folder in <root>, not a file`.** Nombra los archivos que contiene, como en `../shared/**/*`.
-- **`cannot read "<path>" (<code>)`.** El plugin no pudo leer un archivo o listar una carpeta, normalmente por sus permisos, con el código de Node.js, como `EACCES`. Generar sin él quitaría sus clases, así que el plugin se detiene. Corrige sus permisos o, como dice el mensaje, añádelo a `.gitignore` cuando está bajo la raíz, o cambia `content` cuando lo nombra una entrada.
+- **`cannot read "<path>" (<code>)`.** El plugin no pudo leer un archivo o listar una carpeta, normalmente por sus permisos, con el código de Node.js, como `EACCES`. Generar sin él quitaría sus clases, así que el plugin se detiene. Corrige sus permisos o, como dice el mensaje, añádelo a `.gitignore` cuando está bajo la raíz, o cambia `content` cuando lo nombra una entrada. Un `.gitignore` se lee antes de que se aplique ninguna regla, así que para uno el mensaje dice que lo elimines.
 - **`cannot write to "<path>": <reason> (<code>); fix that, or set cacheDir to a folder you can write to`.** El plugin no pudo escribir la hoja de estilos recortada en la carpeta de caché de Vite. `<reason>` y `<code>` son los de Node.js; `EACCES` o `EPERM` significa que no puedes escribir ahí, y `ENOSPC` que el disco está lleno.
 - **`a file changed before the plugin read the project; restart Vite`.** Reinicia Vite.
 

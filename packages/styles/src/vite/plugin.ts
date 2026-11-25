@@ -13,7 +13,7 @@ import {
   resolveExport,
 } from "../trim";
 import { pluginError } from "./errors";
-import { isInside } from "./ignore";
+import { ignoreFilesAbove, isInside } from "./ignore";
 import { createOutputFolder } from "./output";
 import { type FileEvent, ProjectScan } from "./scan";
 import { type TrimmedImport, Trimmer } from "./trimmer";
@@ -110,7 +110,12 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
 
         const configuredRoot = path.resolve(config.root ?? process.cwd());
 
-        cacheDir = findCacheDir(configuredRoot, config.cacheDir);
+        // Vite 5 and 6 call this hook without a context, and keep the older rule.
+        cacheDir = findCacheDir(
+          configuredRoot,
+          config.cacheDir,
+          (this as Partial<typeof this> | undefined)?.meta?.viteVersion,
+        );
 
         const folder = path.join(cacheDir, "codenhub-styles", keyOf(configuredRoot, content));
         const output = createOutputFolder(folder);
@@ -187,6 +192,8 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
         .map((entry) => path.resolve(root.real, globBase(entry)))
         .filter((base) => !isInside(root.real, base) && base !== root.real);
 
+      // Only one that exists: a `.gitignore` created above the root is read at the next start.
+      outside.push(...ignoreFilesAbove(root.real).filter((file) => fs.existsSync(file)));
       if (outside.length > 0) {
         server.watcher.add(outside);
       }
@@ -373,7 +380,8 @@ function readContentOption({ content }: ViteStylesOptions): readonly string[] {
 
 /* Where Vite keeps its own generated files, found as Vite 5 to 8 find it,
    since the `config` hook runs before Vite has. */
-function findCacheDir(root: string, configured: string | undefined): string {
+// Vite's rule for its cache folder, which changed in 8.1.0.
+function findCacheDir(root: string, configured: string | undefined, viteVersion: string | undefined): string {
   if (configured !== undefined) {
     return path.resolve(root, configured);
   }
@@ -389,7 +397,15 @@ function findCacheDir(root: string, configured: string | undefined): string {
 
   const nodeModules = path.join(root, "node_modules");
 
-  return fs.existsSync(nodeModules) ? path.join(nodeModules, ".vite") : path.join(root, ".vite");
+  return isAtLeast(viteVersion, 8, 1) && fs.existsSync(nodeModules)
+    ? path.join(nodeModules, ".vite")
+    : path.join(root, ".vite");
+}
+
+function isAtLeast(version: string | undefined, major: number, minor: number): boolean {
+  const [actualMajor = 0, actualMinor = 0] = (version ?? "").split(".").map((part) => Number.parseInt(part, 10));
+
+  return actualMajor > major || (actualMajor === major && actualMinor >= minor);
 }
 
 // Two configurations that read different files never share a trimmed file.

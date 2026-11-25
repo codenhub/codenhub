@@ -5,7 +5,7 @@ import { findFiles, readFiles, UnmatchedEntryError } from "@codenhub/scan";
 
 import { findClasses, isPackageCopy } from "../trim";
 import { cannotRead, pluginError } from "./errors";
-import { isInside, isWalked, unreadable, walkProject } from "./ignore";
+import { ignoreFilesAbove, isInside, isWalked, unreadable, walkProject } from "./ignore";
 
 export interface ScanOptions {
   // The Vite root, as the system resolves it.
@@ -81,12 +81,12 @@ export class ProjectScan {
 
   /* Whether a file created, changed, or deleted since changes the set of
      classes the project names. A file the scan does not read changes
-     nothing, and a `.gitignore` under the root changes which files it reads,
+     nothing, and a `.gitignore` the walk reads changes which files it reads,
      so every file is read again. */
   async change(file: string, event: FileEvent): Promise<boolean> {
     const { root } = this.#options;
 
-    if (path.basename(file) === ".gitignore" && isInside(root, file)) {
+    if (path.basename(file) === ".gitignore" && (isInside(root, file) || ignoreFilesAbove(root).includes(file))) {
       return this.scanAll();
     }
     if (event === "delete") {
@@ -110,9 +110,9 @@ export class ProjectScan {
     return new Set(this.#counts.keys());
   }
 
-  // The files read, which a build in watch mode watches.
+  // The files read, which a build in watch mode watches, each `.gitignore` above the root included.
   files(): string[] {
-    return [...this.#byFile.keys()];
+    return [...this.#byFile.keys(), ...ignoreFilesAbove(this.#options.root).filter((file) => fs.existsSync(file))];
   }
 
   // Whether a `content` entry names the file created, resolved again since a glob may now match it.

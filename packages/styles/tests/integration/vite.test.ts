@@ -394,6 +394,18 @@ describe("viteStyles: which files are read", () => {
     },
   );
 
+  it.skipIf(process.platform === "win32" || process.getuid?.() === 0)(
+    "fails naming a .gitignore it cannot read, and how to fix it",
+    async () => {
+      await writeFiles({ ...BUTTON_PAGE, "src/.gitignore": "*.log\n" });
+      await chmod(path.join(project, "src", ".gitignore"), 0o000);
+
+      await expect(build()).rejects.toThrow(
+        `@codenhub/styles/vite: cannot read "${path.join(project, "src", ".gitignore")}" (EACCES); fix its permissions or remove it.`,
+      );
+    },
+  );
+
   it("leaves out a copy of the package's class list", async () => {
     await writeFiles({
       ...BUTTON_PAGE,
@@ -520,6 +532,16 @@ describe("viteStyles: the trimmed files", () => {
     const times = await Promise.all(files.map(async (file) => (await stat(file)).mtime));
 
     expect(times).toEqual(files.map(() => past));
+  });
+
+  it("keeps them in Vite's cache folder for a project without package.json", async () => {
+    await rm(path.join(project, "package.json"));
+    await writeFiles({ "index.html": PAGE(`<p>Hello</p>`), "main.js": `import "@codenhub/styles";\n` });
+    await build();
+
+    const { cacheDir } = await vite.resolveConfig({ root: project, configFile: false, logLevel: "silent" }, "build");
+
+    expect((await readdir(path.join(cacheDir, "codenhub-styles"), { recursive: true })).length).toBeGreaterThan(0);
   });
 
   it("leaves no temporary file beside them", async () => {
@@ -783,7 +805,7 @@ async function withDevServer(
     };
 
     await waitFor((message) => message.type === "connected", 0);
-    await watching(project);
+    await watching(server.config.root);
     await use({ server, messages, fetch: fetchText, load, waitFor, watching });
   } finally {
     socket?.close();
@@ -1028,6 +1050,30 @@ describe("viteStyles: live update", { timeout: 40_000 }, () => {
     });
   });
 
+  it("reads the root again when a .gitignore above it changes", async () => {
+    const app = Object.fromEntries(
+      Object.entries({ ...SCRIPT_PAGE, "drafts/card.txt": BUTTON }).map(([name, text]) => [`app/${name}`, text]),
+    );
+
+    await writeFiles({ ...app, ".git/HEAD": "ref: refs/heads/main\n", ".gitignore": "*.log\n" });
+    await withDevServer(
+      async (dev) => {
+        const stylesheet = await loadPage(dev);
+
+        expect(hasRuleFor(await dev.fetch(stylesheet, "text/css"), "btn")).toBe(true);
+
+        const from = dev.messages.length;
+
+        await writeFiles({ ".gitignore": "*.log\ndrafts/\n" });
+        await dev.waitFor((message) => updates(message, stylesheet), from);
+
+        expect(hasRuleFor(await dev.fetch(stylesheet, "text/css"), "btn")).toBe(false);
+      },
+      undefined,
+      { root: path.join(project, "app") },
+    );
+  });
+
   it("writes the trimmed files again into a cache folder deleted while the server runs", async () => {
     await writeFiles(SCRIPT_PAGE);
     await withDevServer(async (dev) => {
@@ -1061,6 +1107,33 @@ describe("viteStyles: live update", { timeout: 40_000 }, () => {
       // The next change names no new class, and the stylesheet is still written.
       from = dev.messages.length;
       await rm(cache);
+      await writeFiles({ "view.js": VIEW(`<button class="btn">Send</button>`) });
+      await dev.waitFor((sent) => updates(sent, stylesheet), from);
+
+      expect(hasRuleFor(await dev.fetch(stylesheet, "text/css"), "btn")).toBe(true);
+    });
+  });
+
+  it("updates the page for a trimmed file it wrote while writing another failed", async () => {
+    await writeFiles(SCRIPT_PAGE);
+    await withDevServer(async (dev) => {
+      const stylesheet = await loadPage(dev);
+      const aesthetics = path.join(project, "node_modules", ".vite", "codenhub-styles");
+      const blocked = path.join(
+        aesthetics,
+        (await readdir(aesthetics)).find((name) => !name.startsWith(".")) ?? "",
+        "aesthetics",
+      );
+      let from = dev.messages.length;
+
+      // The stylesheet the page loads is written; the aesthetics beside it are not.
+      await rm(blocked, { recursive: true });
+      await writeFile(blocked, "");
+      await writeFiles({ "view.js": VIEW(BUTTON) });
+      await dev.waitFor((sent) => sent.type === "error", from);
+
+      from = dev.messages.length;
+      await rm(blocked);
       await writeFiles({ "view.js": VIEW(`<button class="btn">Send</button>`) });
       await dev.waitFor((sent) => updates(sent, stylesheet), from);
 

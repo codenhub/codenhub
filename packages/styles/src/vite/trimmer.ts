@@ -28,6 +28,8 @@ export class Trimmer {
   #queue: Promise<unknown> = Promise.resolve();
   // A write that failed is tried again on the next change, whether or not that change names a new class.
   #isStale = true;
+  // Files a failed write rewrote, so the next write that succeeds still reports them.
+  readonly #written = new Set<string>();
 
   private constructor(options: TrimmerOptions, trees: readonly (readonly Node[])[]) {
     this.#scan = options.scan;
@@ -86,14 +88,26 @@ export class Trimmer {
 
   async #write(): Promise<string[]> {
     const used = usedClasses(this.#scan.classes(), this.#droppable);
-    const written = await Promise.all(
-      this.#sources.map(async ({ file, tree }) =>
-        (await writeIfChanged(file, serialize(purge(tree, used)))) ? file : "",
-      ),
+    // Every write settles before the next change starts one, even when another fails.
+    const results = await Promise.allSettled(
+      this.#sources.map(async ({ file, tree }) => {
+        if (await writeIfChanged(file, serialize(purge(tree, used)))) {
+          this.#written.add(file);
+        }
+      }),
     );
+    const failed = results.find((result) => result.status === "rejected");
+
+    if (failed !== undefined) {
+      throw failed.reason;
+    }
 
     this.#isStale = false;
 
-    return written.filter((file) => file !== "");
+    const written = this.#sources.map(({ file }) => file).filter((file) => this.#written.has(file));
+
+    this.#written.clear();
+
+    return written;
   }
 }

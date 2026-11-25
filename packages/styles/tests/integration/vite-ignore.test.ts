@@ -1,6 +1,6 @@
 import { execFileSync } from "node:child_process";
 import { realpathSync } from "node:fs";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 
@@ -11,6 +11,28 @@ import { walkProject } from "../../src/vite/ignore";
 /* The plugin's `.gitignore` rules are an in-house port of git's, so each case
    here is checked against git itself on the same files: what
    `git ls-files --others --exclude-standard` lists is what the walk yields. */
+
+// Windows links a file only with Developer Mode on or as an administrator.
+const canLinkFiles = await probeFileLinks();
+
+async function probeFileLinks(): Promise<boolean> {
+  const probe = await mkdtemp(path.join(tmpdir(), "styles-ignore-link-"));
+
+  try {
+    await writeFile(path.join(probe, "target"), "");
+    await symlink(path.join(probe, "target"), path.join(probe, "link"), "file");
+
+    return true;
+  } catch (error) {
+    if ((error as { code?: string }).code !== "EPERM") {
+      throw error;
+    }
+
+    return false;
+  } finally {
+    await rm(probe, { recursive: true, force: true });
+  }
+}
 
 let temporary: string;
 let folder: string;
@@ -46,6 +68,8 @@ function git(cwd: string, args: string[]): string {
   return execFileSync("git", ["-c", "core.ignorecase=false", "-c", `core.excludesFile=${emptyConfig}`, ...args], {
     cwd,
     encoding: "utf8",
+    // A warning, such as for a `.gitignore` that is a link, stays out of the test output; a failure still carries it.
+    stdio: ["ignore", "pipe", "pipe"],
     env: { ...process.env, GIT_CONFIG_GLOBAL: emptyConfig, GIT_CONFIG_NOSYSTEM: "1" },
   });
 }
@@ -233,6 +257,16 @@ describe("walkProject: the files git lists", () => {
       "lib/b.txt": "x",
     });
 
+    expect(read).toEqual(listed);
+  });
+
+  it.skipIf(!canLinkFiles)("reads no .gitignore that is a link", async () => {
+    await writeTree(folder, { "rules.txt": "page.html\n", "page.html": "x" });
+    await symlink(path.join(folder, "rules.txt"), path.join(folder, ".gitignore"), "file");
+
+    const { walked: read, listed } = await walkBesideGit({});
+
+    expect(listed).toContain("page.html");
     expect(read).toEqual(listed);
   });
 
