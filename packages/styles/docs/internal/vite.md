@@ -106,7 +106,7 @@ The integration suite runs against the catalog's Vite, and `.github/workflows/vi
 - **Only the complete stylesheet and the aesthetics are trimmed**, as [Which imports are trimmed](#which-imports-are-trimmed) records.
 - **`.git/info/exclude`, a global excludes file, and `core.ignorecase` are not read**, as [Which files are read](#which-files-are-read) records.
 - **A project that aliases the package keeps its alias**, untrimmed, with a warning.
-- **`vite preview` runs none of it.** It serves a finished build, so the plugin adds no alias and reads and writes nothing there, and a `content` entry that matches nothing or a cache folder it cannot write cannot stop it; `tests/integration/vite.test.ts` holds this. Vite passes `isPreview` to the `config` hook from 5.0.0 on.
+- **`vite preview` runs none of it.** It serves a finished build, so the plugin adds no alias and reads and writes nothing there, and a `content` entry that matches nothing or a cache folder it cannot write cannot stop it; `tests/integration/vite.test.ts` holds this. Vite passes `isPreview` to the `config` hook from 5.1.0 on; 5.0.x calls the hook for preview as for the dev server, so there the plugin still reads the project and writes its files, and the test is skipped on it. Rejected: raising the peer floor to 5.1.0 for a case limited to `vite preview` on a release from 2023.
 - **Creating a file starts no rebuild under `vite build --watch`**; the next rebuild reads it, as [Live update](#live-update) records.
 
 ## Failure modes

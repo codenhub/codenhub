@@ -477,6 +477,8 @@ test.each([
   },
 ])(
   "the Vite plugin's declarations typecheck as a $name config imports them",
+  // It reads every declaration Vite ships, which took over 15 seconds on a busy CI runner.
+  { timeout: 60_000 },
   ({ module, moduleResolution, extension }) => {
     const options: ts.CompilerOptions = {
       module,

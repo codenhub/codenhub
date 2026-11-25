@@ -24,7 +24,9 @@ const UTF8_BOM = "ï»¿";
 
 // Every file under the root the plugin reads, in no set order.
 export function* walkProject(options: WalkOptions): Generator<string, void, undefined> {
-  yield* walkFolder(options, options.root, IgnoreRules.forRoot(options.root));
+  const entries = readFolder(options.root);
+
+  yield* walkFolder(options, options.root, entries, IgnoreRules.forRoot(options.root));
 }
 
 // Whether the walk from `root` reaches `file`, which may have been created or deleted since.
@@ -57,14 +59,24 @@ export function isInside(folder: string, file: string): boolean {
   return relative !== "" && relative !== ".." && !relative.startsWith(`..${path.sep}`) && !path.isAbsolute(relative);
 }
 
-function* walkFolder(options: WalkOptions, folder: string, rules: IgnoreRules): Generator<string, void, undefined> {
-  for (const entry of readFolder(folder)) {
+/* A folder is listed before its `.gitignore` is read, so a folder the walk
+   cannot list fails naming the folder: on Unix, a file in it cannot be read
+   either, and the `.gitignore` would be named instead. */
+function* walkFolder(
+  options: WalkOptions,
+  folder: string,
+  entries: readonly fs.Dirent[],
+  rules: IgnoreRules,
+): Generator<string, void, undefined> {
+  for (const entry of entries) {
     const file = path.join(folder, entry.name);
 
     // A link to a folder is never followed, so a link cycle cannot hang the walk; a link to a file is read.
     if (entry.isDirectory()) {
       if (!SKIPPED_FOLDERS.has(entry.name) && !options.skip.has(file) && !rules.isIgnored(file, true)) {
-        yield* walkFolder(options, file, rules.within(file));
+        const inner = readFolder(file);
+
+        yield* walkFolder(options, file, inner, rules.within(file));
       }
     } else if ((entry.isFile() || (entry.isSymbolicLink() && isFile(file))) && !rules.isIgnored(file, false)) {
       yield file;

@@ -237,7 +237,10 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
     async buildStart() {
       if (!isServe && this.meta.watchMode) {
         if (hasBuilt) {
-          rewritten.sinceBuild ||= (await started().rescan()).length > 0;
+          // Read first: `||=` would skip the read once a change has already rewritten a file.
+          const written = await started().rescan();
+
+          rewritten.sinceBuild ||= written.length > 0;
         }
         hasBuilt = true;
         rewritten.forBuild = rewritten.sinceBuild;

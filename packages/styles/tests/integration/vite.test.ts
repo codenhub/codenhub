@@ -15,6 +15,7 @@ import viteStyles, { type ViteStylesOptions } from "../../src/vite";
    since Vitest needs a Vite of its own (`.github/workflows/vite.yml`). */
 const vite = (await import(process.env.VITE_UNDER_TEST ?? "vite")) as typeof Vite;
 const viteMajor = Number.parseInt(vite.version, 10);
+const viteMinor = Number.parseInt(vite.version.split(".")[1], 10);
 const packageRoot = path.resolve(import.meta.dirname, "../..");
 // Windows links a file only with Developer Mode on or as an administrator.
 const canLinkFiles = await probeFileLinks();
@@ -546,30 +547,34 @@ describe("viteStyles: the trimmed files", () => {
 });
 
 describe("viteStyles: vite preview", () => {
-  it("starts without reading the project or writing a file, since it serves a finished build", async () => {
-    await writeFiles({
-      "index.html": PAGE(`<button class="btn primary">Save</button>`),
-      "main.js": `import "@codenhub/styles";
+  // Vite 5.0 does not tell a plugin it is a preview; 5.1 passes `isPreview`.
+  it.skipIf(viteMajor === 5 && viteMinor < 1)(
+    "starts without reading the project or writing a file, since it serves a finished build",
+    async () => {
+      await writeFiles({
+        "index.html": PAGE(`<button class="btn primary">Save</button>`),
+        "main.js": `import "@codenhub/styles";
 `,
-      blocker: "a file",
-    });
-    await vite.build({ root: project, configFile: false, logLevel: "silent" });
+        blocker: "a file",
+      });
+      await vite.build({ root: project, configFile: false, logLevel: "silent" });
 
-    // A content entry that matches nothing and a cache folder it cannot write to each fail a start that reads the project.
-    const server = await vite.preview({
-      root: project,
-      configFile: false,
-      logLevel: "silent",
-      cacheDir: "blocker/cache",
-      preview: { port: 0, open: false },
-      plugins: [viteStyles({ content: ["templates/**/*.html"] })],
-    });
+      // A content entry that matches nothing and a cache folder it cannot write to each fail a start that reads the project.
+      const server = await vite.preview({
+        root: project,
+        configFile: false,
+        logLevel: "silent",
+        cacheDir: "blocker/cache",
+        preview: { port: 0, open: false },
+        plugins: [viteStyles({ content: ["templates/**/*.html"] })],
+      });
 
-    expect(server.resolvedUrls?.local.length).toBeGreaterThan(0);
-    await new Promise<void>((resolve, reject) => {
-      server.httpServer.close((error) => (error ? reject(error) : resolve()));
-    });
-  });
+      expect(server.resolvedUrls?.local.length).toBeGreaterThan(0);
+      await new Promise<void>((resolve, reject) => {
+        server.httpServer.close((error) => (error ? reject(error) : resolve()));
+      });
+    },
+  );
 });
 
 describe("viteStyles: Node.js", () => {
@@ -1253,10 +1258,11 @@ describe("viteStyles: build --watch", { timeout: 40_000 }, () => {
   it("reads a file created while it runs at the next rebuild", async () => {
     await writeFiles({ "index.html": PAGE(`<p>Hello</p>`), "main.js": `import "@codenhub/styles";\n` });
     await withWatchedBuild(async ({ rebuild }) => {
-      // Nothing watches the new file's folder, so the module edited beside it starts the rebuild.
-      const css = await rebuild(() =>
-        writeFiles({ "card.txt": BUTTON, "main.js": `import "@codenhub/styles";\n// card\n` }),
-      );
+      // Nothing watches the new file's folder, so the module edited after it starts the rebuild.
+      const css = await rebuild(async () => {
+        await writeFiles({ "card.txt": BUTTON });
+        await writeFiles({ "main.js": `import "@codenhub/styles";\n// card\n` });
+      });
 
       expect(hasRuleFor(css, "btn")).toBe(true);
     });
