@@ -175,17 +175,6 @@ const MILLISECONDS_PER_SECOND = 1000;
  * private key, or the two are not one key pair bound to one algorithm.
  */
 export async function sign<TPayload extends object = JwtPayload>(input: SignInput<TPayload>): Promise<string> {
-  return signToken(input, true);
-}
-
-/**
- * {@link sign}, with the choice to leave the key's own `kid` out of the header: a DPoP proof names its key by
- * the `jwk` it embeds, so `createDpopProof` writes no `kid`. A `kid` in `input.header` is still written.
- */
-export async function signToken<TPayload extends object = JwtPayload>(
-  input: SignInput<TPayload>,
-  writeKeyKid: boolean,
-): Promise<string> {
   if (typeof input !== "object" || input === null) {
     throw new TypeError("sign: input must be an object.");
   }
@@ -196,7 +185,7 @@ export async function signToken<TPayload extends object = JwtPayload>(
     throw new TypeError("sign: input.key must be a private or secret key.");
   }
   const embedded = input.embedKey === undefined ? undefined : await embeddedJwk(input.embedKey, key);
-  const headerJson = serializeHeader(input.header, key, embedded?.jwk, writeKeyKid);
+  const headerJson = serializeHeader(input.header, key, embedded?.jwk);
   const payloadJson = serializePayload(input.payload, addedClaims(input));
   const signingInput = `${encodeBase64Url(encodeUtf8(headerJson))}.${encodeBase64Url(encodeUtf8(payloadJson))}`;
   const signedBytes = encodeUtf8(signingInput);
@@ -328,17 +317,12 @@ export const writeMembers = (members: readonly (readonly [string, unknown])[]): 
   `{${members.map(([name, value]) => `${JSON.stringify(name)}:${writeJson(value)}`).join(",")}}`;
 
 /** Validates the caller's header and writes it as JSON with `alg`, `kid`, `typ`, `cty` first. */
-function serializeHeader(
-  header: unknown,
-  key: SigningKey,
-  jwk: Record<string, string> | undefined,
-  writeKeyKid: boolean,
-): string {
+function serializeHeader(header: unknown, key: SigningKey, jwk: Record<string, string> | undefined): string {
   const { leading, rest } = readSignHeader(header, key, {
     caller: "sign",
     label: "input.header",
     forbidden: FORBIDDEN_HEADER_MEMBERS,
-    defaultKid: writeKeyKid,
+    defaultKid: true,
   });
   return writeMembers(jwk === undefined ? [...leading, ...rest] : [...leading, ["jwk", jwk], ...rest]);
 }

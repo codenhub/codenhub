@@ -1,8 +1,6 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import {
-  createDpopProof,
-  createDpopVerifier,
   createJwsVerifier,
   createKeySet,
   createRemoteKeySet,
@@ -91,17 +89,6 @@ const CALLS: readonly (readonly [string, string, () => unknown])[] = [
     "createRemoteKeySet",
     "options.timout",
     () => createRemoteKeySet({ url: "https://issuer.example/jwks", timout: 1 } as never),
-  ],
-  [
-    "createDpopProof",
-    "input.htm",
-    () => createDpopProof({ key: pair.privateKey, method: "GET", url: "https://rs.example/", htm: "GET" } as never),
-  ],
-  ["createDpopVerifier", "options.maxage", () => createDpopVerifier({ maxage: 60 } as never)],
-  [
-    "createDpopVerifier",
-    "request.jkt",
-    () => createDpopVerifier()("proof", { method: "GET", url: "https://rs.example/", jkt: "x" } as never),
   ],
 ];
 

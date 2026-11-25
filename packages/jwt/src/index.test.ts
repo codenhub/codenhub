@@ -9,8 +9,6 @@ describe("package entrypoint", () => {
       "JWS_ALGORITHMS",
       "SYMMETRIC_ALGORITHMS",
       "certificateThumbprint",
-      "createDpopProof",
-      "createDpopVerifier",
       "createExternalSigningKey",
       "createJwsVerifier",
       "createKeyRing",

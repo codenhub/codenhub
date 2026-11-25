@@ -39,14 +39,6 @@ export type JwtIssueCode =
   | "missing_claim"
   | "invalid_claim"
   | "schema_failed"
-  // DPoP proofs
-  | "wrong_method"
-  | "wrong_url"
-  | "wrong_access_token_hash"
-  | "wrong_nonce"
-  | "wrong_key"
-  | "replayed"
-  | "callback_failed"
   // Key import
   | "invalid_key"
   | "unsupported_key"
