@@ -2,7 +2,6 @@ import type { AsymmetricAlgorithm, Jwk, PrivateKey, PublicKey, SecretKey } from 
 import { encodeBase64Url, encodeUtf8 } from "../encoding";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import { exportWebCryptoJwk } from "./exported-jwk";
-import { isSingleSequence, MAX_PEM_LENGTH, readPemBlock } from "./pem";
 import { getKeyEntry } from "./registry";
 
 /** RFC 7638 §3.2: the required members of each key type, in lexicographic order. */
@@ -15,9 +14,6 @@ const THUMBPRINT_MEMBERS: Readonly<Record<Jwk["kty"], readonly ("crv" | "e" | "k
 
 /** The `kid` option value that names a generated or imported key by its RFC 7638 thumbprint. */
 export const THUMBPRINT_KID = "thumbprint";
-
-/** RFC 9278 §3: the URI prefix of a SHA-256 JWK thumbprint. */
-const THUMBPRINT_URI_PREFIX = "urn:ietf:params:oauth:jwk-thumbprint:sha-256:";
 
 /**
  * Computes a key's JWK SHA-256 Thumbprint (RFC 7638), base64url-encoded without padding: a key pair's from its
@@ -58,54 +54,6 @@ export async function jwkThumbprint(key: PublicKey | PrivateKey | SecretKey): Pr
     throw new TypeError("jwkThumbprint: key must be a public, private or secret key created by this package.");
   }
   return cryptoKeyThumbprint(publicCryptoKey, key.alg);
-}
-
-/**
- * Computes a key's JWK Thumbprint URI (RFC 9278): `urn:ietf:params:oauth:jwk-thumbprint:sha-256:` followed by
- * its {@link jwkThumbprint}, for a protocol that names a key by URI, such as the `sub` of a self-issued ID token.
- *
- * @example
- * ```ts
- * const uri = await jwkThumbprintUri(publicKey);
- * // "urn:ietf:params:oauth:jwk-thumbprint:sha-256:NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs"
- * ```
- *
- * @param key - A public, private or secret key created by this package.
- * @returns The URI.
- * @throws TypeError as {@link jwkThumbprint} does.
- */
-export async function jwkThumbprintUri(key: PublicKey | PrivateKey | SecretKey): Promise<string> {
-  return `${THUMBPRINT_URI_PREFIX}${await jwkThumbprint(key)}`;
-}
-
-/**
- * Computes an X.509 certificate's SHA-256 thumbprint, base64url-encoded without padding: the `x5t#S256` of a
- * JOSE header (RFC 7515 §4.1.8) or the `cnf` of a certificate-bound access token (RFC 8705 §3.1).
- *
- * @remarks
- * It hashes the certificate's DER as given and does not parse or validate the certificate further: whether it
- * is current, or whom it names, is up to its issuer's chain, which this package does not check.
- *
- * @example
- * ```ts
- * const x5tS256 = await certificateThumbprint(clientCertificatePem);
- * ```
- *
- * @param pem - One `CERTIFICATE` PEM block, with LF or CRLF line breaks, or with `\n` escapes as in an
- * environment variable.
- * @returns The 43-character thumbprint.
- * @throws TypeError when `pem` is longer than 16384 characters, or is not a single `CERTIFICATE` block holding
- * one DER `SEQUENCE`.
- */
-export async function certificateThumbprint(pem: string): Promise<string> {
-  if (typeof pem === "string" && pem.length > MAX_PEM_LENGTH) {
-    throw new TypeError(`certificateThumbprint: pem must be at most ${MAX_PEM_LENGTH} characters.`);
-  }
-  const block = typeof pem === "string" ? readPemBlock(pem) : undefined;
-  if (block?.label !== "CERTIFICATE" || block.hasHeaders || block.der === undefined || !isSingleSequence(block.der)) {
-    throw new TypeError("certificateThumbprint: pem must be a single CERTIFICATE PEM block.");
-  }
-  return encodeBase64Url(new Uint8Array(await crypto.subtle.digest("SHA-256", block.der)));
 }
 
 /** The RFC 7638 thumbprint of a public `CryptoKey` bound to `alg`. */

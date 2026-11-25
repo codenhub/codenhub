@@ -1,11 +1,8 @@
-import { X509Certificate } from "node:crypto";
-
 import { describe, expect, it } from "vitest";
 
 import { exportPublicJwk } from "./export";
 import { importKeyPair, importPrivateKey, importPublicKey } from "./import";
 import { issuesOf, valueOf } from "./test-fixtures";
-import { certificateThumbprint } from "./thumbprint";
 
 // Self-signed certificates OpenSSL 3.5 made for these tests, each with the PUBLIC KEY block of its key.
 const EC_CERTIFICATE = `-----BEGIN CERTIFICATE-----
@@ -161,52 +158,5 @@ describe("importPublicKey with a certificate", () => {
   it("should refuse mismatched labels as invalid_key", async () => {
     const mixed = EC_CERTIFICATE.replace("END CERTIFICATE", "END PUBLIC KEY");
     expect(issuesOf(await importPublicKey(mixed, { alg: "ES256" }))).toEqual([{ code: "invalid_key" }]);
-  });
-});
-
-describe("certificateThumbprint", () => {
-  /** The x5t#S256 of a certificate (RFC 7515 §4.1.8), computed by node:crypto apart from the package's code. */
-  const x5tS256Of = (pem: string): string =>
-    Buffer.from(new X509Certificate(pem).fingerprint256.replaceAll(":", ""), "hex").toString("base64url");
-
-  it.each([
-    ["EC", EC_CERTIFICATE],
-    ["RSA", RSA_CERTIFICATE],
-    ["Ed25519", ED_CERTIFICATE],
-  ])("should give the %s certificate the base64url SHA-256 of its DER", async (_name, pem) => {
-    expect(await certificateThumbprint(pem)).toBe(x5tS256Of(pem));
-  });
-
-  it("should read CRLF line breaks, escaped line breaks and surrounding whitespace", async () => {
-    const expected = x5tS256Of(EC_CERTIFICATE);
-    for (const pem of [
-      EC_CERTIFICATE.replaceAll("\n", "\r\n"),
-      EC_CERTIFICATE.replaceAll("\n", "\\n"),
-      `\n  ${EC_CERTIFICATE}\n`,
-    ]) {
-      // oxlint-disable-next-line no-await-in-loop
-      expect(await certificateThumbprint(pem)).toBe(expected);
-    }
-  });
-
-  it.each([
-    ["a PUBLIC KEY block", EC_SPKI],
-    ["two certificates", `${EC_CERTIFICATE}\n${RSA_CERTIFICATE}`],
-    ["a body that is not base64", EC_CERTIFICATE.replace(/\n[A-Za-z0-9]/, "\n!")],
-    ["a body that is not one DER SEQUENCE", "-----BEGIN CERTIFICATE-----\nMAAA\n-----END CERTIFICATE-----"],
-    ["headers", EC_CERTIFICATE.replace("-----\n", "-----\nComment: x\n\n")],
-    ["not a string", new TextEncoder().encode(EC_CERTIFICATE)],
-  ])("should throw a TypeError for %s", async (_name, pem) => {
-    await expect(certificateThumbprint(pem as never)).rejects.toThrow(
-      new TypeError("certificateThumbprint: pem must be a single CERTIFICATE PEM block."),
-    );
-  });
-
-  it("should name the length limit for a PEM longer than 16384 characters", async () => {
-    const padded = `${EC_CERTIFICATE}${" ".repeat(16_385 - EC_CERTIFICATE.length)}`;
-
-    await expect(certificateThumbprint(padded)).rejects.toThrow(
-      new TypeError("certificateThumbprint: pem must be at most 16384 characters."),
-    );
   });
 });

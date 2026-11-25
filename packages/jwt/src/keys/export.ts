@@ -1,7 +1,6 @@
 import type { Jwk, PrivateJwk, PrivateKey, PublicJwk, PublicKey, SecretJwk, SecretKey } from "../core/types";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import { exportWebCryptoJwk } from "./exported-jwk";
-import { writePem } from "./pem";
 import { getKeyEntryOfKind, isRegisteredKey } from "./registry";
 
 type MaterialMember = "crv" | "x" | "y" | "n" | "e" | "d" | "p" | "q" | "dp" | "dq" | "qi" | "k";
@@ -63,39 +62,6 @@ export async function exportSecretJwk(key: SecretKey): Promise<SecretJwk> {
     throw new TypeError("exportSecretJwk: the key was not created with extractable: true.");
   }
   return toJwk(key, await exportWebCryptoJwk(entry.cryptoKey, key.alg), PRIVATE_MEMBERS) as SecretJwk;
-}
-
-/**
- * Exports a public key as a PEM `PUBLIC KEY` block (SPKI, RFC 7468 §13), for tools and services that take PEM
- * rather than a JWK, such as OpenSSL or a cloud console.
- *
- * @example
- * ```ts
- * const pem = await exportPublicPem(getPublicKey(privateKey));
- * ```
- *
- * @param key - A public key from {@link importPublicKey} or {@link generateKeyPair}.
- * @returns The PEM text: the base64 in 64-character lines, with LF line endings and a final line break.
- * @throws TypeError when `key` is not a public key created by this package. For a private key, the message
- * points to {@link getPublicKey}.
- */
-export async function exportPublicPem(key: PublicKey): Promise<string> {
-  const entry = publicEntry(key, "exportPublicPem");
-  return writePem("PUBLIC KEY", new Uint8Array(await crypto.subtle.exportKey("spki", entry.cryptoKey)));
-}
-
-/**
- * Exports a private key as a PEM `PRIVATE KEY` block (PKCS#8, RFC 7468 §10), unencrypted. Handle the result as a
- * secret.
- *
- * @param key - A private key imported or generated with `extractable: true`.
- * @returns The PEM text: the base64 in 64-character lines, with LF line endings and a final line break.
- * @throws TypeError when `key` is not a private key created by this package, was created without
- * `extractable: true`, or is held by an external signer.
- */
-export async function exportPrivatePem(key: PrivateKey): Promise<string> {
-  const entry = extractablePrivateEntry(key, "exportPrivatePem");
-  return writePem("PRIVATE KEY", new Uint8Array(await crypto.subtle.exportKey("pkcs8", entry.cryptoKey)));
 }
 
 /** The entry of a public key, with a message that points a private key to `getPublicKey`. */

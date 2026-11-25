@@ -15,7 +15,7 @@ import {
   valueOf,
   withMembers,
 } from "./test-fixtures";
-import { jwkThumbprint, jwkThumbprintUri } from "./thumbprint";
+import { jwkThumbprint } from "./thumbprint";
 
 /** RFC 7638 §3.1: the RSA key of the example, and its thumbprint. */
 const RFC7638_RSA_JWK = {
@@ -107,30 +107,6 @@ describe("jwkThumbprint", () => {
       // oxlint-disable-next-line no-await-in-loop
       await expect(jwkThumbprint(key as never)).rejects.toThrow(TypeError);
     }
-  });
-});
-
-describe("jwkThumbprintUri", () => {
-  it("should give the RFC 9278 §3 URI of the RFC 7638 §3.1 key", async () => {
-    const key = valueOf(await importPublicKey(RFC7638_RSA_JWK, { alg: "RS256" }));
-    expect(await jwkThumbprintUri(key)).toBe(
-      "urn:ietf:params:oauth:jwk-thumbprint:sha-256:NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs",
-    );
-  });
-
-  it("should give a private key and an extractable secret the URI of their thumbprint", async () => {
-    const { privateKey } = await generateKeyPair({ alg: "Ed25519" });
-    const secret = await generateSecretKey({ alg: "HS256", extractable: true });
-    for (const key of [privateKey, secret]) {
-      // oxlint-disable-next-line no-await-in-loop
-      const thumbprint = await jwkThumbprint(key);
-      // oxlint-disable-next-line no-await-in-loop
-      expect(await jwkThumbprintUri(key)).toBe(`urn:ietf:params:oauth:jwk-thumbprint:sha-256:${thumbprint}`);
-    }
-  });
-
-  it("should throw a TypeError for a look-alike", async () => {
-    await expect(jwkThumbprintUri({ kind: "public", alg: "ES256" } as never)).rejects.toThrow(TypeError);
   });
 });
 

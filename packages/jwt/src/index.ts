@@ -54,12 +54,9 @@ export { decodeBase64Url, encodeBase64Url } from "./encoding";
 export { readHeader, type ReadHeaderOptions } from "./jws/read-header";
 export {
   ASYMMETRIC_ALGORITHMS,
-  certificateThumbprint,
   createExternalSigningKey,
   exportPrivateJwk,
-  exportPrivatePem,
   exportPublicJwk,
-  exportPublicPem,
   exportSecretJwk,
   generateKeyPair,
   generateSecretKey,
@@ -71,7 +68,6 @@ export {
   isAsymmetricAlgorithm,
   isSymmetricAlgorithm,
   jwkThumbprint,
-  jwkThumbprintUri,
   SYMMETRIC_ALGORITHMS,
   tokenHash,
   type ExternalSigningKeyOptions,

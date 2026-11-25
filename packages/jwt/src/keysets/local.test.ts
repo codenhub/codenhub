@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import type { JwtHeader, PublicKey, SecretKey, VerificationKey } from "../core/types";
-import { exportPublicJwk, exportPublicPem, generateKeyPair, generateSecretKey } from "../keys";
+import { exportPublicJwk, generateKeyPair, generateSecretKey } from "../keys";
 import {
   EC_P256_PRIVATE_JWK,
   EC_P256_PUBLIC_JWK,
@@ -196,7 +196,12 @@ describe("importKeySet", () => {
   });
 
   it("should skip an entry that is a PEM string, which only importPublicKey reads", async () => {
-    const pem = await exportPublicPem(ecA);
+    const { publicKey } = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign"]);
+    const spki = Buffer.from(await crypto.subtle.exportKey("spki", publicKey)).toString("base64");
+    const pem = `-----BEGIN PUBLIC KEY-----
+${spki}
+-----END PUBLIC KEY-----
+`;
     expect(valueOf(await importKeySet({ keys: [pem] })).keys).toEqual([]);
   });
 

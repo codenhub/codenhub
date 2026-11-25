@@ -1,5 +1,5 @@
 import type { AsymmetricAlgorithm, JwtIssue } from "../core/types";
-import { decodeBase64Url, encodeBase64Url } from "../encoding";
+import { decodeBase64Url } from "../encoding";
 import { ALGORITHM_PARAMS } from "./algorithms";
 import {
   contentHex,
@@ -105,14 +105,6 @@ export function readPemBlock(pem: string): PemBlock | undefined {
     hasHeaders: headers !== "",
     isEncrypted: ENCRYPTED_HEADER_PATTERN.test(headers),
   };
-}
-
-/** `der` as a PEM block of `label`, its base64 in 64-character lines (RFC 7468 §2), ending with a line break. */
-export function writePem(label: string, der: Uint8Array): string {
-  const base64Url = encodeBase64Url(der);
-  const base64 = base64Url.replaceAll("-", "+").replaceAll("_", "/") + "=".repeat((4 - (base64Url.length % 4)) % 4);
-  const lines = base64.match(/.{1,64}/g) ?? [];
-  return [`-----BEGIN ${label}-----`, ...lines, `-----END ${label}-----`, ""].join("\n");
 }
 
 /** A key read as the JWK of its material, or the one issue that refuses it. */
@@ -440,13 +432,4 @@ function subjectPublicKeyInfo(der: Uint8Array<ArrayBuffer>): Uint8Array<ArrayBuf
   }
   const key = readElement(der, field.end, tbs.end);
   return key?.tag === DER_SEQUENCE ? der.subarray(key.start, key.end) : undefined;
-}
-
-/**
- * Whether `der` is exactly one DER `SEQUENCE`, as a certificate or a key is, its length in the minimal form and
- * nothing after it; its content is not read.
- */
-export function isSingleSequence(der: Uint8Array): boolean {
-  const element = readElement(der, 0, der.length, true);
-  return element?.tag === DER_SEQUENCE && element.end === der.length;
 }

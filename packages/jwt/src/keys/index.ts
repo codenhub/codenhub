@@ -24,10 +24,10 @@ export {
   SYMMETRIC_ALGORITHMS,
   type AlgorithmParams,
 } from "./algorithms";
-export { exportPrivateJwk, exportPrivatePem, exportPublicJwk, exportPublicPem, exportSecretJwk } from "./export";
+export { exportPrivateJwk, exportPublicJwk, exportSecretJwk } from "./export";
 export { createExternalSigningKey, type ExternalSigningKeyOptions } from "./external";
 export { getPublicKey } from "./public-key";
-export { certificateThumbprint, jwkThumbprint, jwkThumbprintUri } from "./thumbprint";
+export { jwkThumbprint } from "./thumbprint";
 export { tokenHash } from "./token-hash";
 export {
   generateKeyPair,
