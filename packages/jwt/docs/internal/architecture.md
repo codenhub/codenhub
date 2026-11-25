@@ -164,7 +164,7 @@ A `select` call:
 1. Awaits the seed's import, once per key set.
 2. If a fetch counts as running: when the cache is usable, selects from it and answers, unless the header lacks a `kid` the cache carries and the fetch is live; otherwise joins the fetch. If none runs and the cache is not fresh, outside the cooldown: a usable cache answers this call and a fetch starts in the background to replace it (decision 37); without one, the call joins a new fetch.
 3. Takes the usable keys: the cache while it is usable, otherwise the last failure.
-4. Selects. When the header lacks a `kid` the keys carry, as `lacksKid` decides, this call has not fetched, and the cooldown is not running with no live fetch to join, it joins a fetch once more and selects from its keys. If that fetch fails, a stand-in key the first selection found still answers; otherwise the failure does.
+4. Selects. When the header lacks a `kid` the keys carry, as `lacksKid` decides, this call has not fetched, and the cooldown is not running with no live fetch to join, it joins a fetch once more and selects from its keys. If that fetch fails, a stand-in key the first selection found still answers while the cache is usable, since the fetch may have outlasted it; otherwise the failure does.
 
 Joining a fetch (decision 42) starts one when none counts as running. Otherwise it waits for the running fetch until its deadline. A fetch that settles in time gives its result. One that misses the deadline, or rejects, as on Workers when the request that started it ended, is given up: inside the cooldown a usable cache answers instead, and otherwise the call starts a fetch of its own, once.
 

@@ -299,9 +299,9 @@
         "createRemoteKeySet": {
           "files": {
             "dist/keysets/remote.js": {
-              "bytes": 6804,
+              "bytes": 6821,
               "declarations": {
-                "createRemoteSet": 1741,
+                "createRemoteSet": 1758,
                 "readRemoteOptions": 638,
                 "requestJson": 387,
                 "readUrl": 367,
@@ -528,8 +528,8 @@
               "bytes": 36
             }
           },
-          "gzip": 7869,
-          "minified": 21933
+          "gzip": 7872,
+          "minified": 21950
         },
         "createVerifier": {
           "files": {
@@ -2744,9 +2744,9 @@
       },
       "files": {
         "dist/keysets/remote.js": {
-          "bytes": 6832,
+          "bytes": 6849,
           "declarations": {
-            "createRemoteSet": 1748,
+            "createRemoteSet": 1765,
             "readRemoteOptions": 643,
             "requestJson": 389,
             "readUrl": 367,
@@ -3249,9 +3249,9 @@
           }
         }
       },
-      "gzip": 18910,
-      "minified": 60912,
-      "sha256": "3f90603dee5593664b8bce400b4ce01791227e4abe76484de043d6e4aa7940e2"
+      "gzip": 18911,
+      "minified": 60929,
+      "sha256": "e2a344b320597a1886101dc476fff467cc290e61871d422c650166fa6692b9f8"
     }
   }
 }

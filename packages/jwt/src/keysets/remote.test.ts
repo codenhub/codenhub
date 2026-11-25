@@ -1151,6 +1151,27 @@ describe("createRemoteKeySet missing kid", () => {
       kid: undefined,
     });
   });
+
+  it("should not keep the unnamed key when the refetch fails after the cache stopped being usable", async () => {
+    const clock = createClock();
+    let failRefetch: (response: Response) => void = () => undefined;
+    const fetch = fetchSequence(
+      () => jwksResponse({ ...EC_P256_PUBLIC_JWK, alg: "ES256" }),
+      () =>
+        new Promise<Response>((resolve) => {
+          failRefetch = resolve;
+        }),
+    );
+    const keys = createSet({ fetch, now: clock.now, cacheTtl: 60, cooldown: 0, maxStale: 0 });
+    await keys.select({ alg: "ES256" });
+    clock.set(59);
+    const pending = keys.select({ alg: "ES256", kid: "issuer-key" });
+    await vi.waitFor(() => expect(fetch).toHaveBeenCalledTimes(2));
+    clock.set(61);
+    failRefetch(new Response("unavailable", { status: 503 }));
+    const result = await pending;
+    expect(result.ok ? "selected" : result.error.issues[0]?.code).toBe("key_fetch_failed");
+  });
 });
 
 describe("createRemoteKeySet waitUntil", () => {

@@ -229,8 +229,8 @@ interface FetchState {
  *   running past their request.
  * - **Unknown `kid`.** When a token's `kid` is not in the cached JWKS, the JWKS is fetched again once,
  *   and the selection is repeated on the result, also when a key without a `kid` could stand in for it.
- *   A failing refetch gives `key_fetch_failed`, unless such a key stands in. A header without a `kid`
- *   never causes a refetch.
+ *   A failing refetch gives `key_fetch_failed`, unless such a key stands in and the cached JWKS is still
+ *   within `maxStale`. A header without a `kid` never causes a refetch.
  * - **Cooldown.** A refetch for an unknown `kid`, or a retry after a failed fetch, starts only when
  *   `cooldown` seconds have passed since the last fetch started. Inside that window an unknown `kid`
  *   fails with `unknown_kid` at once, so a flood of tokens with invented `kid`s causes at most one
@@ -472,8 +472,9 @@ function createRemoteSet(config: RemoteConfig): {
     }
     const refetched = await awaitFetch();
     if (!refetched.ok) {
-      // A key that stood in for the kid still answers when the refetch fails.
-      return selected.ok ? selected : refetched;
+      // A key that stood in for the kid still answers when the refetch fails, while the cache it came from is
+      // still usable: the refetch may have outlasted `maxStale`.
+      return selected.ok && isCachedWithin(config.maxStaleMs) ? selected : refetched;
     }
     return selectKey(refetched.value, header);
   };
