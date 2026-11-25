@@ -52,7 +52,7 @@ A failure nobody registered becomes `type: "unknown"` with the message `"An unex
 
 ## Requirements
 
-- Node.js 24 or newer, or an ES2022-compatible browser, worker, or edge runtime with native `Error` `cause` support.
+- Node.js 26 or newer, or an ES2022-compatible browser, worker, or edge runtime with native `Error` `cause` support.
 - ESM. CommonJS can load it with `require()` on runtimes that support requiring ES modules.
 - No runtime dependencies, and no access to browser or Node.js globals.
 - The React adapter needs React 18 or newer, and the Svelte adapter needs Svelte 5.3 or newer. Both are optional peer dependencies.

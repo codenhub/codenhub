@@ -54,7 +54,7 @@ A failure nobody registered becomes `type: "unknown"` with the message `"An unex
 
 ## Requirements
 
-- Node.js 24 or newer, or an ES2022-compatible browser, worker, or edge runtime with native `Error` `cause` support.
+- Node.js 26 or newer, or an ES2022-compatible browser, worker, or edge runtime with native `Error` `cause` support.
 - ESM. CommonJS can load it with `require()` on runtimes that support requiring ES modules.
 - No runtime dependencies, and no access to browser or Node.js globals.
 - The React adapter needs React 18 or newer, and the Svelte adapter needs Svelte 5.3 or newer. Both are optional peer dependencies.
@@ -174,9 +174,9 @@ if (!result.ok) {
 
 ## Requirements
 
-- Node.js 24 or newer, or an ES2022-compatible browser, worker, or edge runtime.
+- Node.js 26 or newer, or an ES2022-compatible browser, worker, or edge runtime.
 - Native `Error` `cause` support, which every runtime above has.
-- ESM. CommonJS code can load the package with `require()` on runtimes that support requiring ES modules, such as Node.js 24.
+- ESM. CommonJS code can load the package with `require()` on runtimes that support requiring ES modules, such as Node.js 26.
 - For the adapters only: React 18 or newer for `@codenhub/error/react`, and Svelte 5.3 or newer for `@codenhub/error/svelte`. Both are optional peer dependencies, so the rest of the package installs without them.
 
 The package never touches browser or Node.js globals, so it runs the same in a browser, on a server, during server-side rendering, in a worker, or on an edge runtime. Importing a preset contacts no service and needs no other package.
@@ -851,7 +851,7 @@ Notes:
 - **Only failures before a connection is made are retryable**: refused, an address that did not resolve, an unreachable host, a connection timeout. A reset, a closed socket, or a response timeout can follow a request the other side already acted on. `ETIMEDOUT` is not retryable either, because Node.js raises it both for a connection attempt and for a socket that already carried the request.
 - **Not covered:** filesystem codes such as `ENOENT`, because the right message depends on what the application was doing, and TLS certificate codes, which only an operator can fix.
 - **`TimeoutError` and `AbortError` are also browser preset names.** They are the `DOMException` names an `AbortSignal` raises, as in `fetch(url, { signal: AbortSignal.timeout(5000) })`. Server code should use this preset for them: the browser preset's `TimeoutError` message tells the reader to check their internet connection. When you merge both, the one merged last wins.
-- The codes were observed on Node.js 24. Other server runtimes, such as Deno or Bun, may report network failures differently.
+- The codes were observed on Node.js 24 and 26. Other server runtimes, such as Deno or Bun, may report network failures differently.
 
 ## HTTP
 
@@ -1543,7 +1543,7 @@ Everything on this page is deliberate, and every item on it has surprised someon
 ## Presets do not cover everything
 
 - The browser preset recognizes a failed `fetch` and a failed `import()` by the messages Chromium, Firefox, and Safari produce today. A browser that rewords them falls back to `"unknown"` until the preset catches up.
-- The Node.js preset covers network failures and the errors an `AbortSignal` raises, and was observed on Node.js 24. Other server runtimes may report the same failures differently.
+- The Node.js preset covers network failures and the errors an `AbortSignal` raises, and was observed on Node.js 24 and 26. Other server runtimes may report the same failures differently.
 - The Supabase preset covers the Auth codes a person can act on, six PostgreSQL codes, and the client's own error names. It maps the few developer faults a running application commonly hits, such as a missing table or column, to one shared message, so they are `"known"`: report them by `messageKey`, not by type (see [Recipes](docs/recipes.md#report-to-an-error-tracker)). Other codes only a developer can fix, such as `bad_jwt`, are left unmapped on purpose and reach your error tracker as `"unknown"`.
 
 Register your own mapping for anything a preset misses. [Presets](docs/presets.md) lists exactly what each one covers.

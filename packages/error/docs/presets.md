@@ -109,7 +109,7 @@ Notes:
 - **Only failures before a connection is made are retryable**: refused, an address that did not resolve, an unreachable host, a connection timeout. A reset, a closed socket, or a response timeout can follow a request the other side already acted on. `ETIMEDOUT` is not retryable either, because Node.js raises it both for a connection attempt and for a socket that already carried the request.
 - **Not covered:** filesystem codes such as `ENOENT`, because the right message depends on what the application was doing, and TLS certificate codes, which only an operator can fix.
 - **`TimeoutError` and `AbortError` are also browser preset names.** They are the `DOMException` names an `AbortSignal` raises, as in `fetch(url, { signal: AbortSignal.timeout(5000) })`. Server code should use this preset for them: the browser preset's `TimeoutError` message tells the reader to check their internet connection. When you merge both, the one merged last wins.
-- The codes were observed on Node.js 24. Other server runtimes, such as Deno or Bun, may report network failures differently.
+- The codes were observed on Node.js 24 and 26. Other server runtimes, such as Deno or Bun, may report network failures differently.
 
 ## HTTP
 
