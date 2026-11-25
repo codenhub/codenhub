@@ -67,7 +67,7 @@
               "bytes": 25
             }
           },
-          "gzip": 4255,
+          "gzip": 4256,
           "minified": 12766
         }
       },
@@ -121,7 +121,7 @@
       },
       "gzip": 4299,
       "minified": 12794,
-      "sha256": "de49e6addc14e7b2ea308bb734ce3c6a2f1198a68effc4119a7e4149551d0263"
+      "sha256": "36a0184deec81a6f973f6da399ca9247c26b99dc59ee619c4b38f9964f478d47"
     }
   }
 }

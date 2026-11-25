@@ -898,11 +898,10 @@ React found the `data-theme`, class, or `style` the pre-paint script added. That
 
 Still stuck? The [API reference](docs/reference/index.md) lists every rule each method enforces, and every error it throws.
 
-<!-- Source: docs/changelog/0.4.0.md -->
+<!-- Source: docs/changelog/0.4.1.md -->
 
-# 0.4.0
+# 0.4.1
 
-## Changed
+## Fixed
 
-- `document.documentElement` now always carries `theme-light` or `theme-dark`, following the active theme's `colorScheme`, whatever the theme is named and whatever `className` is set to. A light theme named `paper` gets `theme-paper theme-light`, so stylesheets keyed on `.theme-light` and `.theme-dark`, such as the `dark:` variant of `@codenhub/styles`, match it without a workaround. The pre-paint script applies the same class. ([#627](https://github.com/codenhub/codenhub/issues/627))
-- The manager now owns `theme-light` and `theme-dark` on the root element: it adds and removes them on every change, and `destroy({ revertDom: true })` removes them even if the page added them itself. A page that sets either class by hand, or a stylesheet that expects only the theme's own class to be present, should drop that code when upgrading.
+- While the browser blocks `localStorage`, `theme.preference` and `theme.followsSystem` now report the choice made on this page with `set()` or `toggle()`, until `clearPreference()` or `destroy()`, instead of staying `null` and `false`. The manager already applied that choice, so a menu that shows "Auto" while `preference` is `null` took a fixed pick for "Auto" and switched the page back to the operating system's scheme. When storage can be read but not written, as with a full quota, they still report the previously saved choice. ([#669](https://github.com/codenhub/codenhub/issues/669))
