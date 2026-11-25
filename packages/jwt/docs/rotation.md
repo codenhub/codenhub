@@ -51,7 +51,7 @@ The ring stores nothing and reads the clock, `now`, at every call. Keep your key
 
 **`publishAhead`** must cover every copy of your JWKS a verifier may hold: the `max-age` you serve it with, plus any shared cache in between, plus how long a verifier keeps using a JWKS it cannot refresh. For this package's remote key sets that last part is `maxStale`, one hour by default. A day is a comfortable value for scheduled rotation.
 
-**`publishAfter`** must outlast every token the key signed: your longest token lifetime plus the clock tolerance of your verifiers and how far their clocks may lag yours, with a few seconds more for the time between `signingKey()` and `sign` reading the clock. A key that leaves the JWKS sooner makes its last tokens fail with `unknown_kid` before they expire.
+**`publishAfter`** must outlast every token the key signed: your longest token lifetime plus the clock tolerance of your verifiers and how far their clocks may lag yours, plus the longest delay you allow between `signingKey()` and `sign` reading the clock, a few seconds when you call one right before the other. A key that leaves the JWKS sooner makes its last tokens fail with `unknown_kid` before they expire.
 
 Serve the JWKS with a `max-age` well below `publishAhead`:
 

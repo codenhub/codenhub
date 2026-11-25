@@ -41,9 +41,9 @@ export interface KeyRingOptions {
   readonly publishAhead: number;
   /**
    * Seconds a key stays published after it stops signing. At least your longest token lifetime plus the
-   * clock tolerance of your verifiers and how far their clocks may lag yours, with a few seconds more for the
-   * time between `signingKey()` and `sign` reading the clock, so every token it signed expires before it
-   * leaves. A whole number from 0 to 315360000.
+   * clock tolerance of your verifiers and how far their clocks may lag yours, plus the longest delay you allow
+   * between `signingKey()` and `sign` reading the clock, a few seconds when you call one right before the
+   * other, so every token it signed expires before it leaves. A whole number from 0 to 315360000.
    */
   readonly publishAfter: number;
   /**
