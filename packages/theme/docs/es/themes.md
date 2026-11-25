@@ -2,7 +2,7 @@
 title: Definir temas
 description: Agrega tus propios temas, elige qué temas usan la configuración del sistema y el toggle, lee el estado actual y conoce cada opción con su valor por defecto.
 order: 2
-source: 632c7fdf59665808b4b91a309deb37754c6f814c
+source: 5ce85549a6d39ce29bd216b61aa8ae6277c6ece1
 ---
 
 # Definir temas
@@ -122,13 +122,13 @@ Ahora el tema activo es `ocean-light` u `ocean-dark`, el que tenga el esquema de
 
 El menú de temas necesita mostrar qué entrada está seleccionada. El gestor responde cinco preguntas:
 
-| Miembro               | Responde                                                                                                                                                                                       |
-| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `theme.name`          | Qué tema está activo, como `"dim"`.                                                                                                                                                            |
-| `theme.get()`         | Todo sobre el tema activo: `name`, `colorScheme`, `tokens` y `pairedTheme`.                                                                                                                    |
-| `theme.preference`    | Qué tema eligió el usuario: el guardado, o el elegido en esta página cuando el almacenamiento no pudo guardarlo. `null` cuando no hay elección o el nombre guardado ya no es uno de tus temas. |
-| `theme.followsSystem` | Si esa elección sigue al sistema operativo dentro de su par, como la hace `set(name, { followSystem: true })`.                                                                                 |
-| `theme.system`        | A qué tema corresponde ahora mismo la configuración del sistema operativo, se esté mostrando o no.                                                                                             |
+| Miembro               | Responde                                                                                                                                                                                                                        |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `theme.name`          | Qué tema está activo, como `"dim"`.                                                                                                                                                                                             |
+| `theme.get()`         | Todo sobre el tema activo: `name`, `colorScheme`, `tokens` y `pairedTheme`.                                                                                                                                                     |
+| `theme.preference`    | Qué tema eligió el usuario: el guardado, o el elegido en esta página cuando el almacenamiento no pudo guardarlo. `null` cuando no hay ninguno de los dos; un nombre guardado que ya no es uno de tus temas cuenta como ninguno. |
+| `theme.followsSystem` | Si esa elección sigue al sistema operativo dentro de su par, como la hace `set(name, { followSystem: true })`.                                                                                                                  |
+| `theme.system`        | A qué tema corresponde ahora mismo la configuración del sistema operativo, se esté mostrando o no.                                                                                                                              |
 
 `preference` es lo que hace posible la entrada "Automático": el menú muestra "Automático" como seleccionada mientras vale `null`. Ejecútalo también en cada cambio, para que el menú se entere cuando el toggle u otra pestaña cambian el tema a sus espaldas:
 
