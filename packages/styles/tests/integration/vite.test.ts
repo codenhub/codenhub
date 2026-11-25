@@ -2,6 +2,7 @@ import { realpathSync } from "node:fs";
 import { chmod, mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, utimes, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 import type * as Vite from "vite";
 import type { InlineConfig, Logger, Plugin, ViteDevServer } from "vite";
@@ -33,13 +34,24 @@ afterEach(async () => {
   await rm(project, { recursive: true, force: true, maxRetries: 5 });
 });
 
+/* The chokidar 3 that Vite 5 and 6 bundle drops a change to a file within
+   50 ms of its last one and never reports it, so a test that writes a file
+   twice in a row waits that long. Seen on Linux in about 1 run in 50. */
+const WATCHER_THROTTLE = 60;
+const lastWrites = new Map<string, number>();
+
 async function writeFiles(files: Record<string, string>): Promise<void> {
   await Promise.all(
     Object.entries(files).map(async ([name, text]) => {
       const file = path.join(project, name);
+      const wait = (lastWrites.get(file) ?? -Infinity) + WATCHER_THROTTLE - performance.now();
 
+      if (wait > 0) {
+        await delay(wait);
+      }
       await mkdir(path.dirname(file), { recursive: true });
       await writeFile(file, text);
+      lastWrites.set(file, performance.now());
     }),
   );
 }
