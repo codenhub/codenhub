@@ -34,6 +34,10 @@ const manifest = JSON.parse(await readFile(packagePath, "utf8")) as PackageManif
 /* A Tailwind source export is the compiled one with `/tw` added: `./tw` for
    the root, `./button/tw` for a subpath. */
 const isTailwindExport = (subpath: string) => subpath === "./tw" || subpath.endsWith("/tw");
+// Every export but the manifest and the Vite plugin, which is JavaScript.
+const stylesheetSubpaths = Object.keys(manifest.exports).filter(
+  (subpath) => subpath !== "./package.json" && subpath !== "./vite",
+);
 const exportTargets = Object.entries(manifest.exports).flatMap(([subpath, target]) =>
   typeof target === "string"
     ? [{ subpath, exportName: subpath, target }]
@@ -217,10 +221,11 @@ const representativePublicRules = [".box{--_fill-cap:100%;--_cap-lift:0%;--_d-fi
 
 /* An optional peer still takes part in npm's resolution: a project on Tailwind
    3, or on 4.x below the documented floor, failed `npm install` with ERESOLVE
-   even when it only linked the compiled CSS. The floor is documented instead. */
-test("declares no peer dependency, so no consumer's Tailwind blocks the install", () => {
-  expect(manifest.peerDependencies).toBeUndefined();
-  expect(manifest.peerDependenciesMeta).toBeUndefined();
+   even when it only linked the compiled CSS. The floor is documented instead.
+   Vite is the one peer, accepted for the plugin (`docs/internal/vite.md`). */
+test("declares no peer but an optional Vite, so no consumer's Tailwind blocks the install", () => {
+  expect(manifest.peerDependencies).toEqual({ vite: ">=5.0.0" });
+  expect(manifest.peerDependenciesMeta).toEqual({ vite: { optional: true } });
 });
 
 test("every declared package export target exists after build", async () => {
@@ -454,13 +459,70 @@ test.each(
   },
 );
 
+/* `vite.config.ts` imports the plugin as an ES module, through the resolution
+   its tsconfig sets: Vite's templates set `bundler`, and Node.js's own is
+   `nodenext` from an `.mts` file. */
+test.each([
+  {
+    name: "Bundler",
+    module: ts.ModuleKind.ESNext,
+    moduleResolution: ts.ModuleResolutionKind.Bundler,
+    extension: ".ts",
+  },
+  {
+    name: "NodeNext",
+    module: ts.ModuleKind.NodeNext,
+    moduleResolution: ts.ModuleResolutionKind.NodeNext,
+    extension: ".mts",
+  },
+])(
+  "the Vite plugin's declarations typecheck as a $name config imports them",
+  ({ module, moduleResolution, extension }) => {
+    const options: ts.CompilerOptions = {
+      module,
+      moduleResolution,
+      noEmit: true,
+      strict: true,
+      target: ts.ScriptTarget.ESNext,
+      types: [],
+    };
+    const entry = path.join(packageRoot, `vite.config${extension}`).replaceAll("\\", "/");
+    // The last line names an option the plugin does not have, so the check fails if the options type stops being checked.
+    const source = [
+      `import type { Plugin } from "vite";`,
+      `import viteStyles, { viteStyles as named, type ViteStylesOptions } from "@codenhub/styles/vite";`,
+      `const options: ViteStylesOptions = { content: ["../shared/**/*.html"] };`,
+      `export const plugins: Plugin[] = [viteStyles(options), named()];`,
+      `// @ts-expect-error`,
+      `viteStyles({ output: "dist/app.css" });`,
+    ].join("\n");
+    const host = ts.createCompilerHost(options);
+    const { fileExists, getSourceFile, readFile: readHostFile } = host;
+    const isEntry = (fileName: string) => fileName.replaceAll("\\", "/") === entry;
+
+    host.fileExists = (fileName) => isEntry(fileName) || fileExists.call(host, fileName);
+    host.readFile = (fileName) => (isEntry(fileName) ? source : readHostFile.call(host, fileName));
+    host.getSourceFile = (fileName, languageVersion, ...rest) =>
+      isEntry(fileName)
+        ? ts.createSourceFile(fileName, source, languageVersion)
+        : getSourceFile.call(host, fileName, languageVersion, ...rest);
+
+    const program = ts.createProgram([entry], options, host);
+    const diagnostics = ts
+      .getPreEmitDiagnostics(program)
+      .map((diagnostic) => `TS${diagnostic.code}: ${ts.flattenDiagnosticMessageText(diagnostic.messageText, "\n")}`);
+
+    expect(diagnostics).toEqual([]);
+  },
+);
+
 /* The test above samples entrypoints; this holds every one. TypeScript takes
    the first condition it recognises, so `types` has to lead, and it has to
    name a CommonJS declaration rather than the stylesheet, which a file of
    either format may import, as the test above says. */
 test("every stylesheet export leads with a types condition naming a CommonJS declaration", () => {
   const missing = Object.entries(manifest.exports)
-    .filter(([exportName]) => exportName !== "./package.json")
+    .filter(([exportName]) => stylesheetSubpaths.includes(exportName))
     .filter(([, target]) => {
       const [first, ...rest] = typeof target === "string" ? [] : Object.entries(target);
 
@@ -504,8 +566,8 @@ test("every /tw export resolves into tw/, outside dist, and nothing else does", 
    Tailwind to compile. */
 test("every compiled export has its Tailwind source at the same path with /tw added", () => {
   const subpaths = Object.keys(manifest.exports);
-  const missing = subpaths
-    .filter((subpath) => !isTailwindExport(subpath) && subpath !== "./package.json" && subpath !== "./palette")
+  const missing = stylesheetSubpaths
+    .filter((subpath) => !isTailwindExport(subpath) && subpath !== "./palette")
     .map((subpath) => (subpath === "." ? "./tw" : `${subpath}/tw`))
     .filter((subpath) => !subpaths.includes(subpath));
 

@@ -2,7 +2,7 @@
 title: Vue
 description: Cargar la hoja de estilos en una aplicación Vue / Vite.
 order: 3
-source: 88a7f0b25b6d39cdfff95bf358de01d7b640deeb
+source: 7d4ebf5802e552d16b046796756c807ee9baa159
 ---
 
 # Vue
@@ -21,6 +21,8 @@ createApp(App).mount("#app");
 ```
 
 ¿Usas Tailwind CSS v4? Importa `@codenhub/styles/tw` desde un archivo CSS de entrada en lugar de `main.ts`, con el plugin `@tailwindcss/vite`; consulta [Tailwind CSS v4](./tailwind.md).
+
+¿No usas Tailwind? El import de arriba incluye todas las clases. Añade el [plugin de Vite](./vite.md) del paquete a `vite.config.ts` y el mismo import incluye solo las clases que usan tus archivos `.vue` y el resto del proyecto.
 
 ## Forzar un tema
 

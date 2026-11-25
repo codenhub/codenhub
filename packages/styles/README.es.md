@@ -1,4 +1,4 @@
-<!-- source: 87a8763ae7cb66e621883f88aa1e846e832f3fbd -->
+<!-- source: 7414f5d5ff9350ff0874ac597ab5f113a3e4da61 -->
 
 # @codenhub/styles
 
@@ -29,7 +29,7 @@ Importa la hoja de estilos compilada, que contiene todo lo que incluye el paquet
 </form>
 ```
 
-Para usar en su lugar los puntos de entrada de código fuente de Tailwind CSS v4, o para cargar solo una parte del paquete, consulta [Configuración inicial](./docs/es/setup.md). La [demo](https://demo.codenhub.dev/styles/) muestra cada componente en cada intención, presentación y estética.
+Para usar en su lugar los puntos de entrada de código fuente de Tailwind CSS v4, o para cargar solo una parte del paquete, consulta [Configuración inicial](./docs/es/setup.md). En un proyecto Vite, el [plugin de Vite](./docs/es/integrating/vite.md) del paquete recorta ese mismo import a las clases que usan tus páginas. La [demo](https://demo.codenhub.dev/styles/) muestra cada componente en cada intención, presentación y estética.
 
 ## Documentación
 
@@ -37,7 +37,7 @@ La documentación construye una pantalla de ajustes de cuenta de principio a fin
 
 - [Introducción](./docs/es/index.md): para qué sirve el paquete, qué cuesta y en qué orden leer.
 - [Configuración inicial](./docs/es/setup.md): instala el paquete, elige entre CSS compilado o código fuente de Tailwind y renderiza la estructura base de la página.
-- [Integración](./docs/es/integrating/index.md): carga la hoja de estilos en Next.js, Vue, Svelte, Astro, Tailwind CSS v4 o en una página sin bundler.
+- [Integración](./docs/es/integrating/index.md): carga la hoja de estilos en Next.js, Vue, Svelte, Astro, Tailwind CSS v4, Vite o en una página sin bundler.
 - [Construir una pantalla](./docs/es/concepts.md): maqueta la página y aprende qué son la intención, el relleno, el borde y la estética.
 - [Uso](./docs/es/usage/index.md): guías de botones, formularios, feedback, tooltips, temas, estéticas y clases solo, y después las páginas de consulta con cada clase, token y valor por defecto.
 - [Accesibilidad](./docs/es/accessibility.md): lo que el CSS hace por tus usuarios y lo que tu aplicación todavía les debe.
@@ -45,13 +45,14 @@ La documentación construye una pantalla de ajustes de cuenta de principio a fin
 
 ## Requisitos
 
-| Requisito      | Detalles                                                                                                                                                                                                                                            |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Imports de CSS | Las herramientas del proyecto deben resolver los imports de CSS de paquetes.                                                                                                                                                                        |
-| Navegadores    | Chrome 123, Safari 17.5 o Firefox 128 y posteriores (`light-dark()` para los temas; `:has()` para el estado de `.input-group`; `@property` para una elevación que no se hereda).                                                                    |
-| Tailwind CSS   | 4.3.2 o posterior, por debajo de 5, solo para los puntos de entrada de código fuente `/tw`. Instálalo tú; el paquete no lo instala.                                                                                                                 |
-| Node.js        | 24 o posterior en la máquina que ejecuta el comando `chs build`. Las hojas de estilos no lo necesitan, pero el paquete lo declara como su engine, así que Yarn 1, y npm o pnpm con `engine-strict`, rechazan la instalación en un Node.js anterior. |
-| Accesibilidad  | Tu proyecto aporta el HTML semántico, ARIA, el comportamiento de teclado y la gestión del foco.                                                                                                                                                     |
+| Requisito      | Detalles                                                                                                                                                                                                                                                                |
+| -------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Imports de CSS | Las herramientas del proyecto deben resolver los imports de CSS de paquetes.                                                                                                                                                                                            |
+| Navegadores    | Chrome 123, Safari 17.5 o Firefox 128 y posteriores (`light-dark()` para los temas; `:has()` para el estado de `.input-group`; `@property` para una elevación que no se hereda).                                                                                        |
+| Tailwind CSS   | 4.3.2 o posterior, por debajo de 5, solo para los puntos de entrada de código fuente `/tw`. Instálalo tú; el paquete no lo instala.                                                                                                                                     |
+| Vite           | 5.0.0 o posterior, solo para el plugin de Vite. Es un peer opcional, así que npm rechaza la instalación con Vite 4 o anterior, aunque no se use el plugin.                                                                                                              |
+| Node.js        | 24 o posterior en la máquina que ejecuta el comando `chs build` o el plugin de Vite. Las hojas de estilos no lo necesitan, pero el paquete lo declara como su engine, así que Yarn 1, y npm o pnpm con `engine-strict`, rechazan la instalación en un Node.js anterior. |
+| Accesibilidad  | Tu proyecto aporta el HTML semántico, ARIA, el comportamiento de teclado y la gestión del foco.                                                                                                                                                                         |
 
 ## Notas
 

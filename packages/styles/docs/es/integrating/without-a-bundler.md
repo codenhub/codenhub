@@ -1,8 +1,8 @@
 ---
 title: Sin bundler
 description: Enlazar las hojas de estilos compiladas desde HTML simple, Rails, Laravel, Django o cualquier aplicación renderizada en el servidor, y el build por línea de comandos.
-order: 6
-source: 09e05a6f0f8b4204ccfa92492a00aa965a6700b1
+order: 7
+source: f2a447eff42c76d90e57d43cf685dbd250a64756
 ---
 
 # Sin bundler
@@ -114,7 +114,7 @@ Una aplicación Laravel usa Vite por defecto, así que tiene un bundler: importa
 
 El paquete trae un comando, `chs`, que lee tus plantillas en busca de nombres de clase y escribe una sola hoja de estilos minificada con solo las clases de StyleKit que usan. Una página que usa un botón recibe alrededor de una séptima parte de la hoja de estilos completa; el tamaño exacto depende de las clases que uses, porque cada componente trae las reglas compartidas de las que depende.
 
-El comando también sirve con un bundler. Un proyecto cuyo bundler no ejecuta Tailwind, como un build simple con Vite o webpack, puede escribir la hoja de estilos entre sus fuentes, `--output src/stylekit.css`, e importar ese archivo donde importaría `@codenhub/styles`. Un proyecto que usa Tailwind CSS v4 obtiene la misma reducción con el [punto de entrada de código fuente](./tailwind.md) y no necesita el comando.
+El comando también sirve con un bundler. Un proyecto cuyo bundler no ejecuta Tailwind, como un build con webpack, puede escribir la hoja de estilos entre sus fuentes, `--output src/stylekit.css`, e importar ese archivo donde importaría `@codenhub/styles`. Un proyecto Vite obtiene la misma hoja de estilos con el [plugin de Vite](./vite.md) del paquete, sin comando que ejecutar ni archivo que importar, y un proyecto que usa Tailwind CSS v4 obtiene la misma reducción con el [punto de entrada de código fuente](./tailwind.md); ninguno de los dos necesita el comando.
 
 Necesita Node.js 24 o posterior en la máquina que genera el CSS, sea tu portátil, un job de CI o un paso del despliegue, y nada más: el paquete es toda la instalación, sin Tailwind y sin configuración. Instálalo como dependencia de desarrollo desde la raíz de tu proyecto; npm crea un `package.json` si no tienes uno:
 

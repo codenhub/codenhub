@@ -47,7 +47,7 @@ Pick one:
 - **Tailwind CSS v4 source** (`@codenhub/styles/tw`). Use it when your project already runs Tailwind v4. Your build compiles the package with your own utilities, so you get one stylesheet and Tailwind's `dark:` variant matches the package's theme. It needs Tailwind 4.3.2 or newer, below 5.
 - **No bundler.** Link the compiled file from `node_modules` or a CDN with a `<link>` tag; see [Without a bundler](./integrating/without-a-bundler.md).
 
-To ship only the classes your pages use in a project that does not run Tailwind, with a bundler or without one, the package's `chs build` command reads your files and writes a stylesheet with only those classes, which you import or link in place of the compiled one; see [Build only the classes you use](./integrating/without-a-bundler.md#build-only-the-classes-you-use).
+To ship only the classes your pages use in a project that does not run Tailwind, the package has two tools that read your files for class names. In a Vite project, its [Vite plugin](./integrating/vite.md) trims the stylesheet you already import, with one line of configuration. In any other project, with a bundler or without one, its `chs build` command writes a stylesheet with only those classes, which you import or link in place of the compiled one; see [Build only the classes you use](./integrating/without-a-bundler.md#build-only-the-classes-you-use).
 
 Your framework may need its own wiring, such as where the global stylesheet goes in Next.js or Astro. Each of these guides covers one setup and then sends you back here:
 
@@ -56,6 +56,7 @@ Your framework may need its own wiring, such as where the global stylesheet goes
 - [Vue](./integrating/vue.md)
 - [Svelte](./integrating/svelte.md)
 - [Astro](./integrating/astro.md)
+- [Vite](./integrating/vite.md)
 - [Without a bundler](./integrating/without-a-bundler.md)
 
 ## Add an aesthetic (optional)
@@ -73,8 +74,9 @@ The order of the two imports does not matter, because every entrypoint declares 
 
 - **Browsers:** Chrome 123, Safari 17.5, or Firefox 128 and newer. Colors use `light-dark()` and `color-scheme` (Firefox 120). `.input-group` reads a nested control's invalid and disabled state with `:has()` (Firefox 121). The elevation classes register a non-inheriting property with `@property` (Firefox 128); without it, an elevation class would also reach the unclassed elements inside it. A few newer features are used where a browser has them and skipped where it does not, with nothing broken at the floor: `corner-shape`, without which `.cyber`'s bevelled corners are square, `scrollbar-color` and `scrollbar-width`, without which Safari 17.5 draws its own scrollbar, and the parts the reduced-motion setting stops, such as a scroll-driven animation, which a browser without them never animates.
 - **Tooling:** an `@import` of a package name needs a tool that resolves CSS imports from packages through their `exports` map. Without one, link the compiled file by its path or from a CDN; see [Without a bundler](./integrating/without-a-bundler.md). Two common tools need a nudge, described in [Integrating → Bundlers that need a nudge](./integrating/index.md#bundlers-that-need-a-nudge): Parcel, and PostCSS with `postcss-import`.
-- **Tailwind:** 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. The package does not depend on it, so the compiled entrypoints and the `chs build` command work in a project on any Tailwind or none, and nothing checks the version for you.
-- **Node.js:** 24 or newer on the machine that runs the `chs build` command. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm or pnpm with `engine-strict`, refuse the install on an older Node.js.
+- **Tailwind:** 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. The package does not depend on it, so the compiled entrypoints, the `chs build` command, and the Vite plugin work in a project on any Tailwind or none, and nothing checks the version for you.
+- **Vite:** 5.0.0 or newer, only for the [Vite plugin](./integrating/vite.md#requirements). The package lists it as an optional peer dependency, so npm refuses the install in a project on Vite 4 or older, even one that never loads the plugin.
+- **Node.js:** 24 or newer on the machine that runs the `chs build` command or the Vite plugin. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm or pnpm with `engine-strict`, refuse the install on an older Node.js.
 - **Your application:** the package has no JavaScript. Semantic HTML, ARIA, keyboard behavior, focus management, validation, and announcements are yours; see [Accessibility](./accessibility.md).
 
 ## When nothing is styled

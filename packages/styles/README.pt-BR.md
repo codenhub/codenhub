@@ -1,4 +1,4 @@
-<!-- source: 87a8763ae7cb66e621883f88aa1e846e832f3fbd -->
+<!-- source: 7414f5d5ff9350ff0874ac597ab5f113a3e4da61 -->
 
 # @codenhub/styles
 
@@ -29,7 +29,7 @@ Importe a folha de estilos compilada, que contém tudo o que o pacote entrega:
 </form>
 ```
 
-Para usar os entrypoints de código-fonte do Tailwind CSS v4, ou para carregar só uma parte do pacote, veja [Configuração](./docs/pt-BR/setup.md). A [demo](https://demo.codenhub.dev/styles/) mostra cada componente em cada intenção, apresentação e estética.
+Para usar os entrypoints de código-fonte do Tailwind CSS v4, ou para carregar só uma parte do pacote, veja [Configuração](./docs/pt-BR/setup.md). Num projeto Vite, o [plugin de Vite](./docs/pt-BR/integrating/vite.md) do pacote reduz esse mesmo import às classes que as suas páginas usam. A [demo](https://demo.codenhub.dev/styles/) mostra cada componente em cada intenção, apresentação e estética.
 
 ## Documentação
 
@@ -37,7 +37,7 @@ A documentação monta uma tela de configurações de conta do início ao fim, n
 
 - [Introdução](./docs/pt-BR/index.md): para que serve o pacote, quanto ele custa e a ordem de leitura.
 - [Configuração](./docs/pt-BR/setup.md): instale o pacote, escolha entre CSS compilado ou código-fonte do Tailwind e renderize a estrutura da página.
-- [Integração](./docs/pt-BR/integrating/index.md): carregue a folha de estilos no Next.js, Vue, Svelte, Astro, Tailwind CSS v4 ou numa página sem bundler.
+- [Integração](./docs/pt-BR/integrating/index.md): carregue a folha de estilos no Next.js, Vue, Svelte, Astro, Tailwind CSS v4, Vite ou numa página sem bundler.
 - [Montando uma tela](./docs/pt-BR/concepts.md): organize o layout da página e aprenda intenção, preenchimento, borda e estética.
 - [Uso](./docs/pt-BR/usage/index.md): guias de botões, formulários, feedback, tooltips, temas, estéticas e classes solo, seguidos das páginas de consulta com cada classe, token e padrão.
 - [Acessibilidade](./docs/pt-BR/accessibility.md): o que o CSS faz pelos seus usuários e o que a sua aplicação ainda deve a eles.
@@ -45,13 +45,14 @@ A documentação monta uma tela de configurações de conta do início ao fim, n
 
 ## Requisitos
 
-| Requisito      | Detalhes                                                                                                                                                                                                                                           |
-| -------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Imports de CSS | O ferramental do projeto precisa resolver imports de CSS de pacotes.                                                                                                                                                                               |
-| Navegadores    | Chrome 123, Safari 17.5 ou Firefox 128 e mais recentes (`light-dark()` para temas; `:has()` para o estado de `.input-group`; `@property` para elevação sem herança).                                                                               |
-| Tailwind CSS   | 4.3.2 ou mais recente, abaixo da 5, apenas para os entrypoints de código-fonte `/tw`. Instale-o você mesmo; o pacote não o instala.                                                                                                                |
-| Node.js        | 24 ou mais recente na máquina que roda o comando `chs build`. As folhas de estilos não precisam dele, mas o pacote o declara como sua engine, então o Yarn 1, e o npm ou o pnpm com `engine-strict`, recusam a instalação num Node.js mais antigo. |
-| Acessibilidade | Quem usa o pacote fornece HTML semântico, ARIA, comportamento de teclado e gerenciamento de foco.                                                                                                                                                  |
+| Requisito      | Detalhes                                                                                                                                                                                                                                                               |
+| -------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Imports de CSS | O ferramental do projeto precisa resolver imports de CSS de pacotes.                                                                                                                                                                                                   |
+| Navegadores    | Chrome 123, Safari 17.5 ou Firefox 128 e mais recentes (`light-dark()` para temas; `:has()` para o estado de `.input-group`; `@property` para elevação sem herança).                                                                                                   |
+| Tailwind CSS   | 4.3.2 ou mais recente, abaixo da 5, apenas para os entrypoints de código-fonte `/tw`. Instale-o você mesmo; o pacote não o instala.                                                                                                                                    |
+| Vite           | 5.0.0 ou mais recente, só para o plugin de Vite. É um peer opcional, então o npm recusa a instalação no Vite 4 ou anterior, mesmo sem o plugin.                                                                                                                        |
+| Node.js        | 24 ou mais recente na máquina que roda o comando `chs build` ou o plugin de Vite. As folhas de estilos não precisam dele, mas o pacote o declara como sua engine, então o Yarn 1, e o npm ou o pnpm com `engine-strict`, recusam a instalação num Node.js mais antigo. |
+| Acessibilidade | Quem usa o pacote fornece HTML semântico, ARIA, comportamento de teclado e gerenciamento de foco.                                                                                                                                                                      |
 
 ## Observações
 

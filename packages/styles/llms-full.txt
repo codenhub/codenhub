@@ -29,7 +29,7 @@ Import the compiled stylesheet, which holds everything the package ships:
 </form>
 ```
 
-To use the Tailwind CSS v4 source entrypoints instead, or to load only part of the package, see [Setup](./docs/setup.md). The [demo](https://demo.codenhub.dev/styles/) shows every component in every intent, presentation, and aesthetic.
+To use the Tailwind CSS v4 source entrypoints instead, or to load only part of the package, see [Setup](./docs/setup.md). In a Vite project, the package's [Vite plugin](./docs/integrating/vite.md) trims that same import to the classes your pages use. The [demo](https://demo.codenhub.dev/styles/) shows every component in every intent, presentation, and aesthetic.
 
 ## Documentation
 
@@ -37,7 +37,7 @@ The docs build one account settings screen from start to finish, in this order:
 
 - [Introduction](./docs/index.md): What the package is for, what it costs, and the reading order.
 - [Setup](./docs/setup.md): Install the package, choose compiled CSS or Tailwind source, and render the page shell.
-- [Integrating](./docs/integrating/index.md): Load the stylesheet in Next.js, Vue, Svelte, Astro, Tailwind CSS v4, or a page with no bundler.
+- [Integrating](./docs/integrating/index.md): Load the stylesheet in Next.js, Vue, Svelte, Astro, Tailwind CSS v4, Vite, or a page with no bundler.
 - [Building a screen](./docs/concepts.md): Lay out the page and learn intent, fill, edge, and aesthetic.
 - [Usage](./docs/usage/index.md): Guides for buttons, forms, feedback, tooltips, theming, aesthetics, and solo classes, then the lookup pages for every class, token, and default.
 - [Accessibility](./docs/accessibility.md): What the CSS does for your users and what your application still owes them.
@@ -45,13 +45,14 @@ The docs build one account settings screen from start to finish, in this order:
 
 ## Requirements
 
-| Requirement   | Details                                                                                                                                                                                                                      |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                                                                                           |
-| Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation).                                                                     |
-| Tailwind CSS  | 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. Install it yourself; the package does not.                                                                                                                   |
-| Node.js       | 24 or newer on the machine that runs the `chs build` command. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm or pnpm with `engine-strict`, refuse the install on an older Node.js. |
-| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                                                                                              |
+| Requirement   | Details                                                                                                                                                                                                                                         |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                                                                                                              |
+| Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation).                                                                                        |
+| Tailwind CSS  | 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. Install it yourself; the package does not.                                                                                                                                      |
+| Vite          | 5.0.0 or newer, only for the Vite plugin. An optional peer, so npm refuses the install on Vite 4 or older, even without the plugin.                                                                                                             |
+| Node.js       | 24 or newer on the machine that runs the `chs build` command or the Vite plugin. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm or pnpm with `engine-strict`, refuse the install on an older Node.js. |
+| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                                                                                                                 |
 
 ## Notes
 
@@ -120,7 +121,7 @@ The package ships the same classes two ways:
 Know these costs before you adopt it:
 
 - **Class names are short and unprefixed.** `.primary`, `.success`, `.dark`, `.label`, `.field`, `.section`, `.stack`, `.flat`, and `.ghost` are global names. Another stylesheet on the same page that uses them collides with this one. The package sits in [cascade layers](docs/setup.md#cascade-layers), so your own unlayered CSS wins a collision, but a third-party library's rules for the same name still apply alongside the package's.
-- **The complete stylesheets are large before compression.** Minified, the complete stylesheet is about 232 KB, `/native` about 347 KB, and `/components` about 186 KB. Served with gzip they are about 20 KB, 27 KB, and 15 KB. Focused files are much smaller: `/theme` is about 13 KB (3 KB with gzip) and one aesthetic is 5 to 15 KB (1 to 2 KB with gzip). Most of the size is composition that every component repeats, which is why compression removes so much of it. A compiled file ships every class, whether a page uses it or not. To ship only the classes your pages use, compile the package in your own build: through [Tailwind CSS v4](docs/integrating/tailwind.md) when the project runs it, or with the package's [`build` command](docs/integrating/without-a-bundler.md#build-only-the-classes-you-use) in any other project. Measured on a page with one `btn primary` button and Tailwind CSS 4.3.4, `@import "@codenhub/styles/tw"` gives about 34 KB minified (7 KB with gzip), `@import "tailwindcss"` with `/button/tw` about 26 KB (6 KB), and the `build` command about 31 KB (8 KB). About 4 KB of the Tailwind figures is Tailwind's own Preflight and theme, which a Tailwind project ships anyway. Otherwise import the narrowest entrypoint that covers a page; see [Setup → All entrypoints](docs/setup.md#all-entrypoints).
+- **The complete stylesheets are large before compression.** Minified, the complete stylesheet is about 232 KB, `/native` about 347 KB, and `/components` about 186 KB. Served with gzip they are about 20 KB, 27 KB, and 15 KB. Focused files are much smaller: `/theme` is about 13 KB (3 KB with gzip) and one aesthetic is 5 to 15 KB (1 to 2 KB with gzip). Most of the size is composition that every component repeats, which is why compression removes so much of it. A compiled file ships every class, whether a page uses it or not. To ship only the classes your pages use, compile the package in your own build: through [Tailwind CSS v4](docs/integrating/tailwind.md) when the project runs it, with the package's [Vite plugin](docs/integrating/vite.md) in a Vite project that does not, or with the package's [`build` command](docs/integrating/without-a-bundler.md#build-only-the-classes-you-use) in any other project. Measured on a page with one `btn primary` button, `@import "@codenhub/styles/tw"` with Tailwind CSS 4.3.4 gives about 34 KB minified (7 KB with gzip), `@import "tailwindcss"` with `/button/tw` about 26 KB (6 KB), the `build` command about 37 KB (8 KB), and the Vite plugin the same file, which Vite 8.3.6 ships at about 38 KB (8 KB) because its minifier adds a fallback for each `light-dark()` color. About 4 KB of the Tailwind figures is Tailwind's own Preflight and theme, which a Tailwind project ships anyway. Otherwise import the narrowest entrypoint that covers a page; see [Setup → All entrypoints](docs/setup.md#all-entrypoints).
 - **`--color-foreground` is a background, not a text color.** It is the tone one step off the page that a quiet card or panel sits on. The text color is `--color-text`.
 - **Four hover colors are fixed values.** `--color-success-hover`, `--color-warning-hover`, `--color-destructive-hover`, and `--color-info-hover` are precomputed, because mixing them live crashed WebKit. If you override `--color-success` alone, its hover keeps the old hue, so replace the whole family; see [Theming → Color tokens](docs/usage/theming.md#color-tokens).
 - **Modern browsers only.** Chrome 123, Safari 17.5, or Firefox 128 and newer. There is no fallback layer for older browsers.
@@ -208,7 +209,7 @@ Pick one:
 - **Tailwind CSS v4 source** (`@codenhub/styles/tw`). Use it when your project already runs Tailwind v4. Your build compiles the package with your own utilities, so you get one stylesheet and Tailwind's `dark:` variant matches the package's theme. It needs Tailwind 4.3.2 or newer, below 5.
 - **No bundler.** Link the compiled file from `node_modules` or a CDN with a `<link>` tag; see [Without a bundler](docs/integrating/without-a-bundler.md).
 
-To ship only the classes your pages use in a project that does not run Tailwind, with a bundler or without one, the package's `chs build` command reads your files and writes a stylesheet with only those classes, which you import or link in place of the compiled one; see [Build only the classes you use](docs/integrating/without-a-bundler.md#build-only-the-classes-you-use).
+To ship only the classes your pages use in a project that does not run Tailwind, the package has two tools that read your files for class names. In a Vite project, its [Vite plugin](docs/integrating/vite.md) trims the stylesheet you already import, with one line of configuration. In any other project, with a bundler or without one, its `chs build` command writes a stylesheet with only those classes, which you import or link in place of the compiled one; see [Build only the classes you use](docs/integrating/without-a-bundler.md#build-only-the-classes-you-use).
 
 Your framework may need its own wiring, such as where the global stylesheet goes in Next.js or Astro. Each of these guides covers one setup and then sends you back here:
 
@@ -217,6 +218,7 @@ Your framework may need its own wiring, such as where the global stylesheet goes
 - [Vue](docs/integrating/vue.md)
 - [Svelte](docs/integrating/svelte.md)
 - [Astro](docs/integrating/astro.md)
+- [Vite](docs/integrating/vite.md)
 - [Without a bundler](docs/integrating/without-a-bundler.md)
 
 ## Add an aesthetic (optional)
@@ -234,8 +236,9 @@ The order of the two imports does not matter, because every entrypoint declares 
 
 - **Browsers:** Chrome 123, Safari 17.5, or Firefox 128 and newer. Colors use `light-dark()` and `color-scheme` (Firefox 120). `.input-group` reads a nested control's invalid and disabled state with `:has()` (Firefox 121). The elevation classes register a non-inheriting property with `@property` (Firefox 128); without it, an elevation class would also reach the unclassed elements inside it. A few newer features are used where a browser has them and skipped where it does not, with nothing broken at the floor: `corner-shape`, without which `.cyber`'s bevelled corners are square, `scrollbar-color` and `scrollbar-width`, without which Safari 17.5 draws its own scrollbar, and the parts the reduced-motion setting stops, such as a scroll-driven animation, which a browser without them never animates.
 - **Tooling:** an `@import` of a package name needs a tool that resolves CSS imports from packages through their `exports` map. Without one, link the compiled file by its path or from a CDN; see [Without a bundler](docs/integrating/without-a-bundler.md). Two common tools need a nudge, described in [Integrating → Bundlers that need a nudge](docs/integrating/index.md#bundlers-that-need-a-nudge): Parcel, and PostCSS with `postcss-import`.
-- **Tailwind:** 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. The package does not depend on it, so the compiled entrypoints and the `chs build` command work in a project on any Tailwind or none, and nothing checks the version for you.
-- **Node.js:** 24 or newer on the machine that runs the `chs build` command. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm or pnpm with `engine-strict`, refuse the install on an older Node.js.
+- **Tailwind:** 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. The package does not depend on it, so the compiled entrypoints, the `chs build` command, and the Vite plugin work in a project on any Tailwind or none, and nothing checks the version for you.
+- **Vite:** 5.0.0 or newer, only for the [Vite plugin](docs/integrating/vite.md#requirements). The package lists it as an optional peer dependency, so npm refuses the install in a project on Vite 4 or older, even one that never loads the plugin.
+- **Node.js:** 24 or newer on the machine that runs the `chs build` command or the Vite plugin. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm or pnpm with `engine-strict`, refuse the install on an older Node.js.
 - **Your application:** the package has no JavaScript. Semantic HTML, ARIA, keyboard behavior, focus management, validation, and announcements are yours; see [Accessibility](docs/accessibility.md).
 
 ## When nothing is styled
@@ -374,9 +377,10 @@ Importing from one place matters for two reasons. Some frameworks only _allow_ y
 | Vue                                                                           | [Vue](docs/integrating/vue.md)                             |
 | Svelte / SvelteKit                                                            | [Svelte](docs/integrating/svelte.md)                       |
 | Astro                                                                         | [Astro](docs/integrating/astro.md)                         |
+| Vite, without Tailwind, shipping only the classes your pages use              | [Vite](docs/integrating/vite.md)                           |
 | Plain HTML, Rails, Laravel, Django, or any app with no Node.js CSS build step | [Without a bundler](docs/integrating/without-a-bundler.md) |
 
-A project with no framework — a plain Vite, webpack, or Parcel build — imports the compiled stylesheet from the project's existing global CSS entry, as [Setup → Import the stylesheet](docs/setup.md#import-the-stylesheet) shows. Vite and webpack resolve the package name as it is; Parcel and PostCSS with `postcss-import` need the change below. The compiled stylesheet holds every class; to ship only the ones your pages use without adopting Tailwind, write a trimmed stylesheet with the package's [`build` command](docs/integrating/without-a-bundler.md#build-only-the-classes-you-use) and import that instead.
+A project with no framework — a plain Vite, webpack, or Parcel build — imports the compiled stylesheet from the project's existing global CSS entry, as [Setup → Import the stylesheet](docs/setup.md#import-the-stylesheet) shows. Vite and webpack resolve the package name as it is; Parcel and PostCSS with `postcss-import` need the change below. The compiled stylesheet holds every class. To ship only the ones your pages use without adopting Tailwind, add the package's [Vite plugin](docs/integrating/vite.md) to a Vite build, which trims the stylesheet you already import; with another bundler, write a trimmed stylesheet with the package's [`build` command](docs/integrating/without-a-bundler.md#build-only-the-classes-you-use) and import that instead.
 
 ### Bundlers that need a nudge
 
@@ -703,6 +707,8 @@ createApp(App).mount("#app");
 
 Running Tailwind CSS v4? Import `@codenhub/styles/tw` from a CSS entry file instead of `main.ts`, using the `@tailwindcss/vite` plugin — see [Tailwind CSS v4](docs/integrating/tailwind.md).
 
+Not running Tailwind? The import above ships every class. Add the package's [Vite plugin](docs/integrating/vite.md) to `vite.config.ts` and the same import ships only the classes your `.vue` files and the rest of the project use.
+
 ## Force a theme
 
 Apply `data-theme="light"` or `data-theme="dark"` on `<html>` in `index.html` to force a theme instead of following the system preference; see [Theming → Light and dark](docs/usage/theming.md#light-and-dark).
@@ -793,6 +799,156 @@ Apply `data-theme="light"` or `data-theme="dark"` on `<html>` to force a theme i
 ## Next
 
 Return to the main path: [Building a screen](docs/concepts.md) adds the first card and form to the settings page. [Setup → All entrypoints](docs/setup.md#all-entrypoints) lists every other stylesheet you can import.
+
+<!-- Source: docs/integrating/vite.md -->
+
+# Vite
+
+The compiled stylesheet holds every class the package has, so a settings page that uses a few buttons, a card, and a form ships the tables, tooltips, and alerts too, in case it changes its mind. In a Vite project that does not run Tailwind CSS, the package's Vite plugin fixes that without touching your imports. When Vite starts, it reads your project's files for class names and swaps the stylesheet you import for one with only the StyleKit classes those files use. There is no command to run and no output file to name: you add one line to `vite.config.ts`, and the rest of the project stays as it was.
+
+A project that already runs Tailwind CSS v4 does not need the plugin. Its own build trims the [source entrypoint](docs/integrating/tailwind.md) the same way. A project without Vite, with another bundler or none, writes the trimmed stylesheet with the package's [`chs build` command](docs/integrating/without-a-bundler.md#build-only-the-classes-you-use) instead.
+
+## Add the plugin
+
+With the package installed as in [Setup](docs/setup.md#install), add the plugin to your Vite configuration:
+
+```ts
+// vite.config.ts
+import viteStyles from "@codenhub/styles/vite";
+import { defineConfig } from "vite";
+
+export default defineConfig({
+  plugins: [viteStyles()],
+});
+```
+
+`viteStyles` is also exported by that name, as in `import { viteStyles } from "@codenhub/styles/vite"`.
+
+Keep the import you already have, from your JavaScript entry or your global stylesheet:
+
+```ts
+// main.ts
+import "@codenhub/styles";
+```
+
+```css
+/* app.css */
+@import "@codenhub/styles";
+@import "@codenhub/styles/aesthetics/neobrutalism";
+```
+
+That is the whole setup. `vite` and `vite build` now serve and ship a stylesheet trimmed to the classes the settings page names: `section`, `stack`, `text-title`, `btn`, and the rest, and none of the components it never uses.
+
+Measured with Vite 8.3.6 on a page with one `btn primary` button, the build ships about 38 KB of CSS (8 KB with gzip), where the same page without the plugin ships about 255 KB (21 KB). Both figures include what Vite 8's own CSS minifier adds: for its default browser targets, it writes a fallback beside each `light-dark()` color, with the plugin or without it. The file the plugin hands Vite is the one `chs build` writes for the same page, byte for byte.
+
+## Which imports are trimmed
+
+The complete stylesheet and the aesthetics are trimmed. The other stylesheets load whole, exactly as they do without the plugin:
+
+| Import                                             | Through the plugin                           |
+| -------------------------------------------------- | -------------------------------------------- |
+| `@codenhub/styles`                                 | Trimmed to the classes your files use.       |
+| `@codenhub/styles/aesthetics`                      | Trimmed, each aesthetic to the classes used. |
+| `@codenhub/styles/aesthetics/<name>`               | Trimmed to the classes used.                 |
+| `/components`, `/native`, `/theme`, and `/palette` | Whole.                                       |
+| The `/tw` paths                                    | Left alone; they are Tailwind source.        |
+
+So to ship less, import the complete stylesheet rather than `/components`. For the one-button page above, the trimmed stylesheet is about a fifth of the 186 KB `/components` loads whole. The trimmed stylesheet is built from the complete one, not from `/native`, so it has no classless mappings; a page that relies on them imports `/native`, which loads whole.
+
+The import is trimmed wherever Vite resolves it: a JavaScript `import`, a CSS `@import`, a CSS file that another CSS file imports, a Sass `@use` or `@import`, Lightning CSS as Vite's CSS transformer, and Vite's `?inline`, `?url`, and `?raw` queries.
+
+The trimmed stylesheet holds what [`chs build`](docs/integrating/without-a-bundler.md#options) writes: the theme and its tokens, the reset, the base rules every component relies on, the four classes kept whether or not a file names them (`.dark`, `.theme-dark`, `.theme-light`, and `.disabled`), and each StyleKit class your files use. It is always minified. An aesthetic you import is trimmed the same way, to its rules for the classes your files use; the import already says which aesthetics you want, so there is nothing to configure.
+
+## Which files are read
+
+Everything under Vite's root is read, the folder that holds `index.html` unless your configuration sets [`root`](https://vite.dev/config/shared-options.html#root). Tailwind's automatic source detection reads a project the same way. A few things are left out, each because reading it would keep classes your pages do not use:
+
+- **What your `.gitignore` excludes.** The `.gitignore` in the root, in every folder below it, and in every folder above it up to the one that holds `.git`, with git's rules: the last matching line wins, and a deeper file overrides a higher one. The root itself is never left out, even when the repository ignores it. `.git/info/exclude` and a global excludes file are not read, and matching is case-sensitive on every system, so every machine builds the same stylesheet.
+- **`node_modules` and `.git`**, at any depth. A dependency's files name classes no page of yours uses.
+- **Vite's build output.** `build.outDir` and, on Vite 6 and newer, each environment's output folder, plus Vite's cache folder. A build's output names the classes the last build kept, so reading it back would keep a class your sources no longer use. An output folder that only another configuration names, such as `dist/server` from a separate `vite build --ssr` command, is read unless `.gitignore` excludes it; the `.gitignore` of every create-vite template excludes `dist` and `dist-ssr`.
+- **Stylesheets**: `.css`, `.scss`, `.sass`, `.less`, `.styl`, `.stylus`, `.pcss`, `.postcss`, and `.sss`. A property value is a word too, and `border: 1px solid` would keep `.solid`. The CSS inside a `.vue` or `.svelte` file is read with the rest of the file.
+- **Binary files**, by git's rule: a file with a NUL byte in its first 8,000 bytes, unless it starts with a UTF-16 byte order mark. Only those bytes are read, so a video in `public/` costs nothing.
+- **Copies of the package's own files**, such as a stylesheet that `chs build` wrote or a copy of the package's class list, by the rules in [How classes are found](docs/integrating/without-a-bundler.md#how-classes-are-found). Each names every class the package has and would keep the whole stylesheet.
+
+A link to a file is read; a link to a folder is not followed, so a link that loops back cannot hang the scan.
+
+Class names are found as words, as the `chs build` command finds them: a class written whole in any file counts, and a class your code assembles while rendering, as in `` `btn ${tone}` ``, is never found. [How classes are found](docs/integrating/without-a-bundler.md#how-classes-are-found) explains the rules and the two ways out. One of them gets easier here: a safelist is any text file under the root, such as `stylekit-classes.txt` with one class name per line, and the plugin reads it like the rest, with no option to set. The ten variant prefixes, such as `md:lg` and `hover:primary`, work as [Variants](docs/integrating/without-a-bundler.md#variants) describes.
+
+## Files outside the root
+
+The `content` option adds files outside the root, such as a shared component folder in a monorepo. It is the plugin's only option:
+
+```ts
+// apps/web/vite.config.ts
+export default defineConfig({
+  plugins: [viteStyles({ content: ["../../packages/ui/src/**/*.{vue,ts}"] })],
+});
+```
+
+Each entry is a path or a glob, read from the Vite root, with the command's glob rules from [Options](docs/integrating/without-a-bundler.md#options). The files an entry names are read even where a `.gitignore` excludes them, and a `*` or `**` does not enter a `node_modules` folder, so a component library you install adds its classes only when you name it, as in `node_modules/some-ui/dist/**/*.js`. Each entry has to match at least one file, or Vite fails to start and names it, so a typo cannot quietly drop a folder's classes.
+
+## While you work
+
+The dev server follows your files as they change, with no reload by hand:
+
+- **Saving a file that names a new class** updates the stylesheet in place. Removing the last use of a class drops its rule.
+- **Creating or deleting a file** counts as a change to its classes.
+- **Saving an HTML file** reloads the page, as Vite does for HTML, and the page it reloads gets the new stylesheet.
+- **Changing a `.gitignore`** reads the whole root again, since it changes what is read.
+- **A file a `content` entry names** is followed too, and so is a file created in a folder an entry reads from.
+
+The stylesheet a server-side render loads follows the same changes, and a server-side rendering build inlines the trimmed stylesheet where it inlines CSS.
+
+`vite build --watch` follows the files it read when it started. Saving one rebuilds with its classes, even when no module imports it, such as an HTML template your server renders, and deleting one drops them. A file created while it runs is read when you start `vite build --watch` again. On Vite 8, a change that changes the stylesheet rebuilds twice in a row, and the second build writes the same files as the first.
+
+## Where the trimmed files live
+
+The plugin writes the trimmed stylesheets into Vite's cache folder, `node_modules/.vite/codenhub-styles/` unless your configuration sets [`cacheDir`](https://vite.dev/config/shared-options.html#cachedir). That is where Vite keeps its own generated files, so your project already keeps it out of version control. Deleting it is safe: the plugin writes it again when Vite starts, and, if you delete it while the dev server runs, at the next change you save. The browser's dev tools show the stylesheet at its path in that folder rather than in the package.
+
+## Your own alias wins
+
+If your configuration or another plugin already maps `@codenhub/styles` in `resolve.alias`, to a fork or a vendored copy, say, that import keeps your alias and is not trimmed. Vite prints one warning when it starts:
+
+```text
+@codenhub/styles/vite: resolve.alias already maps "@codenhub/styles", so that import keeps your alias and is not trimmed; remove the alias to trim it.
+```
+
+Remove the alias to trim the import. The imports your alias does not map, such as an aesthetic, are still trimmed.
+
+## Requirements
+
+- **Vite:** 5.0.0 or newer. The package lists Vite as an optional peer dependency, so installing the package never installs Vite. A project on Vite 4 or older cannot `npm install @codenhub/styles`, even when it never loads the plugin: npm stops with `ERESOLVE`, naming `peerOptional vite@">=5.0.0"`. Upgrade Vite, or install with `npm install --legacy-peer-deps`, which turns off npm's peer check for that whole install. pnpm only warns.
+- **Node.js:** 24 or newer on the machine that runs Vite. Vite 5 itself runs on Node.js 18, so the plugin checks the version and fails with a message rather than half-working.
+- **Tailwind:** none. A project that runs Tailwind CSS v4 trims through the [source entrypoint](docs/integrating/tailwind.md) and does not need the plugin.
+
+## When Vite fails to start
+
+Every message the plugin prints starts with `@codenhub/styles/vite:`, and a failure while Vite starts stops the server or the build, so a typo cannot ship a stylesheet without your classes. The message says what went wrong and what to do:
+
+- **`this plugin needs Node.js 24 or newer; this is Node.js <version>`.** Update Node.js on the machine that runs Vite.
+- **`content must be an array of paths or globs`.** The option was given something other than a list of strings, such as `content: "../shared/**/*.html"`. Put the glob in a list, as in `content: ["../shared/**/*.html"]`.
+- **`content holds an empty entry`.** An entry is empty or only spaces, as an unset environment variable gives. Remove it, or name a path or glob.
+- **`content "<entry>" matches no file in <root>`.** The entry is read from the Vite root, not from the folder that holds the configuration file or the one you ran Vite in, so check the path from the root. When a likelier cause is known, the message names it instead: a `*` or `**` that matched files only inside `node_modules`, which it does not enter, or a `[` read as the start of a set of characters, where `[[]` would match the bracket.
+- **`content "<entry>" is a folder in <root>, not a file`.** Name the files in it, as in `../shared/**/*`.
+- **`cannot read "<path>" (<code>)`.** The plugin could not read a file or list a folder, usually for its permissions, with Node.js's code, such as `EACCES`. Building without it would drop its classes, so the plugin stops instead. Fix its permissions, or, as the message says, add it to `.gitignore` when it is under the root, or change `content` when an entry names it.
+- **`cannot write to "<path>": <reason> (<code>); fix that, or set cacheDir to a folder you can write to`.** The plugin could not write the trimmed stylesheet into Vite's cache folder. `<reason>` and `<code>` are Node.js's own; `EACCES` or `EPERM` means you cannot write there, and `ENOSPC` that the disk is full.
+- **`a file changed before the plugin read the project; restart Vite`.** Restart Vite.
+
+While the dev server runs, an error from a change, such as a stylesheet it cannot write, is shown in the page as Vite shows its own errors. The page keeps the stylesheet written last, and the next change you save tries the write again.
+
+## Verifying it worked
+
+Render one styled element, as in [Integrating → Verifying it worked](docs/integrating/index.md#verifying-it-worked):
+
+```html
+<button class="btn primary">Save changes</button>
+```
+
+A rounded button filled with the primary color means the stylesheet loaded. To see the trimming, run `vite build` and compare the size it prints for the CSS file in `dist/assets/` with the size it prints without the plugin.
+
+## Next
+
+Return to the main path: [Building a screen](docs/concepts.md) adds the first card and form to the settings page. Each class you add there lands in the stylesheet as soon as you save.
 
 <!-- Source: docs/integrating/without-a-bundler.md -->
 
@@ -905,7 +1061,7 @@ A Laravel app runs Vite by default, so it has a bundler: import the package from
 
 The package carries a command, `chs`, that reads your templates for class names and writes one minified stylesheet with only the StyleKit classes they use. A page that uses one button gets about a seventh of the full stylesheet; the exact size depends on which classes you use, since each component brings the shared rules it relies on.
 
-The command works with a bundler too. A project whose bundler does not run Tailwind, such as a plain Vite or webpack build, can write the stylesheet into its sources, `--output src/stylekit.css`, and import that file where it would import `@codenhub/styles`. A project that runs Tailwind CSS v4 gets the same trimming from the [source entrypoint](docs/integrating/tailwind.md) and does not need the command.
+The command works with a bundler too. A project whose bundler does not run Tailwind, such as a webpack build, can write the stylesheet into its sources, `--output src/stylekit.css`, and import that file where it would import `@codenhub/styles`. A Vite project gets the same stylesheet from the package's [Vite plugin](docs/integrating/vite.md), with no command to run and no file to import, and a project that runs Tailwind CSS v4 gets the same trimming from the [source entrypoint](docs/integrating/tailwind.md); neither needs the command.
 
 It needs Node.js 24 or newer on the machine that builds the CSS, whether that is your laptop, a CI job, or a deploy step, and nothing else: the package is the whole install, with no Tailwind and no configuration. Install it as a development dependency from your project root; npm creates a `package.json` if you have none:
 
@@ -2065,7 +2221,7 @@ With the Tailwind source entrypoints (`/tw`), the package replaces Tailwind's `d
 
 It differs from the tokens in one case: an explicit theme nested inside the opposite one. A `.theme-light` element inside a `.theme-dark` one has light tokens, because the nearest `color-scheme` wins. But `dark:` matches by selector, and `.theme-dark *` matches every element inside `.theme-dark`, so a `dark:` utility inside that `.theme-light` element still applies. If a page uses both tokens and `dark:` utilities, do not nest opposite themes.
 
-The compiled entrypoints do not define a `dark:` variant; they have no Tailwind build to define it in. The [`chs build` command](docs/integrating/without-a-bundler.md#variants) does offer `dark:`, with the same selectors, on the intent, presentation, and modifier classes only.
+The compiled entrypoints do not define a `dark:` variant; they have no Tailwind build to define it in. The [`chs build` command](docs/integrating/without-a-bundler.md#variants) and the [Vite plugin](docs/integrating/vite.md) do offer `dark:`, with the same selectors, on the intent, presentation, and modifier classes only.
 
 ## Change the brand color
 

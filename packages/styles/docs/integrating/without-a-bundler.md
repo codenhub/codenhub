@@ -1,7 +1,7 @@
 ---
 title: Without a bundler
 description: Linking the compiled stylesheets from plain HTML, Rails, Laravel, Django, or any server-rendered app, and the command-line build.
-order: 6
+order: 7
 ---
 
 # Without a bundler
@@ -113,7 +113,7 @@ A Laravel app runs Vite by default, so it has a bundler: import the package from
 
 The package carries a command, `chs`, that reads your templates for class names and writes one minified stylesheet with only the StyleKit classes they use. A page that uses one button gets about a seventh of the full stylesheet; the exact size depends on which classes you use, since each component brings the shared rules it relies on.
 
-The command works with a bundler too. A project whose bundler does not run Tailwind, such as a plain Vite or webpack build, can write the stylesheet into its sources, `--output src/stylekit.css`, and import that file where it would import `@codenhub/styles`. A project that runs Tailwind CSS v4 gets the same trimming from the [source entrypoint](./tailwind.md) and does not need the command.
+The command works with a bundler too. A project whose bundler does not run Tailwind, such as a webpack build, can write the stylesheet into its sources, `--output src/stylekit.css`, and import that file where it would import `@codenhub/styles`. A Vite project gets the same stylesheet from the package's [Vite plugin](./vite.md), with no command to run and no file to import, and a project that runs Tailwind CSS v4 gets the same trimming from the [source entrypoint](./tailwind.md); neither needs the command.
 
 It needs Node.js 24 or newer on the machine that builds the CSS, whether that is your laptop, a CI job, or a deploy step, and nothing else: the package is the whole install, with no Tailwind and no configuration. Install it as a development dependency from your project root; npm creates a `package.json` if you have none:
 

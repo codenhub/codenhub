@@ -21,6 +21,8 @@ createApp(App).mount("#app");
 
 Running Tailwind CSS v4? Import `@codenhub/styles/tw` from a CSS entry file instead of `main.ts`, using the `@tailwindcss/vite` plugin — see [Tailwind CSS v4](./tailwind.md).
 
+Not running Tailwind? The import above ships every class. Add the package's [Vite plugin](./vite.md) to `vite.config.ts` and the same import ships only the classes your `.vue` files and the rest of the project use.
+
 ## Force a theme
 
 Apply `data-theme="light"` or `data-theme="dark"` on `<html>` in `index.html` to force a theme instead of following the system preference; see [Theming → Light and dark](../usage/theming.md#light-and-dark).
