@@ -19,7 +19,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { compile, optimize, Polyfills } from "@tailwindcss/node";
 
 import { classesOf, parse, serialize } from "../src/cli/purge.ts";
-import { withNotice } from "./notice.mjs";
+import { withHead } from "./head.mjs";
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 const registry = JSON.parse(readFileSync(path.join(packageRoot, "registry.json"), "utf8"));
@@ -106,7 +106,7 @@ const compiled = serialize(
       : node,
   ),
 );
-const css = withNotice(
+const css = withHead(
   compiled.replace(REGISTRATION, "") +
     (compiled.match(REGISTRATION) ?? []).toSorted((a, b) => registrationOrder(a) - registrationOrder(b)).join(""),
 );
