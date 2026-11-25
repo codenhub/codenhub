@@ -9,7 +9,7 @@ import { selectKey } from "./select";
 /** One signing key of a {@link KeyRing} and when it signs. Times are seconds since the Unix epoch. */
 export interface KeyRingEntry {
   /**
-   * A private key from `generateKeyPair`, `importPrivateKey`, `importKeyPair` or `createExternalSigningKey`,
+   * A private key from `generateKeyPair`, `importPrivateKey` or `importKeyPair`,
    * with a `kid` no other key of the ring has.
    */
   readonly key: PrivateKey;

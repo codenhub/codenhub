@@ -1,7 +1,7 @@
 import { beforeAll, describe, expect, it } from "vitest";
 
 import type { PrivateKey } from "../core/types";
-import { createExternalSigningKey, exportPublicJwk, generateKeyPair, getPublicKey } from "../keys";
+import { exportPublicJwk, generateKeyPair, getPublicKey } from "../keys";
 import { sign } from "../sign/sign";
 import { createVerifier } from "../verify/create-verifier";
 import { createKeyRing, type KeyRingOptions } from "./ring";
@@ -11,15 +11,13 @@ const T0 = 1_800_000_000;
 
 let keyA: PrivateKey;
 let keyB: PrivateKey;
-let keyC: PrivateKey;
 let keyEd: PrivateKey;
 let noKid: PrivateKey;
 
 beforeAll(async () => {
-  [keyA, keyB, keyC, keyEd, noKid] = await Promise.all([
+  [keyA, keyB, keyEd, noKid] = await Promise.all([
     generateKeyPair({ alg: "ES256", kid: "a" }).then((pair) => pair.privateKey),
     generateKeyPair({ alg: "ES256", kid: "b" }).then((pair) => pair.privateKey),
-    generateKeyPair({ alg: "ES256", kid: "c" }).then((pair) => pair.privateKey),
     generateKeyPair({ alg: "Ed25519", kid: "ed" }).then((pair) => pair.privateKey),
     generateKeyPair({ alg: "ES256" }).then((pair) => pair.privateKey),
   ]);
@@ -92,16 +90,6 @@ describe("createKeyRing signingKey", () => {
     ];
     expect(() => ring(T0 + 15 * DAY, { keys }).signingKey()).toThrow(TypeError);
     expect(ring(T0 + 20 * DAY, { keys }).signingKey()).toBe(keyB);
-  });
-
-  it("should accept an external signing key", async () => {
-    const external = createExternalSigningKey({
-      publicKey: getPublicKey(keyC),
-      sign: async () => new Uint8Array(64),
-    });
-    const keyRing = ring(T0, { keys: [{ key: external, activeFrom: T0 }] });
-    expect(keyRing.signingKey()).toBe(external);
-    expect(await kids(keyRing)).toEqual(["c"]);
   });
 });
 

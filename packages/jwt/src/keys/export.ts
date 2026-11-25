@@ -75,9 +75,6 @@ function publicEntry(key: PublicKey, functionName: string) {
 /** The entry of a private key whose material may be exported. */
 function extractablePrivateEntry(key: PrivateKey, functionName: string) {
   const entry = getKeyEntryOfKind(key, "private");
-  if (entry.externalSign !== undefined) {
-    throw new TypeError(`${functionName}: the key's material is held by an external signer.`);
-  }
   if (!key.extractable) {
     throw new TypeError(`${functionName}: the key was not created with extractable: true.`);
   }
