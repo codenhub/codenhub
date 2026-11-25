@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-18
+last_updated: 2026-11-25
 scope: Generated API reference documentation for public workspace packages.
 ---
 
@@ -18,7 +18,7 @@ This is an addition to `docs/specs/packages-documentation.md`, not a replacement
 
 ## Scope
 
-This spec covers packages that ship TypeScript. The reference is compiled from emitted `.d.ts` declarations and the TSDoc attached to them. Packages that expose no API a declaration file can describe, such as the CSS-only `@codenhub/styles`, are out of scope; a CSS reference, if it is ever built, is a separate document. Plain JavaScript packages typed with JSDoc are also out of scope for now: the extractor could read JSDoc the same way it reads TSDoc, but no such package exists, and committing to that surface is a later revision of this spec rather than an implicit guarantee here.
+This spec covers packages that ship TypeScript. The reference is compiled from emitted `.d.ts` declarations and the TSDoc attached to them. Packages that expose no API a declaration file can describe, such as a package that ships only stylesheets, are out of scope; a CSS reference, if it is ever built, is a separate document. Plain JavaScript packages typed with JSDoc are also out of scope for now: the extractor could read JSDoc the same way it reads TSDoc, but no such package exists, and committing to that surface is a later revision of this spec rather than an implicit guarantee here.
 
 ## Opting in
 
