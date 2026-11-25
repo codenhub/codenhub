@@ -324,6 +324,7 @@ describe("createKeyRing options", () => {
       "createKeyRing: options.publishAfter must be a whole number of seconds from 0 to 315360000.",
     ],
     ["now is not a function", () => ring(T0, { now: 1 as never }), "createKeyRing: options.now must be a function."],
+    ["now is null", () => ring(T0, { now: null as never }), "createKeyRing: options.now must be a function."],
     ["issuer is empty", () => ring(T0, { issuer: "" }), "createKeyRing: options.issuer must be a non-empty string."],
   ];
 

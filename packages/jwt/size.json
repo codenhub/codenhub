@@ -98,10 +98,10 @@
         "createKeyRing": {
           "files": {
             "dist/keysets/ring.js": {
-              "bytes": 3290,
+              "bytes": 3304,
               "declarations": {
                 "readSchedule": 1055,
-                "readRing": 620,
+                "readRing": 634,
                 "createKeyRing": 389,
                 "currentOf": 255,
                 "readSigningKey": 255,
@@ -234,8 +234,8 @@
               "bytes": 27
             }
           },
-          "gzip": 3526,
-          "minified": 9157
+          "gzip": 3528,
+          "minified": 9171
         },
         "createKeySet": {
           "files": {
@@ -2924,10 +2924,10 @@
           }
         },
         "dist/keysets/ring.js": {
-          "bytes": 3303,
+          "bytes": 3317,
           "declarations": {
             "readSchedule": 1059,
-            "readRing": 624,
+            "readRing": 638,
             "createKeyRing": 400,
             "currentOf": 256,
             "readSigningKey": 255,
@@ -3249,9 +3249,9 @@
           }
         }
       },
-      "gzip": 18907,
-      "minified": 60898,
-      "sha256": "3743a835d70f44077afaf748a76a96e6cdb0586b5cd2a0942491fcae8c881b7a"
+      "gzip": 18910,
+      "minified": 60912,
+      "sha256": "3f90603dee5593664b8bce400b4ce01791227e4abe76484de043d6e4aa7940e2"
     }
   }
 }

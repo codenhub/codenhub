@@ -213,7 +213,7 @@ function readRing<TPrivate, TPublic>(options: object, kind: RingKind<TPrivate, T
   const source = options as Record<string, unknown>;
   const publishAhead = kind.publishesAhead ? readDuration(source, "publishAhead", name) : 0;
   const publishAfter = readDuration(source, "publishAfter", name);
-  const now = source.now ?? Date.now;
+  const now = source.now === undefined ? Date.now : source.now;
   if (typeof now !== "function") {
     throw new TypeError(`${name}: options.now must be a function.`);
   }
