@@ -545,6 +545,33 @@ describe("viteStyles: the trimmed files", () => {
   });
 });
 
+describe("viteStyles: vite preview", () => {
+  it("starts without reading the project or writing a file, since it serves a finished build", async () => {
+    await writeFiles({
+      "index.html": PAGE(`<button class="btn primary">Save</button>`),
+      "main.js": `import "@codenhub/styles";
+`,
+      blocker: "a file",
+    });
+    await vite.build({ root: project, configFile: false, logLevel: "silent" });
+
+    // A content entry that matches nothing and a cache folder it cannot write to each fail a start that reads the project.
+    const server = await vite.preview({
+      root: project,
+      configFile: false,
+      logLevel: "silent",
+      cacheDir: "blocker/cache",
+      preview: { port: 0, open: false },
+      plugins: [viteStyles({ content: ["templates/**/*.html"] })],
+    });
+
+    expect(server.resolvedUrls?.local.length).toBeGreaterThan(0);
+    await new Promise<void>((resolve, reject) => {
+      server.httpServer.close((error) => (error ? reject(error) : resolve()));
+    });
+  });
+});
+
 describe("viteStyles: Node.js", () => {
   it("fails naming both versions on a Node.js older than 24, when the configuration calls it", () => {
     const actual = Object.getOwnPropertyDescriptor(process.versions, "node") as PropertyDescriptor;

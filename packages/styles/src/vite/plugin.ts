@@ -64,6 +64,8 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
   // Vite's root, as Vite names it and as the system resolves it.
   let root = { vite: "", real: "" };
   let isServe = false;
+  // `vite preview` serves a finished build, so the plugin reads and writes nothing for it.
+  let isPreview = false;
   let trimmer: Trimmer | undefined;
   const recent = new Map<string, Promise<string[]>>();
   /* Whether a change rewrote a trimmed file since the build before, and so
@@ -98,7 +100,12 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
     name: "codenhub-styles",
     config: {
       order: "post",
-      handler(config) {
+      handler(config, env) {
+        isPreview = env.isPreview === true;
+        if (isPreview) {
+          return;
+        }
+
         const configuredRoot = path.resolve(config.root ?? process.cwd());
 
         cacheDir = findCacheDir(configuredRoot, config.cacheDir);
@@ -138,6 +145,9 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
       },
     },
     async configResolved(config) {
+      if (isPreview) {
+        return;
+      }
       for (const name of aliased) {
         config.logger.warn(
           pluginError(

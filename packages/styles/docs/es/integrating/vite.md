@@ -2,7 +2,7 @@
 title: Vite
 description: Incluir solo las clases que usan tus páginas desde un proyecto Vite que no usa Tailwind, con el plugin de Vite del paquete.
 order: 6
-source: 92281fe760250879baeae73c422c7b8d8585731f
+source: 895677e0c9ad4f4eda8d7587d82a34d5dbb031d3
 ---
 
 # Vite
@@ -66,7 +66,7 @@ La hoja de estilos recortada contiene lo que escribe [`chs build`](./without-a-b
 
 Se lee todo lo que hay bajo la raíz de Vite, la carpeta que contiene `index.html` salvo que tu configuración defina [`root`](https://vite.dev/config/shared-options.html#root). La detección automática de fuentes de Tailwind lee un proyecto de la misma manera. Se dejan fuera unas pocas cosas, cada una porque leerla conservaría clases que tus páginas no usan:
 
-- **Lo que excluye tu `.gitignore`.** El `.gitignore` de la raíz, el de cada carpeta por debajo y el de cada carpeta por encima hasta la que contiene `.git`, con las reglas de git: gana la última línea que coincide, y un archivo más profundo prevalece sobre uno más alto. La raíz nunca se deja fuera, aunque el repositorio la ignore. No se leen `.git/info/exclude` ni un archivo de exclusiones global, y la coincidencia distingue mayúsculas en todos los sistemas, así que todas las máquinas generan la misma hoja de estilos.
+- **Lo que excluye tu `.gitignore`.** El `.gitignore` de la raíz, el de cada carpeta por debajo y el de cada carpeta por encima hasta la que contiene `.git`, con las reglas de git: gana la última línea que coincide, y un archivo más profundo prevalece sobre uno más alto. La raíz nunca se deja fuera, aunque el repositorio la ignore con una línea como `playground/`. Una línea que nombra los archivos bajo la raíz y no la carpeta, como `playground/**`, sí los deja fuera; nómbralos en [`content`](#archivos-fuera-de-la-raíz), como en `content: ["index.html", "src/**/*"]`, o cambia la línea al nombre de la propia carpeta. No se leen `.git/info/exclude` ni un archivo de exclusiones global, y la coincidencia distingue mayúsculas en todos los sistemas, así que todas las máquinas generan la misma hoja de estilos.
 - **`node_modules` y `.git`**, a cualquier profundidad. Los archivos de una dependencia nombran clases que ninguna de tus páginas usa.
 - **La salida del build de Vite.** `build.outDir` y, en Vite 6 y posteriores, la carpeta de salida de cada entorno, además de la carpeta de caché de Vite. La salida de un build nombra las clases que conservó el último build, así que releerla conservaría una clase que tus fuentes ya no usan. Una carpeta de salida que solo nombra otra configuración, como `dist/server` de un comando `vite build --ssr` aparte, se lee salvo que `.gitignore` la excluya; el `.gitignore` de cada plantilla de create-vite excluye `dist` y `dist-ssr`.
 - **Las hojas de estilos**: `.css`, `.scss`, `.sass`, `.less`, `.styl`, `.stylus`, `.pcss`, `.postcss` y `.sss`. El valor de una propiedad también es una palabra, y `border: 1px solid` conservaría `.solid`. El CSS dentro de un archivo `.vue` o `.svelte` se lee con el resto del archivo.
@@ -106,7 +106,7 @@ La hoja de estilos que carga un renderizado en el servidor sigue los mismos camb
 
 ## Dónde están los archivos recortados
 
-El plugin escribe las hojas de estilos recortadas en la carpeta de caché de Vite, `node_modules/.vite/codenhub-styles/` salvo que tu configuración defina [`cacheDir`](https://vite.dev/config/shared-options.html#cachedir). Es donde Vite guarda sus propios archivos generados, así que tu proyecto ya la deja fuera del control de versiones. Borrarla es seguro: el plugin la vuelve a escribir cuando Vite arranca y, si la borras mientras corre el servidor de desarrollo, en el siguiente cambio que guardes. Las herramientas de desarrollo del navegador muestran la hoja de estilos en su ruta dentro de esa carpeta y no en el paquete.
+El plugin escribe las hojas de estilos recortadas en la carpeta de caché de Vite, `node_modules/.vite/codenhub-styles/` salvo que tu configuración defina [`cacheDir`](https://vite.dev/config/shared-options.html#cachedir). Es donde Vite guarda sus propios archivos generados, así que tu proyecto ya la deja fuera del control de versiones. Borrarla es seguro: el plugin la vuelve a escribir cuando Vite arranca y, si la borras mientras corre el servidor de desarrollo, cuando reinicias el servidor o guardas un cambio que añade o quita una clase. Las herramientas de desarrollo del navegador muestran la hoja de estilos en su ruta dentro de esa carpeta y no en el paquete.
 
 ## Tu propio alias gana
 

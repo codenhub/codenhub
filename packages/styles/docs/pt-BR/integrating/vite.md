@@ -2,7 +2,7 @@
 title: Vite
 description: Entregar só as classes que as suas páginas usam a partir de um projeto Vite que não usa Tailwind, com o plugin de Vite do pacote.
 order: 6
-source: 92281fe760250879baeae73c422c7b8d8585731f
+source: 895677e0c9ad4f4eda8d7587d82a34d5dbb031d3
 ---
 
 # Vite
@@ -66,7 +66,7 @@ A folha de estilos reduzida traz o que o [`chs build`](./without-a-bundler.md#op
 
 Tudo o que está sob a raiz do Vite é lido, a pasta que contém o `index.html`, a menos que a sua configuração defina [`root`](https://vite.dev/config/shared-options.html#root). A detecção automática de fontes do Tailwind lê um projeto do mesmo jeito. Algumas coisas ficam de fora, cada uma porque lê-la manteria classes que as suas páginas não usam:
 
-- **O que o seu `.gitignore` exclui.** O `.gitignore` da raiz, o de cada pasta abaixo dela e o de cada pasta acima dela até a que contém o `.git`, com as regras do git: vale a última linha que casa, e um arquivo mais fundo prevalece sobre um mais alto. A raiz nunca fica de fora, mesmo quando o repositório a ignora. O `.git/info/exclude` e um arquivo global de exclusões não são lidos, e a comparação diferencia maiúsculas em todos os sistemas, então todas as máquinas geram a mesma folha de estilos.
+- **O que o seu `.gitignore` exclui.** O `.gitignore` da raiz, o de cada pasta abaixo dela e o de cada pasta acima dela até a que contém o `.git`, com as regras do git: vale a última linha que casa, e um arquivo mais fundo prevalece sobre um mais alto. A raiz nunca fica de fora, mesmo quando o repositório a ignora com uma linha como `playground/`. Uma linha que nomeia os arquivos sob a raiz, e não a pasta, como `playground/**`, deixa esses arquivos de fora; nomeie-os em [`content`](#arquivos-fora-da-raiz), como em `content: ["index.html", "src/**/*"]`, ou mude a linha para o nome da própria pasta. O `.git/info/exclude` e um arquivo global de exclusões não são lidos, e a comparação diferencia maiúsculas em todos os sistemas, então todas as máquinas geram a mesma folha de estilos.
 - **`node_modules` e `.git`**, em qualquer profundidade. Os arquivos de uma dependência nomeiam classes que nenhuma página sua usa.
 - **A saída do build do Vite.** O `build.outDir` e, no Vite 6 e mais recentes, a pasta de saída de cada ambiente, além da pasta de cache do Vite. A saída de um build nomeia as classes que o último build manteve, então relê-la manteria uma classe que as suas fontes não usam mais. Uma pasta de saída que só outra configuração nomeia, como a `dist/server` de um comando `vite build --ssr` separado, é lida a menos que o `.gitignore` a exclua; o `.gitignore` de todo template do create-vite exclui `dist` e `dist-ssr`.
 - **Folhas de estilos**: `.css`, `.scss`, `.sass`, `.less`, `.styl`, `.stylus`, `.pcss`, `.postcss` e `.sss`. O valor de uma propriedade também é uma palavra, e `border: 1px solid` manteria a `.solid`. O CSS dentro de um arquivo `.vue` ou `.svelte` é lido com o resto do arquivo.
@@ -106,7 +106,7 @@ A folha de estilos que uma renderização no servidor carrega acompanha as mesma
 
 ## Onde ficam os arquivos reduzidos
 
-O plugin escreve as folhas de estilos reduzidas na pasta de cache do Vite, `node_modules/.vite/codenhub-styles/`, a menos que a sua configuração defina [`cacheDir`](https://vite.dev/config/shared-options.html#cachedir). É onde o Vite guarda os próprios arquivos gerados, então o seu projeto já a deixa fora do controle de versão. Apagá-la é seguro: o plugin a escreve de novo quando o Vite inicia e, se você a apagar enquanto o servidor de desenvolvimento roda, na próxima mudança que você salvar. As ferramentas de desenvolvimento do navegador mostram a folha de estilos no caminho dela dentro dessa pasta, e não no pacote.
+O plugin escreve as folhas de estilos reduzidas na pasta de cache do Vite, `node_modules/.vite/codenhub-styles/`, a menos que a sua configuração defina [`cacheDir`](https://vite.dev/config/shared-options.html#cachedir). É onde o Vite guarda os próprios arquivos gerados, então o seu projeto já a deixa fora do controle de versão. Apagá-la é seguro: o plugin a escreve de novo quando o Vite inicia e, se você a apagar enquanto o servidor de desenvolvimento roda, quando você reinicia o servidor ou salva uma mudança que adiciona ou remove uma classe. As ferramentas de desenvolvimento do navegador mostram a folha de estilos no caminho dela dentro dessa pasta, e não no pacote.
 
 ## O seu próprio alias vence
 
