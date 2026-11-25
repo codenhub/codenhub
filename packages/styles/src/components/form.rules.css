@@ -1156,12 +1156,15 @@
          mark that reads against it. The tick and the dash are the package's
          own drawings, on a 12-unit grid that is one unit per pixel of this
          12px box, centred on it, in a stroke a little heavier than the line of
-         a 16px icon so the cut-out reads on a small plate. The mask reads only
-         their alpha, so the stroke's colour is any. */
+         a 16px icon so the cut-out reads on a small plate. The tick is built on
+         that grid, not traced from an icon: its knee sits at (4.75, 8.75), its
+         short arm falls 2 units over 2.25 and its long arm rises 5.5 over 4.75,
+         so the two meet at about 91 degrees, and its bounds are centred on (6, 6).
+         The mask reads only their alpha, so the stroke's colour is any. */
       background-color: currentcolor;
       content: "";
-      mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'><path d='M2.5 6.25 5 8.75 9.5 3.25'/></svg>");
-      -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'><path d='M2.5 6.25 5 8.75 9.5 3.25'/></svg>");
+      mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'><path d='M2.5 6.75 4.75 8.75 9.5 3.25'/></svg>");
+      -webkit-mask-image: url("data:image/svg+xml;charset=utf-8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12' fill='none' stroke='black' stroke-width='1.75' stroke-linecap='round' stroke-linejoin='round'><path d='M2.5 6.75 4.75 8.75 9.5 3.25'/></svg>");
       mask-size: contain;
       -webkit-mask-size: contain;
     }
