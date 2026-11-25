@@ -34,27 +34,14 @@ const TEXT_MEMBERS = ["kid", "typ", "cty"] as const;
 export const ownMember = (header: object, name: string): unknown =>
   Object.hasOwn(header, name) ? (header as Record<string, unknown>)[name] : undefined;
 
-/** An `unsupported_alg` issue unless the header's own `alg` is one this package supports, compared exactly. */
-export const algIssue = (header: object): JwtIssue | undefined =>
-  isJwsAlgorithm(ownMember(header, "alg")) ? undefined : { code: "unsupported_alg", path: ["header", "alg"] };
-
-/** A `malformed` issue for the first of `kid`, `typ` and `cty` the header holds as something other than text. */
-export function textMemberIssue(header: object): JwtIssue | undefined {
-  const notText = TEXT_MEMBERS.find(
-    (name) => Object.hasOwn(header, name) && typeof ownMember(header, name) !== "string",
-  );
-  return notText === undefined ? undefined : { code: "malformed", path: ["header", notText] };
-}
-
 /**
  * Checks a parsed JWT header against what this package supports, returning the first issue found: an
  * unsupported or missing `alg`, any `crit` (a JWT understands no extension), any `b64` (RFC 7797 §7 keeps
  * unencoded payloads out of JWTs), or a `kid`, `typ` or `cty` that is not text.
  */
 function headerIssue(header: object): JwtIssue | undefined {
-  const unsupported = algIssue(header);
-  if (unsupported !== undefined) {
-    return unsupported;
+  if (!isJwsAlgorithm(ownMember(header, "alg"))) {
+    return { code: "unsupported_alg", path: ["header", "alg"] };
   }
   if (Object.hasOwn(header, "crit")) {
     return { code: "unsupported_crit", path: ["header", "crit"] };
@@ -62,7 +49,10 @@ function headerIssue(header: object): JwtIssue | undefined {
   if (Object.hasOwn(header, "b64")) {
     return { code: "malformed", path: ["header", "b64"] };
   }
-  return textMemberIssue(header);
+  const notText = TEXT_MEMBERS.find(
+    (name) => Object.hasOwn(header, name) && typeof ownMember(header, name) !== "string",
+  );
+  return notText === undefined ? undefined : { code: "malformed", path: ["header", notText] };
 }
 
 /**

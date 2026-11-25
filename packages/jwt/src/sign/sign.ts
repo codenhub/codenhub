@@ -204,7 +204,7 @@ export async function sign<TPayload extends object = JwtPayload>(input: SignInpu
  * and verified with the public key first, since a signer holding another key, or a DER conversion gone wrong,
  * would otherwise give tokens no one can verify.
  */
-export async function signatureOf(
+async function signatureOf(
   entry: KeyEntry,
   signParams: AlgorithmParams["signParams"],
   signedBytes: Uint8Array<ArrayBuffer>,
@@ -252,7 +252,7 @@ async function embeddedJwk(
 }
 
 /** Where a signing header comes from, for the messages {@link readSignHeader} throws. */
-export interface SignHeaderContext {
+interface SignHeaderContext {
   /** The function name messages start with, such as `sign`. */
   readonly caller: string;
   /** The header's place in the input, such as `input.header`. */
@@ -270,7 +270,7 @@ export interface SignHeaderContext {
  * @throws TypeError when the header is not a plain object of JSON values, names another `alg` than the
  * key's, holds a forbidden member, or holds a `kid`, `typ` or `cty` that is not a string.
  */
-export function readSignHeader(
+function readSignHeader(
   header: unknown,
   key: SigningKey,
   context: SignHeaderContext,
@@ -313,7 +313,7 @@ export function readSignHeader(
 }
 
 /** Writes members as a JSON object in the order listed: an object would list integer-like names before `alg`. */
-export const writeMembers = (members: readonly (readonly [string, unknown])[]): string =>
+const writeMembers = (members: readonly (readonly [string, unknown])[]): string =>
   `{${members.map(([name, value]) => `${JSON.stringify(name)}:${writeJson(value)}`).join(",")}}`;
 
 /** Validates the caller's header and writes it as JSON with `alg`, `kid`, `typ`, `cty` first. */
@@ -455,12 +455,7 @@ function currentSeconds(now: () => number): number {
  * descriptor, and the token is written from the copy, so a `Proxy` or a value changed meanwhile cannot show the
  * checks one value and the token another.
  */
-export function snapshotJsonObject(
-  object: unknown,
-  label: string,
-  caller = "sign",
-  depth = 1,
-): Record<string, unknown> {
+function snapshotJsonObject(object: unknown, label: string, caller = "sign", depth = 1): Record<string, unknown> {
   return snapshot(object, label, depth, caller) as Record<string, unknown>;
 }
 
@@ -519,7 +514,7 @@ function snapshot(container: unknown, label: string, depth: number, caller: stri
  * Writes a {@link snapshot} copy, or a value this module built, as `JSON.stringify` would, without looking up
  * `toJSON` anywhere: only primitives reach `JSON.stringify`.
  */
-export function writeJson(value: unknown): string {
+function writeJson(value: unknown): string {
   if (Array.isArray(value)) {
     return `[${value.map(writeJson).join(",")}]`;
   }

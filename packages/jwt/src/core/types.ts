@@ -6,7 +6,7 @@ export type JwtPathSegment = string | number;
 /**
  * Stable category of a failure that callers can branch on without parsing messages.
  *
- * Token codes come from {@link Verifier}, {@link JwsVerifier} and {@link readHeader}; key codes from the `import*`
+ * Token codes come from {@link Verifier} and {@link readHeader}; key codes from the `import*`
  * functions and key sets; `key_fetch_failed` from any key set that fails, remote or custom.
  *
  * A minor release may add codes, and values of `params.reason`, when a new check or failure needs its own
@@ -19,7 +19,6 @@ export type JwtIssueCode =
   | "duplicate_key"
   | "unsupported_crit"
   | "unsupported_alg"
-  | "missing_payload"
   // Key selection and signature
   | "unknown_kid"
   | "no_matching_key"
@@ -527,87 +526,3 @@ export type VerifiedPayload<TSchema extends StandardSchemaV1 | undefined> = TSch
 export type Verifier<TPayload extends JwtRegisteredClaims = JwtPayload> = (
   token: unknown,
 ) => Promise<JwtResult<VerifiedJwt<TPayload>>>;
-
-/**
- * The protected header of a verified JWS (RFC 7515), as {@link createJwsVerifier} returns it. Frozen.
- *
- * Beyond {@link JwtHeader}, it may carry `b64` (RFC 7797) and `crit`, which the verifier has checked: every
- * name in `crit` is `b64` or one the verifier's `crit` option lists, and is present in this header.
- */
-export interface JwsHeader extends JwtHeader {
-  /** `false` when the payload was signed as is rather than base64url-encoded (RFC 7797). */
-  readonly b64?: boolean;
-  /** Header parameters the signer marked as critical, each understood by the verifier. */
-  readonly crit?: readonly string[];
-  /** Any other header parameter. Redeclared from {@link JwtHeader} so the API reference documents it here. */
-  readonly [parameter: string]: unknown;
-}
-
-/** A verified JWS. Frozen, except `payload`, a byte array no other result shares. */
-export interface VerifiedJws {
-  /**
-   * The payload's bytes, after the signature verified: decoded from base64url, the unencoded payload's UTF-8
-   * bytes when `b64` is `false`, or a copy of the detached payload given to the verifier. Decode text with
-   * `new TextDecoder("utf-8", { fatal: true }).decode(payload)`.
-   */
-  readonly payload: Uint8Array<ArrayBuffer>;
-  /** The protected header of the signature that verified. */
-  readonly header: JwsHeader;
-  /**
-   * The unprotected header of that signature, in the JSON serialization, when it has one. The signature does
-   * not cover it: anyone who handles the JWS can change it.
-   */
-  readonly unprotectedHeader?: Readonly<Record<string, unknown>>;
-  /** The key whose signature matched. */
-  readonly key: VerificationKey;
-  /** The index of the signature that verified in the general JSON serialization's `signatures`; otherwise 0. */
-  readonly signatureIndex: number;
-}
-
-/** How {@link createJwsVerifier} checks a JWS. Invalid options throw `TypeError` when the verifier is created. */
-export interface JwsVerifierOptions {
-  /** Where verification keys come from. Each signature's key is selected from its header, as a JWT's is. */
-  readonly keys: KeySet;
-  /**
-   * Extension header parameters your code understands and processes, so a JWS that lists them in `crit` is
-   * accepted; a JWS whose `crit` names any other parameter fails with `unsupported_crit`. `b64` is always
-   * understood and may not be listed, nor may a parameter RFC 7515 or RFC 7518 defines.
-   *
-   * @defaultValue none: only `b64` may be critical
-   */
-  readonly crit?: readonly string[];
-  /**
-   * Maximum length of the JWS in characters, compact or JSON, checked before any decoding. An integer from 1
-   * through 65536. A detached payload does not count.
-   *
-   * @defaultValue 8192
-   */
-  readonly maxLength?: number;
-  /**
-   * Called with what went wrong when the key set fails with `key_set_error`, as
-   * {@link VerifierOptions.onKeySetError} is.
-   */
-  readonly onKeySetError?: (error: unknown) => void;
-}
-
-/** Per-call input to a {@link JwsVerifier}. Unknown members throw `TypeError`. */
-export interface JwsVerifyOptions {
-  /**
-   * The detached payload (RFC 7515 Appendix F), for a JWS that carries none: a compact JWS whose payload
-   * segment is empty, or a JSON one without `payload` or with an empty one. A string is signed as its UTF-8
-   * bytes. A JWS that carries a payload of its own fails with `malformed` when this is given.
-   *
-   * @defaultValue none: the JWS must carry its payload
-   */
-  readonly payload?: Uint8Array | string;
-}
-
-/**
- * A configured JWS verifier. Call it with any value; it never throws for a JWS, whatever its content. Its
- * promise rejects only for caller mistakes: `options` that is not an object, holds an unknown member, or has
- * a `payload` that is neither a string nor a `Uint8Array`.
- *
- * @returns The verified JWS, or every issue found. In the general JSON serialization, a failure lists each
- * signature's issue under `["signatures", index]`.
- */
-export type JwsVerifier = (jws: unknown, options?: JwsVerifyOptions) => Promise<JwtResult<VerifiedJws>>;
