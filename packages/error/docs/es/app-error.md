@@ -55,9 +55,9 @@ if (error.code === "email_not_confirmed") {
 }
 ```
 
-Contiene el código registrado que coincidió, o el nombre registrado cuando lo que coincidió fue un nombre. Una coincidencia por mensaje, prefijo o patrón no tiene código, así que ahí `code` es `null`, y también en los errores desconocidos.
+Contiene el código registrado que coincidió, o el nombre registrado cuando lo que coincidió fue un nombre. Una entrada que [nombra un código](registries.md#nombrar-un-código-en-lugar-de-palabras) da ese código, sea cual sea la coincidencia. Una coincidencia por mensaje, prefijo o patrón sin un alias no tiene código, así que ahí `code` es `null`, y también en los errores desconocidos.
 
-Cuando el mismo fallo puede llegar por más de un camino, ramifica según `messageKey`. El caso clásico es un chunk de code splitting desactualizado. Webpack lo informa por nombre, así que `code` es `"ChunkLoadError"`. Un navegador informa un `import()` fallido solo en su mensaje, así que `code` es `null`. Ambos se resuelven a `messageKey: "error.browser.moduleLoadFailed"`.
+Cuando el mismo fallo puede llegar por más de un camino, da a cada camino una entrada que nombre un mismo código y ramifica según él. Para una entrada de un preset integrado, que nunca nombra un código, ramifica según `messageKey`. El caso clásico es un chunk de code splitting desactualizado. Webpack lo informa por nombre, así que `code` es `"ChunkLoadError"`. Un navegador informa un `import()` fallido solo en su mensaje, así que `code` es `null`. Ambos se resuelven a `messageKey: "error.browser.moduleLoadFailed"`.
 
 ### `messageKey`
 

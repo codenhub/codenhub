@@ -471,7 +471,7 @@ Implements the standard JavaScript `Error` interface and adds classification, lo
 readonly code: string | null;
 ```
 
-The registry identifier that classified this error: the matched code, or the matched error name when no code matched. `null` for message, prefix, and pattern matches and for unknown errors. Use it to branch on a specific failure; branch on `messageKey` for a built-in preset mapping matched by message, prefix, or pattern, which has no code.
+The registry identifier that classified this error: the code a matched `ErrorCodeAlias` names, else the matched code, or the matched error name when no code matched. `null` for a message, prefix, or pattern match without an alias and for unknown errors. Use it to branch on a specific failure; branch on `messageKey` for a built-in preset mapping matched by message, prefix, or pattern, which has no code.
 
 #### AppError › details
 
@@ -614,11 +614,60 @@ readonly error: AppError;
 readonly ok: false;
 ```
 
+### ErrorCodeAlias
+
+```ts
+export interface ErrorCodeAlias {
+    code: string;
+    message?: never;
+    messageKey?: never;
+    source?: never;
+    isRetryable?: never;
+}
+```
+
+A mapping that names a registered code instead of carrying words of its own.
+
+A match on it resolves through the registry's `codes` bucket: the error takes the named `code` and that code's `message`, `messageKey`, `source`, and `isRetryable`, and keeps the `type` the match itself earns (`"heuristic"` for a pattern). An alias whose code is not registered, or is itself an alias, matches nothing. It lets the code that recognizes a failure name it without wording it, and gives the same failure one `code` however it was matched.
+
+#### ErrorCodeAlias › code
+
+```ts
+code: string;
+```
+
+The registered code this mapping stands for; any non-empty string.
+
+#### ErrorCodeAlias › isRetryable
+
+```ts
+isRetryable?: never;
+```
+
+#### ErrorCodeAlias › message
+
+```ts
+message?: never;
+```
+
+#### ErrorCodeAlias › messageKey
+
+```ts
+messageKey?: never;
+```
+
+#### ErrorCodeAlias › source
+
+```ts
+source?: never;
+```
+
 ### ErrorFeedback
 
 ```ts
 export interface ErrorFeedback {
     message: string;
+    code?: never;
     messageKey?: string;
     source?: string;
     isRetryable?: boolean;
@@ -626,6 +675,14 @@ export interface ErrorFeedback {
 ```
 
 The structured feedback returned when a registry matches an error. Defines the safe user-facing message and metadata to attach to the `AppError`.
+
+#### ErrorFeedback › code
+
+```ts
+code?: never;
+```
+
+Only an `ErrorCodeAlias` names a code; feedback with words carries none.
 
 #### ErrorFeedback › isRetryable
 
@@ -661,46 +718,12 @@ source?: string;
 
 An optional source label; any non-empty string. Built-in presets use dot-separated lowercase kebab-case segments (e.g. `supabase.auth`).
 
-### ErrorPatternDefinition
-
-```ts
-export interface ErrorPatternDefinition extends ErrorFeedback {
-    pattern: RegExp;
-}
-```
-
-Represents a registered regex pattern definition and its feedback mapping.
-
-#### ErrorPatternDefinition › isRetryable
-
-Inherited from [`ErrorFeedback`](#errorfeedback--isretryable).
-
-#### ErrorPatternDefinition › message
-
-Inherited from [`ErrorFeedback`](#errorfeedback--message).
-
-#### ErrorPatternDefinition › messageKey
-
-Inherited from [`ErrorFeedback`](#errorfeedback--messagekey).
-
-#### ErrorPatternDefinition › pattern
-
-```ts
-pattern: RegExp;
-```
-
-The RegExp instance used to evaluate heuristic error matches.
-
-#### ErrorPatternDefinition › source
-
-Inherited from [`ErrorFeedback`](#errorfeedback--source).
-
 ### ErrorPatternRegistryBucket
 
 ```ts
 export interface ErrorPatternRegistryBucket {
-    add(pattern: RegExp, feedback: ErrorFeedback): void;
-    addList(entries: readonly (readonly [pattern: RegExp, feedback: ErrorFeedback])[]): void;
+    add(pattern: RegExp, feedback: ErrorMapping): void;
+    addList(entries: readonly (readonly [pattern: RegExp, feedback: ErrorMapping])[]): void;
     clear(): void;
     delete(pattern: RegExp): boolean;
     values(): readonly Readonly<ErrorPatternDefinition>[];
@@ -712,7 +735,7 @@ A registry bucket for storing and matching error classifications heuristically u
 #### ErrorPatternRegistryBucket › add
 
 ```ts
-add(pattern: RegExp, feedback: ErrorFeedback): void;
+add(pattern: RegExp, feedback: ErrorMapping): void;
 ```
 
 Adds or replaces a RegExp pattern and its feedback mapping.
@@ -727,7 +750,7 @@ Adds or replaces a RegExp pattern and its feedback mapping.
 #### ErrorPatternRegistryBucket › addList
 
 ```ts
-addList(entries: readonly (readonly [pattern: RegExp, feedback: ErrorFeedback])[]): void;
+addList(entries: readonly (readonly [pattern: RegExp, feedback: ErrorMapping])[]): void;
 ```
 
 Adds or replaces multiple RegExp pattern definitions from a list of tuples.
@@ -774,46 +797,12 @@ The returned list, its definitions, and their RegExp instances are frozen. Shari
 
 **Returns** — Frozen list of pattern definitions.
 
-### ErrorPrefixDefinition
-
-```ts
-export interface ErrorPrefixDefinition extends ErrorFeedback {
-    prefix: string;
-}
-```
-
-Represents a registered message prefix definition and its feedback mapping.
-
-#### ErrorPrefixDefinition › isRetryable
-
-Inherited from [`ErrorFeedback`](#errorfeedback--isretryable).
-
-#### ErrorPrefixDefinition › message
-
-Inherited from [`ErrorFeedback`](#errorfeedback--message).
-
-#### ErrorPrefixDefinition › messageKey
-
-Inherited from [`ErrorFeedback`](#errorfeedback--messagekey).
-
-#### ErrorPrefixDefinition › prefix
-
-```ts
-prefix: string;
-```
-
-The message prefix matched after trimming trailing sentence punctuation.
-
-#### ErrorPrefixDefinition › source
-
-Inherited from [`ErrorFeedback`](#errorfeedback--source).
-
 ### ErrorPrefixRegistryBucket
 
 ```ts
 export interface ErrorPrefixRegistryBucket {
-    add(prefix: string, feedback: ErrorFeedback): void;
-    addList(entries: readonly (readonly [prefix: string, feedback: ErrorFeedback])[]): void;
+    add(prefix: string, feedback: ErrorMapping): void;
+    addList(entries: readonly (readonly [prefix: string, feedback: ErrorMapping])[]): void;
     clear(): void;
     delete(prefix: string): boolean;
     values(): readonly Readonly<ErrorPrefixDefinition>[];
@@ -825,7 +814,7 @@ A registry bucket for storing and matching error classifications based on messag
 #### ErrorPrefixRegistryBucket › add
 
 ```ts
-add(prefix: string, feedback: ErrorFeedback): void;
+add(prefix: string, feedback: ErrorMapping): void;
 ```
 
 Adds or replaces feedback for a given message prefix. Strips trailing punctuation from the prefix before registration.
@@ -840,7 +829,7 @@ Adds or replaces feedback for a given message prefix. Strips trailing punctuatio
 #### ErrorPrefixRegistryBucket › addList
 
 ```ts
-addList(entries: readonly (readonly [prefix: string, feedback: ErrorFeedback])[]): void;
+addList(entries: readonly (readonly [prefix: string, feedback: ErrorMapping])[]): void;
 ```
 
 Adds or replaces multiple prefix feedback definitions from a list of tuples.
@@ -969,12 +958,12 @@ Merges all mappings from the source registry into this registry, overwriting mat
 
 ```ts
 export interface ErrorRegistryBucket {
-    add(identifier: string, feedback: ErrorFeedback): void;
-    addList(entries: readonly (readonly [identifier: string, feedback: ErrorFeedback])[]): void;
+    add(identifier: string, feedback: ErrorMapping): void;
+    addList(entries: readonly (readonly [identifier: string, feedback: ErrorMapping])[]): void;
     clear(): void;
-    get(identifier: string): Readonly<ErrorFeedback> | undefined;
+    get(identifier: string): Readonly<ErrorMapping> | undefined;
     delete(identifier: string): boolean;
-    values(): readonly (readonly [identifier: string, feedback: Readonly<ErrorFeedback>])[];
+    values(): readonly (readonly [identifier: string, feedback: Readonly<ErrorMapping>])[];
 }
 ```
 
@@ -983,7 +972,7 @@ A registry bucket for storing and retrieving deterministic string-based error ma
 #### ErrorRegistryBucket › add
 
 ```ts
-add(identifier: string, feedback: ErrorFeedback): void;
+add(identifier: string, feedback: ErrorMapping): void;
 ```
 
 Adds or replaces error feedback for a given identifier. Code and name buckets trim whitespace. Message buckets also strip trailing sentence punctuation.
@@ -998,7 +987,7 @@ Adds or replaces error feedback for a given identifier. Code and name buckets tr
 #### ErrorRegistryBucket › addList
 
 ```ts
-addList(entries: readonly (readonly [identifier: string, feedback: ErrorFeedback])[]): void;
+addList(entries: readonly (readonly [identifier: string, feedback: ErrorMapping])[]): void;
 ```
 
 Adds or replaces multiple feedback entries from a list of tuple definitions.
@@ -1036,7 +1025,7 @@ Removes error feedback mapped to the specified identifier. Uses the same bucket-
 #### ErrorRegistryBucket › get
 
 ```ts
-get(identifier: string): Readonly<ErrorFeedback> | undefined;
+get(identifier: string): Readonly<ErrorMapping> | undefined;
 ```
 
 Retrieves the frozen feedback mapping for the specified identifier.
@@ -1050,7 +1039,7 @@ Retrieves the frozen feedback mapping for the specified identifier.
 #### ErrorRegistryBucket › values
 
 ```ts
-values(): readonly (readonly [identifier: string, feedback: Readonly<ErrorFeedback>])[];
+values(): readonly (readonly [identifier: string, feedback: Readonly<ErrorMapping>])[];
 ```
 
 Returns every mapping stored in the bucket, in insertion order.
@@ -1165,6 +1154,40 @@ The classification level of a normalized application error.
 - `"unknown"`: Could not be resolved/classified by the active registry.
 
 The type says how the error was matched, not how serious it is: a defect such as a missing table is `"known"` when its code is registered, and an offline user is `"heuristic"` when a pattern matched. Branch on `code` or `messageKey` to decide what to report.
+
+### ErrorMapping
+
+```ts
+export type ErrorMapping = ErrorFeedback | ErrorCodeAlias;
+```
+
+What a registry entry maps an identifier to: words of its own, or the code whose words it uses.
+
+### ErrorPatternDefinition
+
+```ts
+export type ErrorPatternDefinition = ErrorMapping & {
+    /**
+     * The RegExp instance used to evaluate heuristic error matches.
+     */
+    pattern: RegExp;
+};
+```
+
+Represents a registered regex pattern definition and its feedback mapping.
+
+### ErrorPrefixDefinition
+
+```ts
+export type ErrorPrefixDefinition = ErrorMapping & {
+    /**
+     * The message prefix matched after trimming trailing sentence punctuation.
+     */
+    prefix: string;
+};
+```
+
+Represents a registered message prefix definition and its feedback mapping.
 
 ### Result
 

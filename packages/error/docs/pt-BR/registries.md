@@ -31,6 +31,26 @@ registry.codes.add("E_RATE_LIMIT", {
 
 As entradas são verificadas e copiadas quando você as adiciona. Uma `message` vazia, ou um campo do tipo errado, lança `TypeError` ali mesmo, na inicialização, e não mais tarde, no meio do tratamento de algum outro erro.
 
+### Nomeando um código em vez de palavras
+
+Uma entrada pode nomear um código registrado em vez de ter palavras próprias, um `ErrorCodeAlias`. A camada de arquivos de um app desktop reconhece que o sistema operacional recusou uma gravação; a tela que mostra a falha decide o que dizer sobre ela:
+
+```ts
+registry.codes.add("files.permissionDenied", {
+  message: "You don't have permission to change this folder. Choose another folder, or allow access, then try again.",
+  messageKey: "error.files.permissionDenied",
+});
+
+registry.names.add("NotAllowedError", { code: "files.permissionDenied" });
+registry.patterns.add(/\(os error 5\)$/, { code: "files.permissionDenied" });
+```
+
+Uma correspondência com um alias recebe o código que ele nomeia e o `message`, o `messageKey`, o `source` e o `isRetryable` desse código. O `type` continua sendo o que a correspondência merece: `"heuristic"` para o pattern, `"known"` para o nome. Assim, o `NotAllowedError` do navegador e um `Access is denied. (os error 5)` do Rust chegam à tela como `code: "files.permissionDenied"`, e uma decisão por esse código cobre os dois.
+
+- Um alias guarda só `code`. Colocar palavras ao lado dele lança `TypeError`, já que elas nunca seriam mostradas.
+- O código é procurado quando um erro é criado, não quando o alias é adicionado, então os aliases e as palavras que eles nomeiam podem vir de registros diferentes, combinados em qualquer ordem.
+- Um alias cujo código não está registrado, ou que nomeia outro alias, não corresponde a nada. A busca segue como se ele não existisse: para a próxima regra daquele erro e depois para os erros embrulhados nele. Um alias nunca mostra texto bruto.
+
 ## Os cinco buckets
 
 Um registro tem cinco buckets, um para cada forma de reconhecer uma falha:
@@ -156,6 +176,8 @@ Os tipos de registro são exportados para código que monta registros ou os pass
 | Tipo                                                      | Use para                                                                   |
 | --------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `ErrorFeedback`                                           | O objeto de feedback de uma entrada, como em uma checagem com `satisfies`. |
+| `ErrorCodeAlias`                                          | Uma entrada que nomeia um código em vez de ter palavras.                   |
+| `ErrorMapping`                                            | Qualquer um dos dois: o que `add` aceita e `get` retorna.                  |
 | `ErrorRegistry`                                           | Um registro que você pode alterar, vindo de `createErrorRegistry`.         |
 | `ReadonlyErrorRegistry`                                   | Um snapshot congelado, vindo de `freezeRegistry`, e todo preset.           |
 | `ErrorRegistryBucket`                                     | Os buckets `codes`, `names` e `messages`.                                  |

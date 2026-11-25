@@ -30,6 +30,26 @@ registry.codes.add("E_RATE_LIMIT", {
 
 Entries are checked and copied when you add them. An empty `message`, or a field of the wrong type, throws `TypeError` right there, at startup, instead of later in the middle of handling some other error.
 
+### Naming a code instead of words
+
+An entry can name a registered code instead of carrying words of its own, an `ErrorCodeAlias`. A desktop app's file layer recognizes that the operating system refused a write; the screen that shows the failure decides what to say about it:
+
+```ts
+registry.codes.add("files.permissionDenied", {
+  message: "You don't have permission to change this folder. Choose another folder, or allow access, then try again.",
+  messageKey: "error.files.permissionDenied",
+});
+
+registry.names.add("NotAllowedError", { code: "files.permissionDenied" });
+registry.patterns.add(/\(os error 5\)$/, { code: "files.permissionDenied" });
+```
+
+A match on an alias takes the code it names, and that code's `message`, `messageKey`, `source`, and `isRetryable`. Its `type` is still the one the match earns: `"heuristic"` for the pattern, `"known"` for the name. So the browser's `NotAllowedError` and a Rust `Access is denied. (os error 5)` both reach the screen as `code: "files.permissionDenied"`, and a branch on that code covers both.
+
+- An alias holds only `code`. Adding words beside it throws `TypeError`, since they would never be shown.
+- The code is looked up when an error is created, not when the alias is added, so aliases and the words they name can come from different registries, merged in any order.
+- An alias whose code is not registered, or names another alias, matches nothing. Matching moves on as if it were not there: to the next rule for that error, and then to the errors wrapped inside it. An alias never shows raw text.
+
 ## The five buckets
 
 A registry has five buckets, one for each way a failure can be recognized:
@@ -155,6 +175,8 @@ The registry types are exported for code that builds or passes registries around
 | Type                                                      | Use it for                                                         |
 | --------------------------------------------------------- | ------------------------------------------------------------------ |
 | `ErrorFeedback`                                           | The feedback object of one entry, as in a `satisfies` check.       |
+| `ErrorCodeAlias`                                          | An entry that names a code instead of carrying words.              |
+| `ErrorMapping`                                            | Either of the two: what `add` accepts and `get` returns.           |
 | `ErrorRegistry`                                           | A registry you can change, from `createErrorRegistry`.             |
 | `ReadonlyErrorRegistry`                                   | A frozen snapshot, from `freezeRegistry`, and every preset.        |
 | `ErrorRegistryBucket`                                     | The `codes`, `names`, and `messages` buckets.                      |

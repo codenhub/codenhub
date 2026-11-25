@@ -1,5 +1,5 @@
 import { normalizeErrorMessage } from "./bucket";
-import type { AppErrorType, ErrorFeedback, ErrorPrefixDefinition, ErrorRegistry, ReadonlyErrorRegistry } from "./types";
+import type { AppErrorType, ErrorMapping, ErrorRegistry, ReadonlyErrorRegistry } from "./types";
 
 interface NormalizedError {
   code: string | null;
@@ -47,13 +47,38 @@ const getStringField = (source: Record<string, unknown>, key: string): string | 
   return typeof value === "string" ? value : null;
 };
 
+type Registry = ErrorRegistry | ReadonlyErrorRegistry;
+
+const getAliasCode = (mapping: ErrorMapping): string | null => {
+  const { code } = mapping as { code?: unknown };
+
+  return typeof code === "string" && code.trim().length > 0 ? code.trim() : null;
+};
+
 // Built-in buckets validate feedback on registration, but a hand-written registry can return
-// anything, so the fields are checked again before they reach an AppError.
+// anything, so the fields are checked again before they reach an AppError. An alias takes its
+// code's words; one whose code is missing or is itself an alias matches nothing (`null`).
 const toClassification = (
+  registry: Registry,
   type: ErrorClassification["type"],
-  feedback: ErrorFeedback,
-  code: string | null = null,
-): ErrorClassification => {
+  mapping: ErrorMapping,
+  matchedCode: string | null = null,
+): ErrorClassification | null => {
+  const aliasCode = getAliasCode(mapping);
+  let feedback = mapping;
+  let code = matchedCode;
+
+  if (aliasCode !== null) {
+    const target = registry.codes.get(aliasCode);
+
+    if (target === undefined || getAliasCode(target) !== null) {
+      return null;
+    }
+
+    feedback = target;
+    code = aliasCode;
+  }
+
   const { message, messageKey, source, isRetryable } = feedback;
 
   if (typeof message !== "string" || message.trim().length === 0) {
@@ -197,50 +222,55 @@ export const getErrorCandidates = (
   return candidates;
 };
 
-const getKnownMessageFeedback = (
-  registry: ErrorRegistry | ReadonlyErrorRegistry,
-  message: string,
-): ErrorClassification | null => {
+const getKnownMessageFeedback = (registry: Registry, message: string): ErrorClassification | null => {
   const normalizedMessage = normalizeErrorMessage(message);
 
   const exactFeedback = registry.messages.get(normalizedMessage);
-  if (exactFeedback !== undefined) {
-    return toClassification("known", exactFeedback);
+  const exactClassification = exactFeedback === undefined ? null : toClassification(registry, "known", exactFeedback);
+  if (exactClassification !== null) {
+    return exactClassification;
   }
 
   // Scanning for the longest match keeps custom registries that return unordered prefix
-  // definitions correct without copying and sorting the list on every classification.
-  let longestMatch: ErrorPrefixDefinition | null = null;
+  // definitions correct without copying and sorting the list on every classification. A prefix
+  // whose alias resolves to nothing is passed over, as if it were not registered.
+  let longestMatch: { length: number; classification: ErrorClassification } | null = null;
 
   for (const definition of registry.prefixes.values()) {
     if (
       normalizedMessage.startsWith(definition.prefix) &&
-      (longestMatch === null || definition.prefix.length > longestMatch.prefix.length)
+      (longestMatch === null || definition.prefix.length > longestMatch.length)
     ) {
-      longestMatch = definition;
+      const classification = toClassification(registry, "known", definition);
+
+      if (classification !== null) {
+        longestMatch = { length: definition.prefix.length, classification };
+      }
     }
   }
 
-  return longestMatch === null ? null : toClassification("known", longestMatch);
+  return longestMatch?.classification ?? null;
 };
 
 const resolveDeterministicKnownError = (
-  registry: ErrorRegistry | ReadonlyErrorRegistry,
+  registry: Registry,
   { code, message, name }: NormalizedError,
 ): ErrorClassification | null => {
   if (code !== null) {
     const feedback = registry.codes.get(code);
+    const classification = feedback === undefined ? null : toClassification(registry, "known", feedback, code.trim());
 
-    if (feedback !== undefined) {
-      return toClassification("known", feedback, code.trim());
+    if (classification !== null) {
+      return classification;
     }
   }
 
   if (name !== null) {
     const feedback = registry.names.get(name);
+    const classification = feedback === undefined ? null : toClassification(registry, "known", feedback, name.trim());
 
-    if (feedback !== undefined) {
-      return toClassification("known", feedback, name.trim());
+    if (classification !== null) {
+      return classification;
     }
   }
 
@@ -256,20 +286,25 @@ const resolveDeterministicKnownError = (
 };
 
 const resolveHeuristicUnexpectedError = (
-  registry: ErrorRegistry | ReadonlyErrorRegistry,
+  registry: Registry,
   { message }: NormalizedError,
 ): ErrorClassification | null => {
   if (message === null) {
     return null;
   }
 
-  const matchedDefinition = registry.patterns.values().find((definition) => definition.pattern.test(message));
+  // The first pattern that matches and resolves wins; an alias that resolves to nothing is passed over.
+  for (const definition of registry.patterns.values()) {
+    if (definition.pattern.test(message)) {
+      const classification = toClassification(registry, "heuristic", definition);
 
-  if (matchedDefinition === undefined) {
-    return null;
+      if (classification !== null) {
+        return classification;
+      }
+    }
   }
 
-  return toClassification("heuristic", matchedDefinition);
+  return null;
 };
 
 /**
