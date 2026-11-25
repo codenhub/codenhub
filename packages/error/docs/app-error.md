@@ -52,9 +52,9 @@ if (error.code === "email_not_confirmed") {
 }
 ```
 
-It holds the registered code that matched, or the registered name when a name matched instead. A message, prefix, or pattern match has no code, so `code` is `null` there, and also for unknown errors.
+It holds the registered code that matched, or the registered name when a name matched instead. A mapping that [names a code](registries.md#naming-a-code-instead-of-words) gives that code, however it matched. A message, prefix, or pattern match without one has no code, so `code` is `null` there, and also for unknown errors.
 
-When the same failure can arrive by more than one route, branch on `messageKey` instead. A stale code-split chunk is the classic case. Webpack reports it by name, so `code` is `"ChunkLoadError"`. A browser reports a failed `import()` only in its message, so `code` is `null`. Both resolve to `messageKey: "error.browser.moduleLoadFailed"`.
+When the same failure can arrive by more than one route, give each route a mapping that names one code, and branch on that. For a built-in preset mapping, which never names a code, branch on `messageKey` instead. A stale code-split chunk is the classic case. Webpack reports it by name, so `code` is `"ChunkLoadError"`. A browser reports a failed `import()` only in its message, so `code` is `null`. Both resolve to `messageKey: "error.browser.moduleLoadFailed"`.
 
 ### `messageKey`
 

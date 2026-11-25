@@ -1,7 +1,7 @@
 ---
 title: Registros
 description: Os cinco buckets, como os identificadores são comparados, qual correspondência vence e quando usar um registro próprio em vez do global.
-source: 7893791736449b5f8d3475c4fa9d25342d41128a
+source: 3f52638c8f4bb0823cc07d373d4a510de2a64883
 order: 3
 ---
 
@@ -30,6 +30,26 @@ registry.codes.add("E_RATE_LIMIT", {
 | `isRetryable` | Não         | Se a chamada que falhou pode ser repetida como está. O padrão é `false`; veja [O AppError](app-error.md#isretryable). |
 
 As entradas são verificadas e copiadas quando você as adiciona. Uma `message` vazia, ou um campo do tipo errado, lança `TypeError` ali mesmo, na inicialização, e não mais tarde, no meio do tratamento de algum outro erro.
+
+### Nomeando um código em vez de palavras
+
+Uma entrada pode nomear um código registrado em vez de ter palavras próprias, um `ErrorCodeAlias`. A camada de arquivos de um app desktop reconhece que o sistema operacional recusou uma gravação; a tela que mostra a falha decide o que dizer sobre ela:
+
+```ts
+registry.codes.add("files.permissionDenied", {
+  message: "You don't have permission to change this folder. Choose another folder, or allow access, then try again.",
+  messageKey: "error.files.permissionDenied",
+});
+
+registry.names.add("NotAllowedError", { code: "files.permissionDenied" });
+registry.patterns.add(/\(os error 5\)$/, { code: "files.permissionDenied" });
+```
+
+Uma correspondência com um alias recebe o código que ele nomeia e o `message`, o `messageKey`, o `source` e o `isRetryable` desse código. O `type` continua sendo o que a correspondência merece: `"heuristic"` para o pattern, `"known"` para o nome. Assim, o `NotAllowedError` do navegador e um `Access is denied. (os error 5)` do Rust chegam à tela como `code: "files.permissionDenied"`, e uma decisão por esse código cobre os dois.
+
+- Um alias guarda só `code`. Um `messageKey`, `source` ou `isRetryable` ao lado dele lança `TypeError`, já que nunca seria usado. Uma entrada com `message` é feedback comum, e um `code` ao lado dela é ignorado, então uma linha lida de uma tabela que traz o próprio código continua sendo registrada como antes de os aliases existirem.
+- O código é procurado quando um erro é criado, não quando o alias é adicionado, então os aliases e as palavras que eles nomeiam podem vir de registros diferentes, combinados em qualquer ordem.
+- Um alias cujo código não está registrado, ou que nomeia outro alias, não corresponde a nada. A busca segue como se ele não existisse: para a próxima regra daquele erro e depois para os erros embrulhados nele. Um alias nunca mostra texto bruto.
 
 ## Os cinco buckets
 
@@ -135,7 +155,7 @@ export const projectErrors = freezeRegistry(registry);
 
 Um registro congelado funciona em qualquer lugar em que um registro é só lido: como a opção `registry`, no `merge` e na lista que você passa para `createErrorRegistry`. Ele não funciona em `setErrorRegistry`, que precisa de um ao qual consiga acrescentar mapeamentos.
 
-Esses lugares de só leitura também aceitam um objeto que você mesmo escreve, desde que ele tenha o mesmo formato de um `ReadonlyErrorRegistry`: `get` e `values` em `codes`, `names` e `messages`, e `values` em `prefixes` e `patterns`. É assim que você apoiaria um registro em algo que não seja a memória. As respostas do seu objeto recebem menos confiança que as dos buckets nativos: uma busca que devolve algo diferente de `undefined` ou de feedback com uma `message` não vazia faz o `createAppError` lançar `TypeError`, já que a alternativa seria um `AppError` sem nada a dizer. Uma busca que lança exceção também não é capturada.
+Esses lugares de só leitura também aceitam um objeto que você mesmo escreve, desde que ele tenha o mesmo formato de um `ReadonlyErrorRegistry`: `get` e `values` em `codes`, `names` e `messages`, e `values` em `prefixes` e `patterns`. É assim que você apoiaria um registro em algo que não seja a memória. As respostas do seu objeto recebem menos confiança que as dos buckets nativos: uma busca que devolve algo diferente de `undefined`, de um alias ou de feedback com uma `message` não vazia faz o `createAppError` lançar `TypeError`, já que a alternativa seria um `AppError` sem nada a dizer. Um alias que o seu objeto devolve funciona como um nativo: ele pega as palavras do código que nomeia dos `codes` do seu objeto, e não corresponde a nada quando esse código falta ou é ele mesmo um alias. Uma busca que lança exceção também não é capturada.
 
 Tudo o que um bucket devolve também é congelado. `values()` devolve a mesma lista congelada até o bucket mudar, e as entradas, os objetos de feedback e as expressões regulares dela são todos congelados. Espalhe um deles em um objeto novo quando precisar de uma cópia que possa alterar, e copie um pattern com `new RegExp(pattern.source, pattern.flags)`.
 
@@ -156,6 +176,8 @@ Os tipos de registro são exportados para código que monta registros ou os pass
 | Tipo                                                      | Use para                                                                   |
 | --------------------------------------------------------- | -------------------------------------------------------------------------- |
 | `ErrorFeedback`                                           | O objeto de feedback de uma entrada, como em uma checagem com `satisfies`. |
+| `ErrorCodeAlias`                                          | Uma entrada que nomeia um código em vez de ter palavras.                   |
+| `ErrorMapping`                                            | Qualquer um dos dois: o que `add` aceita e `get` retorna.                  |
 | `ErrorRegistry`                                           | Um registro que você pode alterar, vindo de `createErrorRegistry`.         |
 | `ReadonlyErrorRegistry`                                   | Um snapshot congelado, vindo de `freezeRegistry`, e todo preset.           |
 | `ErrorRegistryBucket`                                     | Os buckets `codes`, `names` e `messages`.                                  |

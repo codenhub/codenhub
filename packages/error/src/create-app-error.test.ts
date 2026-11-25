@@ -978,10 +978,12 @@ describe("appErrorFromJSON", () => {
     ["a code match", { code: "23505" }],
     ["a name match", { name: "AbortError" }],
     ["a pattern match", new TypeError("Failed to fetch")],
+    ["a pattern match on a code alias", "Access is denied. (os error 5)"],
     ["an unknown error", { code: "unmapped" }],
   ])("should rebuild %s from its serialized shape", (_label, raw) => {
     const registry = createErrorRegistry([browserErrorRegistry]);
     registry.codes.add("23505", { message: "Already exists.", messageKey: "error.app.exists", source: "app.db" });
+    registry.patterns.add(/\(os error 5\)$/, { code: "23505" });
     const original = createAppError(raw, { registry, fallbackMessage: "Could not save." });
 
     const rebuilt = appErrorFromJSON(roundTrip(original));
@@ -1057,7 +1059,6 @@ describe("appErrorFromJSON", () => {
     ["a missing details field", { ...serialized, details: undefined }],
     ["details that are a list", { ...serialized, details: [1] }],
     ["details that are a string", { ...serialized, details: "field" }],
-    ["a code on a heuristic match", { ...serialized, type: "heuristic" }],
     ["a code on an unknown error", { ...serialized, type: "unknown", isRetryable: false }],
     [
       "a retryable unknown error",

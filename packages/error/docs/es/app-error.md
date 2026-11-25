@@ -2,7 +2,7 @@
 title: El AppError
 description: Cada campo de un AppError, lo que promete cada uno, qué pasa cuando un error se normaliza dos veces y cómo enviar uno de un servidor a un cliente.
 order: 2
-source: 68f6384e4038acf989b325414981fcc56f2d4c52
+source: 1618a89bbd85e4283ce167460c37f96d769dc3b3
 ---
 
 # El AppError
@@ -55,9 +55,9 @@ if (error.code === "email_not_confirmed") {
 }
 ```
 
-Contiene el código registrado que coincidió, o el nombre registrado cuando lo que coincidió fue un nombre. Una coincidencia por mensaje, prefijo o patrón no tiene código, así que ahí `code` es `null`, y también en los errores desconocidos.
+Contiene el código registrado que coincidió, o el nombre registrado cuando lo que coincidió fue un nombre. Una entrada que [nombra un código](registries.md#nombrar-un-código-en-lugar-de-palabras) da ese código, sea cual sea la coincidencia. Una coincidencia por mensaje, prefijo o patrón sin un alias no tiene código, así que ahí `code` es `null`, y también en los errores desconocidos.
 
-Cuando el mismo fallo puede llegar por más de un camino, ramifica según `messageKey`. El caso clásico es un chunk de code splitting desactualizado. Webpack lo informa por nombre, así que `code` es `"ChunkLoadError"`. Un navegador informa un `import()` fallido solo en su mensaje, así que `code` es `null`. Ambos se resuelven a `messageKey: "error.browser.moduleLoadFailed"`.
+Cuando el mismo fallo puede llegar por más de un camino, da a cada camino una entrada que nombre un mismo código y ramifica según él. Para una entrada de un preset integrado, que nunca nombra un código, ramifica según `messageKey`. El caso clásico es un chunk de code splitting desactualizado. Webpack lo informa por nombre, así que `code` es `"ChunkLoadError"`. Un navegador informa un `import()` fallido solo en su mensaje, así que `code` es `null`. Ambos se resuelven a `messageKey: "error.browser.moduleLoadFailed"`.
 
 ### `messageKey`
 

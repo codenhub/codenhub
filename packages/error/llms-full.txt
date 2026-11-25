@@ -414,9 +414,9 @@ if (error.code === "email_not_confirmed") {
 }
 ```
 
-It holds the registered code that matched, or the registered name when a name matched instead. A message, prefix, or pattern match has no code, so `code` is `null` there, and also for unknown errors.
+It holds the registered code that matched, or the registered name when a name matched instead. A mapping that [names a code](docs/registries.md#naming-a-code-instead-of-words) gives that code, however it matched. A message, prefix, or pattern match without one has no code, so `code` is `null` there, and also for unknown errors.
 
-When the same failure can arrive by more than one route, branch on `messageKey` instead. A stale code-split chunk is the classic case. Webpack reports it by name, so `code` is `"ChunkLoadError"`. A browser reports a failed `import()` only in its message, so `code` is `null`. Both resolve to `messageKey: "error.browser.moduleLoadFailed"`.
+When the same failure can arrive by more than one route, give each route a mapping that names one code, and branch on that. For a built-in preset mapping, which never names a code, branch on `messageKey` instead. A stale code-split chunk is the classic case. Webpack reports it by name, so `code` is `"ChunkLoadError"`. A browser reports a failed `import()` only in its message, so `code` is `null`. Both resolve to `messageKey: "error.browser.moduleLoadFailed"`.
 
 ### `messageKey`
 
@@ -587,6 +587,26 @@ registry.codes.add("E_RATE_LIMIT", {
 
 Entries are checked and copied when you add them. An empty `message`, or a field of the wrong type, throws `TypeError` right there, at startup, instead of later in the middle of handling some other error.
 
+### Naming a code instead of words
+
+An entry can name a registered code instead of carrying words of its own, an `ErrorCodeAlias`. A desktop app's file layer recognizes that the operating system refused a write; the screen that shows the failure decides what to say about it:
+
+```ts
+registry.codes.add("files.permissionDenied", {
+  message: "You don't have permission to change this folder. Choose another folder, or allow access, then try again.",
+  messageKey: "error.files.permissionDenied",
+});
+
+registry.names.add("NotAllowedError", { code: "files.permissionDenied" });
+registry.patterns.add(/\(os error 5\)$/, { code: "files.permissionDenied" });
+```
+
+A match on an alias takes the code it names, and that code's `message`, `messageKey`, `source`, and `isRetryable`. Its `type` is still the one the match earns: `"heuristic"` for the pattern, `"known"` for the name. So the browser's `NotAllowedError` and a Rust `Access is denied. (os error 5)` both reach the screen as `code: "files.permissionDenied"`, and a branch on that code covers both.
+
+- An alias holds only `code`. A `messageKey`, `source`, or `isRetryable` beside it throws `TypeError`, since it would never be used. An entry with a `message` is ordinary feedback, and a `code` beside it is ignored, so a row read from a table that carries its own code still registers as it did before aliases existed.
+- The code is looked up when an error is created, not when the alias is added, so aliases and the words they name can come from different registries, merged in any order.
+- An alias whose code is not registered, or names another alias, matches nothing. Matching moves on as if it were not there: to the next rule for that error, and then to the errors wrapped inside it. An alias never shows raw text.
+
 ## The five buckets
 
 A registry has five buckets, one for each way a failure can be recognized:
@@ -691,7 +711,7 @@ export const projectErrors = freezeRegistry(registry);
 
 A frozen registry works anywhere a registry is only read: as the `registry` option, in `merge`, and in the list you pass to `createErrorRegistry`. It does not work in `setErrorRegistry`, which needs one it can add to.
 
-Those read-only places also accept an object you write yourself, as long as it has the same shape as a `ReadonlyErrorRegistry`: `get` and `values` on `codes`, `names`, and `messages`, and `values` on `prefixes` and `patterns`. That is how you would back a registry with something other than memory. Your object's answers are trusted less than the built-in buckets' are: a lookup that returns anything other than `undefined` or feedback with a non-empty `message` makes `createAppError` throw `TypeError`, since the alternative is an `AppError` with nothing to say. A lookup that throws is not caught either.
+Those read-only places also accept an object you write yourself, as long as it has the same shape as a `ReadonlyErrorRegistry`: `get` and `values` on `codes`, `names`, and `messages`, and `values` on `prefixes` and `patterns`. That is how you would back a registry with something other than memory. Your object's answers are trusted less than the built-in buckets' are: a lookup that returns anything other than `undefined`, an alias, or feedback with a non-empty `message` makes `createAppError` throw `TypeError`, since the alternative is an `AppError` with nothing to say. An alias your object returns works as a built-in one does: it takes the words of the code it names from your object's `codes`, and matches nothing when that code is missing or is itself an alias. A lookup that throws is not caught either.
 
 Everything a bucket returns is frozen too. `values()` returns the same frozen list until the bucket changes, and its entries, feedback objects, and regular expressions are all frozen. Spread one into a new object when you need a copy you can change, and copy a pattern with `new RegExp(pattern.source, pattern.flags)`.
 
@@ -712,6 +732,8 @@ The registry types are exported for code that builds or passes registries around
 | Type                                                      | Use it for                                                         |
 | --------------------------------------------------------- | ------------------------------------------------------------------ |
 | `ErrorFeedback`                                           | The feedback object of one entry, as in a `satisfies` check.       |
+| `ErrorCodeAlias`                                          | An entry that names a code instead of carrying words.              |
+| `ErrorMapping`                                            | Either of the two: what `add` accepts and `get` returns.           |
 | `ErrorRegistry`                                           | A registry you can change, from `createErrorRegistry`.             |
 | `ReadonlyErrorRegistry`                                   | A frozen snapshot, from `freezeRegistry`, and every preset.        |
 | `ErrorRegistryBucket`                                     | The `codes`, `names`, and `messages` buckets.                      |
