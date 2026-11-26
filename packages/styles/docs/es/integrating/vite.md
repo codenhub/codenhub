@@ -58,7 +58,7 @@ Se recortan la hoja de estilos completa y las estéticas. Las demás hojas de es
 
 Así que, para publicar menos, importa la hoja de estilos completa en lugar de `/components`. Para la página de un botón de arriba, la hoja de estilos recortada ocupa alrededor de una quinta parte de los 186 KB que `/components` carga entera. La hoja de estilos recortada se genera a partir de la completa, no de `/native`, así que no incluye los mapeos sin clases; una página que depende de ellos importa `/native`, que se carga entera.
 
-El import se recorta dondequiera que Vite lo resuelva: un `import` de JavaScript, un `@import` de CSS, un archivo CSS que otro archivo CSS importa, un `@use` o un `@import` de Sass, Lightning CSS como transformador de CSS de Vite, y las consultas `?inline`, `?url` y `?raw` de Vite.
+El import se recorta dondequiera que Vite lo resuelva: un `import` de JavaScript, un `@import` de CSS, un archivo CSS que otro archivo CSS importa, un `@use` o un `@import` de Sass, Lightning CSS como transformador de CSS de Vite, y las consultas `?inline`, `?url` y `?raw` de Vite. Una URL `pkg:` de Sass, como en `@use "pkg:@codenhub/styles"`, es la excepción: Sass la resuelve sin preguntar a Vite, así que se publica la hoja de estilos entera. Escribe `@use "@codenhub/styles"` en su lugar.
 
 La hoja de estilos recortada contiene lo que escribe [`chs build`](./without-a-bundler.md#opciones): el tema y sus tokens, el reset, las reglas base de las que depende cada componente, las cuatro clases que se conservan las nombre o no un archivo (`.dark`, `.theme-dark`, `.theme-light` y `.disabled`), y cada clase de StyleKit que usan tus archivos. Siempre va minificada. Una estética que importas se recorta igual, a sus reglas para las clases que usan tus archivos; el import ya dice qué estéticas quieres, así que no hay nada que configurar.
 
@@ -137,7 +137,7 @@ Cada mensaje que imprime el plugin empieza por `@codenhub/styles/vite:`, y un fa
 - **`cannot write to "<path>": <reason> (<code>); fix that, or set cacheDir to a folder you can write to`.** El plugin no pudo escribir la hoja de estilos recortada en la carpeta de caché de Vite. `<reason>` y `<code>` son los de Node.js; `EACCES` o `EPERM` significa que no puedes escribir ahí, y `ENOSPC` que el disco está lleno.
 - **`a file changed before the plugin read the project; restart Vite`.** Reinicia Vite.
 
-Mientras corre el servidor de desarrollo, un error de un cambio, como una hoja de estilos que no puede escribir, se muestra en la página como Vite muestra sus propios errores. La página conserva la última hoja de estilos escrita, y el siguiente cambio que guardes vuelve a intentar la escritura.
+Mientras corre el servidor de desarrollo, un error de un cambio, como una hoja de estilos que no puede escribir, se muestra en la página como Vite muestra sus propios errores, y en la terminal. La página conserva la última hoja de estilos escrita, y el siguiente cambio que guardes vuelve a intentar la escritura.
 
 ## Comprobar que funciona
 

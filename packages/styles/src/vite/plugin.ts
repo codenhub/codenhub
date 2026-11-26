@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 
-import type { AliasOptions, Plugin, ViteDevServer } from "vite";
+import type { AliasOptions, Logger, Plugin, ViteDevServer } from "vite";
 
 import {
   PURGE_SOURCE,
@@ -29,9 +29,10 @@ export interface ViteStylesOptions {
 
 const PACKAGE = "@codenhub/styles";
 /* Vite 6 and newer call `hotUpdate` once per environment for one change, so
-   the first call's result is kept for the others. A change has as many calls
-   as there are environments, and a few changes can overlap. */
-const RECENT_CHANGES = 32;
+   the first call's result is kept until every environment has had it. A call
+   that never comes, as when another plugin's hook throws before this one's,
+   leaves its result kept this long. */
+const CHANGE_KEPT_MS = 60_000;
 // `(` starts every extglob, as `@codenhub/scan` reads them.
 const GLOB_CHARACTERS = /[*?[\]{}(]/;
 // Vite's test for a module it processes as CSS, which matches a Vue or Svelte style block by its `lang.css` query too.
@@ -64,10 +65,14 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
   // Vite's root, as Vite names it and as the system resolves it.
   let root = { vite: "", real: "" };
   let isServe = false;
+  let logger: Logger | undefined;
   // `vite preview` serves a finished build, so the plugin reads and writes nothing for it.
   let isPreview = false;
   let trimmer: Trimmer | undefined;
-  const recent = new Map<string, Promise<string[]>>();
+  // Each change still in flight: its result, the environments yet to call for it, and when it started.
+  const recent = new Map<string, { pending: Promise<string[]>; left: number; at: number }>();
+  // How many times a change reaches `hotUpdate` or `handleHotUpdate`: once per environment, and once on Vite 5.
+  let environmentCount = 1;
   /* Whether a change rewrote a trimmed file since the build before, and so
      whether this build does. A change made during a build counts for the next. */
   const rewritten = { sinceBuild: false, forBuild: false };
@@ -81,14 +86,44 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
     return isInside(root.vite, resolved) ? path.join(root.real, path.relative(root.vite, resolved)) : resolved;
   };
   const changeOnce = (key: string, file: string, event: FileEvent): Promise<string[]> => {
-    const pending = recent.get(key) ?? started().change(toScanPath(file), event);
+    const now = Date.now();
 
-    recent.set(key, pending);
-    if (recent.size > RECENT_CHANGES) {
-      recent.delete(recent.keys().next().value as string);
+    // Oldest first, as a Map keeps them.
+    for (const [kept, { at }] of recent) {
+      if (now - at <= CHANGE_KEPT_MS) {
+        break;
+      }
+      recent.delete(kept);
     }
 
-    return pending;
+    const change = recent.get(key) ?? {
+      pending: changeInServer(file, event),
+      left: environmentCount,
+      at: now,
+    };
+
+    change.left -= 1;
+    if (change.left > 0) {
+      recent.set(key, change);
+    } else {
+      recent.delete(key);
+    }
+
+    return change.pending;
+  };
+  /* A change the dev server reports. Vite shows a hook's error only on the
+     page, so with no page open it would go unseen; it is shown in the
+     terminal too, once however many environments call for the change. */
+  const changeInServer = async (file: string, event: FileEvent): Promise<string[]> => {
+    try {
+      return await started().change(toScanPath(file), event);
+    } catch (error) {
+      logger?.error(error instanceof Error ? error.message : String(error), {
+        timestamp: true,
+        error: error instanceof Error ? error : undefined,
+      });
+      throw error;
+    }
   };
   const started = (): Trimmer => {
     if (trimmer === undefined) {
@@ -170,6 +205,7 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
       ];
 
       root = { vite: path.resolve(config.root), real: fs.realpathSync.native(config.root) };
+      logger = config.logger;
       isServe = config.command === "serve";
       hasBuilt = false;
       recent.clear();
@@ -178,6 +214,7 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
         droppable,
         scan: new ProjectScan({
           root: root.real,
+          viteRoot: root.vite,
           skip: [...outDirs.map(({ outDir }) => path.resolve(config.root, outDir)), config.cacheDir, cacheDir].map(
             realPathOrSelf,
           ),
@@ -188,9 +225,12 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
       });
     },
     configureServer(server) {
+      // The types are the newest Vite's, which always has environments.
+      environmentCount = Object.keys((server as Partial<ViteDevServer>).environments ?? {}).length || 1;
+
       const outside = content
-        .map((entry) => path.resolve(root.real, globBase(entry)))
-        .filter((base) => !isInside(root.real, base) && base !== root.real);
+        .map((entry) => path.resolve(root.vite, globBase(entry)))
+        .filter((base) => !isInside(root.vite, base) && base !== root.vite);
 
       // Only one that exists: a `.gitignore` created above the root is read at the next start.
       outside.push(...ignoreFilesAbove(root.real).filter((file) => fs.existsSync(file)));
@@ -198,14 +238,10 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
         server.watcher.add(outside);
       }
       // Vite 6 and newer call `hotUpdate` for a file created or deleted too; Vite 5 has no hook for either.
-      // The types are the newest Vite's, which always has environments.
       if ((server as Partial<ViteDevServer>).environments === undefined) {
         server.watcher
-          .on("add", (file: string) => void reloadTrimmed(server, () => started().change(toScanPath(file), "create")))
-          .on(
-            "unlink",
-            (file: string) => void reloadTrimmed(server, () => started().change(toScanPath(file), "delete")),
-          );
+          .on("add", (file: string) => void reloadTrimmed(server, () => changeInServer(file, "create")))
+          .on("unlink", (file: string) => void reloadTrimmed(server, () => changeInServer(file, "delete")));
       }
     },
     // Vite 6 and newer. After other plugins, which may pick the modules a change updates and would drop the stylesheets.
@@ -416,16 +452,26 @@ function keyOf(root: string, content: readonly string[]): string {
     .slice(0, 16);
 }
 
-// A folder as the system resolves it, as the scan walks the root, or as given while nothing is there yet.
+/* A folder as the system resolves it, as the scan walks the root. One not
+   there yet is resolved through the nearest folder above it that is, so an
+   output folder a build creates later is still left out when the root's
+   spelling differs from its real path: a link, a `subst` drive, an 8.3 short
+   name, or a Windows path in another case. */
 function realPathOrSelf(folder: string): string {
-  try {
-    return fs.realpathSync.native(folder);
-  } catch (error) {
-    if ((error as { code?: string }).code !== "ENOENT") {
-      throw error;
-    }
+  const missing: string[] = [];
 
-    return path.resolve(folder);
+  for (let dir = path.resolve(folder); ; dir = path.dirname(dir)) {
+    try {
+      return path.join(fs.realpathSync.native(dir), ...missing);
+    } catch (error) {
+      if ((error as { code?: string }).code !== "ENOENT") {
+        throw error;
+      }
+      if (path.dirname(dir) === dir) {
+        return path.resolve(folder);
+      }
+      missing.unshift(path.basename(dir));
+    }
   }
 }
 

@@ -11,6 +11,8 @@ import { ignoreFilesAbove, isInside, isWalked, unreadable, walkProject } from ".
 export interface ScanOptions {
   // The Vite root, as the system resolves it.
   root: string;
+  // The Vite root as Vite names it, which a relative `content` entry is read from, as Vite reads its other paths.
+  viteRoot: string;
   // Folders under the root never read: build output and caches.
   skip: readonly string[];
   // The `content` option: files read whatever the walk leaves out.
@@ -52,7 +54,7 @@ export class ProjectScan {
 
   // Whether the project names a different set of classes than before. What was read stays until every file is read again.
   async scanAll(): Promise<boolean> {
-    const named = findNamed(this.#options.content, this.#options.root);
+    const named = findNamed(this.#options);
     const byFile = new Map<string, ReadonlySet<string>>();
 
     for (const file of named) {
@@ -123,9 +125,14 @@ export class ProjectScan {
 
   // Whether a `content` entry names the file created, resolved again since a glob may now match it.
   #isNamedNow(file: string): boolean {
-    const { content, root } = this.#options;
+    const { content, root, viteRoot } = this.#options;
 
-    return content.length > 0 && findFiles(content, { cwd: root, skipNodeModules: true }).includes(file);
+    return (
+      content.length > 0 &&
+      findFiles(content, { cwd: viteRoot, skipNodeModules: true }).some(
+        (found) => toWalkedPath({ root, viteRoot }, found) === file,
+      )
+    );
   }
 
   // Whether giving the file these classes, or none once it is gone, adds a class no other file names or removes the last file naming one.
@@ -175,14 +182,19 @@ export class ProjectScan {
 /* The files the `content` entries name, each resolved from the root with the
    command's rules: a wildcard stays out of `node_modules` unless the entry
    names it, and an entry that names no file fails, naming it. */
-function findNamed(entries: readonly string[], root: string): Set<string> {
+function findNamed({ content, root, viteRoot }: ScanOptions): Set<string> {
   const files = new Set<string>();
 
-  for (const entry of entries) {
+  for (const entry of content) {
     let matched: string[];
 
     try {
-      matched = findFiles([entry], { cwd: root, failOnUnmatched: true, failOnUnreadable: true, skipNodeModules: true });
+      matched = findFiles([entry], {
+        cwd: viteRoot,
+        failOnUnmatched: true,
+        failOnUnreadable: true,
+        skipNodeModules: true,
+      });
     } catch (error) {
       if (!(error instanceof UnmatchedEntryError)) {
         throw cannotRead({ file: (error as { path?: string }).path ?? entry, error, remedy: "change content" });
@@ -190,16 +202,23 @@ function findNamed(entries: readonly string[], root: string): Set<string> {
       // The scanner's advice for no cause it can name is to run from the project root, which a plugin does not choose.
       throw pluginError(
         error.reason === undefined
-          ? `content "${entry}" matches no file in ${root}; check the path, which is read from the Vite root.`
+          ? `content "${entry}" matches no file in ${viteRoot}; check the path, which is read from the Vite root.`
           : `content ${error.message}`,
       );
     }
     for (const file of matched) {
-      files.add(file);
+      files.add(toWalkedPath({ root, viteRoot }, file));
     }
   }
 
   return files;
+}
+
+// A file found from the root as Vite names it, as the walk and the plugin name it: under the real root when it is inside.
+function toWalkedPath({ root, viteRoot }: Pick<ScanOptions, "root" | "viteRoot">, file: string): string {
+  const resolved = path.resolve(file);
+
+  return isInside(viteRoot, resolved) ? path.join(root, path.relative(viteRoot, resolved)) : resolved;
 }
 
 // A file a `content` entry names, read as the command reads it, or nothing when it was deleted since.
