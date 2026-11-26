@@ -169,6 +169,20 @@ Creates a verifier whose payload type is given rather than inferred from a `clai
 
 **Throws** — TypeError for the invalid options the overload above lists.
 
+```ts
+export declare function createVerifier(options: VerifierOptions<StandardSchemaV1 | undefined>): Verifier<JwtPayload>;
+```
+
+The overload above with its default payload. A call never reaches it, since the one above matches first; it is last so that `ReturnType<typeof createVerifier>`, which reads the last overload with its type parameters at their constraints, is `Verifier<JwtPayload>` rather than a payload of registered claims alone.
+
+**Parameters**
+
+- `options` — Where keys come from and which claims to require; see [`VerifierOptions`](#verifieroptions).
+
+**Returns** — A [`Verifier`](#verifier) whose payload is typed [`JwtPayload`](#jwtpayload).
+
+**Throws** — TypeError for the invalid options the first overload lists.
+
 ### decodeBase64Url
 
 ```ts

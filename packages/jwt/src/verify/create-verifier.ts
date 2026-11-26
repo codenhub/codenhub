@@ -113,6 +113,16 @@ export function createVerifier<
     readonly [K in keyof TPayload & keyof JwtRegisteredClaims]?: JwtRegisteredClaims[K];
   } = JwtPayload,
 >(options: VerifierOptions<StandardSchemaV1 | undefined>): Verifier<TPayload>;
+/**
+ * The overload above with its default payload. A call never reaches it, since the one above matches first;
+ * it is last so that `ReturnType<typeof createVerifier>`, which reads the last overload with its type
+ * parameters at their constraints, is `Verifier<JwtPayload>` rather than a payload of registered claims alone.
+ *
+ * @param options - Where keys come from and which claims to require; see {@link VerifierOptions}.
+ * @returns A {@link Verifier} whose payload is typed {@link JwtPayload}.
+ * @throws TypeError for the invalid options the first overload lists.
+ */
+export function createVerifier(options: VerifierOptions<StandardSchemaV1 | undefined>): Verifier<JwtPayload>;
 export function createVerifier(options: VerifierOptions<StandardSchemaV1 | undefined>): Verifier<JwtPayload> {
   const resolved = resolveOptions(options);
   const report = reporterOf(resolved.onKeySetError);
