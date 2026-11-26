@@ -1,6 +1,6 @@
 {
   "name": "@codenhub/error",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": false,
   "description": "Typed error normalization, result helpers, and opt-in registry presets for TypeScript apps.",
   "keywords": [
