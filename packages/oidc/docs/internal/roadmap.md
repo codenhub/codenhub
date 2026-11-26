@@ -16,7 +16,6 @@ Many items below change a contract: a record the store persists, a client record
 
 The SSO application is the package's first real consumer, and a review of its scope against this package found what it needs and the package lacks. The order follows the SSO application's own roadmap.
 
-- **Release what `main` already holds.** The fixes after 0.0.1, the 60-second client clock tolerance (decision 44) and the expired `id_token_hint` at logout (decision 45), are not on npm. The SSO application installs from npm, so it needs a release that carries them.
 - **Run the OpenID conformance plans.** Every change the review found is built, and scope.md decisions 47 to 56 record them; the record shapes are settled before the SSO application writes its `OidcStore` adapters. What its data API needs is built too: `authenticate`, `accessTokenClaims` and resource indicators on both sides, in decisions 57 to 59, its privacy asks for pairwise subjects, in decision 60, and its audit for the refused request in `onDiagnostic`, in decision 61. It builds on `@codenhub/jwt` 0.1.0. What is left before 0.1 is the conformance run below and the release ("Release" below).
 
 ## Planned
@@ -29,6 +28,7 @@ The target is that the provider passes the Basic OP and Config OP plans; no plan
 
 ### Release
 
+- **No release before 0.1.0.** Everything after 0.0.1 reaches npm in 0.1.0, including the 60-second client clock tolerance (decision 44) and the expired `id_token_hint` at logout (decision 45), which the SSO application installs from npm. A 0.0.2 now would carry every breaking change since 0.0.1 without the conformance run behind it, and the SSO application would adopt that shape. Revisit only if the SSO application is blocked on a fix before the run.
 - **What the SSO application finds next.** 0.0.1 aimed to be the last release before a breaking change (`docs/specs/packages-lifecycle.md`, "Versioning"). What the first look at the consumer found is built, as scope.md decisions 47 to 61 record; a change building it shows the public API needs ships in the release that makes it, as a breaking change if it is one. 0.1.0 is the judgment that the SSO application builds on the package without such changes.
 - **A changelog from 0.1.0**, opened by `hub release --cut` with the release, per `docs/specs/packages-changelog.md`. An adapter or app written for 0.0.1 breaks in ways the page must mark, each with what to do: `engines.node` is `>=26`; the `@codenhub/jwt` peer is `^0.1.0`; `secretHash` is `secretHashes` (decision 48); `client_secret_jwt` takes `keys` rather than `key` (decision 82); `CodeRecord.maxAgeRequested` is gone (decision 71); saves must reject an existing key and `findClient` matches byte for byte (decisions 29 and 68); a client assertion's `aud` is the issuer alone (decision 66); `createProvider` refuses unknown options and a non-canonical issuer or endpoint (decisions 95 and 96); `refresh` takes `previous` rather than `subject` (decision 92); `callback` results carry `parameters`, and `ProviderDiagnostic` carries `grantId` and `subject` and reports `token_revoked` with status 200 (decisions 78 and 89); a signed userinfo response without `iss` or `aud` is refused (decision 97).
 
@@ -38,7 +38,9 @@ The target is that the provider passes the Basic OP and Config OP plans; no plan
 
 ## Later / Possible
 
-None at present. Pairwise subject identifiers, the last item here, shipped as the `subjectTypes` option (scope.md decision 60).
+- **A client assertion without `client_id`** ([#615](https://github.com/codenhub/codenhub/issues/615)). It only accepts requests the provider refuses today, so it is not breaking and comes after 0.1.0. It revises scope.md decision 15, which waits for the maintainer's approval of the change itself.
+
+Pairwise subject identifiers shipped as the `subjectTypes` option (scope.md decision 60).
 
 ## Not Planned
 
