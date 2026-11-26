@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-18
+last_updated: 2026-11-25
 scope: `@codenhub/styles` package direction.
 ---
 
@@ -22,6 +22,12 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ## Planned
 
+### Generator
+
+A build step that writes the rules a project's files use: layout, spacing, sizing, display, and type utilities with Tailwind's names and values for a project that does not run Tailwind, then the package's own classes in place of trimming `dist/purge/`. Delivered through the Vite plugin and `chs build`, with no new option. [Generator](./generator.md) records the decisions and the questions still open; each is settled there before the code that depends on it.
+
+It waits on those open questions, so the next minor release, which carries the package's own checkbox marks and the Vite plugin, ships without it. This is an exception to "Versioning" in `docs/specs/packages-lifecycle.md`, recorded with its reason in `docs/specs/packages-exceptions.md`; it ends when the open questions are settled, and the release after that carries the generator.
+
 ### Aesthetics
 
 The aesthetics below carry no release commitment. Each needs its solo class, compiled and `/tw` exports, a registry entry, public documentation, playground coverage, and cross-browser tests when it lands, and clears every token the other aesthetics declare ([Adding an aesthetic](./model.md#adding-an-aesthetic)).
@@ -36,7 +42,6 @@ Aesthetics compose the foundation rather than justify new tokens. Exact appearan
 
 Ideas kept for later, not planned: no release is prepared toward them, so they are not deferred features in the sense of `docs/specs/packages-lifecycle.md`. Each moves to Planned only by a decision that names the need it meets.
 
-- **A build command that generates, not only trims.** `chs build` drops rules from a stylesheet compiled in advance and writes none. A generator would write rules for the project that runs it. Two things need one: layout, spacing, and type utilities for a project that does not run Tailwind, which today has the package's layout and content helpers and nothing finer, and a look named once in a project file. Both are recorded as rejected, in [No Tailwind utilities, ten variants](./cli.md#no-tailwind-utilities-ten-variants) and under "A configuration file for look" in [Not Planned](#not-planned), and both decisions stand until this one is made. Neither weighs a command that writes: the first rejects utilities as a fixed subset compiled in advance, wrong for some project whatever it holds, where a generator writes only what the content names; the second counts a build step that writes this package's rules for each project as a cost, because the command has none. The other cost of a configuration file, the same markup rendering differently from one project to the next, stands either way. A decision to build it starts from this boundary: a closed set of utilities driven by the package's tokens, named as Tailwind names them where the two overlap, under the fixed list of variants. Arbitrary values and open stacking of variants stay out, since past them the command is a second Tailwind. It depends on [A build the package owns](#a-build-the-package-owns-with-tailwind-as-an-adapter).
 - **A compiled entrypoint that states a shared body once.** A step after [A build the package owns](#a-build-the-package-owns-with-tailwind-as-an-adapter), measured and found not to pay for itself. Today a body several classes apply is written out under each of them: in `dist/index.css`, 53 bodies repeat. Estimated on the 0.9.0 output without regard to rule order, so as a ceiling, emitting each once under the list of selectors that share it takes `dist/index.css` from 194.1 KB to 125.3 and from 561 rules to 306, and `dist/native.css` from 289.8 KB to 188.4. Measured on the build the package owns, with a prototype of the step:
   - **Merging whole rules** without changing any cascade result: `dist/index.css` 196.6 → 183.9 KB, 545 → 410 rules, gzip 17.6 → 17.4, Brotli 13.0 → 12.9; `dist/native.css` 292.3 → 275.9 KB, Brotli 13.7 → 13.8.
   - **Also moving every declaration nothing contests:** `dist/index.css` 196.6 → 154.6 KB, Brotli 13.0 → 13.2; `dist/native.css` 292.3 → 232.6 KB, Brotli 13.7 → 14.3.
@@ -72,7 +77,7 @@ Rejected: a source of plain CSS, with a shared body written once under a list of
 
 The reason is that the dependence that costs is on Tailwind's compiler, not on its utilities. Most of what the source applies is the package's own (`box`, `surface`, `text-control`), and the Tailwind utilities applied are single declarations such as `flex`, `items-center`, and `py-2`. What the package works around is how the compiler behaves: a referenced file that strips the theme's tokens ([Which files import the theme](./model.md#which-files-import-the-theme)), a utility that repeats its body once for each route that reaches it ([One route to each utility](./model.md#one-route-to-each-utility)), and a scan that ships a word of prose as a class, which a source Tailwind compiles has to hold back with `@source not` lines. The peer range, `>=4.3.2 <5`, also means the next Tailwind major is a port of the whole source; with an adapter it is a port of the adapter.
 
-It is also what a larger aim needs. The package is meant to give a project most of what an interface needs and to make building one faster, and [Possible](#possible) records the step that would take. A package compiled by another project's compiler cannot decide what its own build does.
+It is also what a larger aim needs. The package is meant to give a project most of what an interface needs and to make building one faster, and the [Generator](#generator) under Planned is the step that takes it. A package compiled by another project's compiler cannot decide what its own build does.
 
 Rejected:
 
@@ -103,7 +108,7 @@ Documentation status remains `active`: supported for normal consumer use, not fr
 ## Not Planned
 
 - **Removing `.theme-light` and `.theme-dark`**: `@codenhub/theme` writes a `theme-<name>` class by default, and the toaster's standalone fallback reads it, so it is not a second name nothing uses.
-- **A configuration file for look**: a project file that would give a plain class such as `.btn` a default look, such as a `.lg` soft button under `.neobrutalism`. The component, intent, presentation, elevation, corner, size, and modifier classes are `/tw` utilities, so a project names a look once in a class of its own, `@utility btn-save { @apply btn primary soft sm; }`, as [Presets](../usage/presets.md) describes. What the file would add is a default for the plain class itself, and that is what it costs: the same markup would render differently from one project to the next, and it needs a build step that writes this package's rules for each project, which `chs build` does not do, since it only trims a stylesheet the package compiled. The second cost rests on the command only trimming, which [Possible](#possible) keeps open; this entry is judged again if a generating command is decided.
+- **A configuration file for look**: a project file that would give a plain class such as `.btn` a default look, such as a `.lg` soft button under `.neobrutalism`. The component, intent, presentation, elevation, corner, size, and modifier classes are `/tw` utilities, so a project names a look once in a class of its own, `@utility btn-save { @apply btn primary soft sm; }`, as [Presets](../usage/presets.md) describes. What the file would add is a default for the plain class itself, and that is what it costs: the same markup would render differently from one project to the next, and it needs a build step that writes this package's rules for each project, which `chs build` does not do, since it only trims a stylesheet the package compiled. A [generator](./generator.md) is now planned, so the second cost no longer holds on its own; the entry stands on the first, since the generator writes only what the content names and never a default for a plain class.
 - **Neumorphism**: Its defining trait is a borderless control distinguished only by low-contrast shadow, which fails WCAG 1.4.11 non-text contrast. Not shipped unless a variant is found that keeps the look and passes.
 - **Bundled fonts**: `.pixel` reads `--font-pixel` and falls back to monospace. The package ships no font binary and stays free of network side effects. The playground supplies Pixelify Sans from a CDN so the aesthetic can be reviewed against a real bitmap face; that is preview scaffolding and never ships. A substitute needs distinct uppercase and lowercase glyphs and real 400-700 weights, since components set `font-weight` 500 to 700 and synthetic bold smears a bitmap glyph. Silkscreen fails the first requirement: it draws the same glyph for both cases, which makes every heading read as shouting and hides real casing mistakes.
 - **JS/TS Helpers**: Runtime DOM helpers such as a typed `createElement` wrapper are not planned. The package ships no runtime JavaScript. The one piece of JavaScript it ships is the `chs` build command, which runs at build time on the developer's machine, never in the browser: it trims this package's compiled stylesheet to a project's templates for a project that does not run Tailwind. Its decisions and limits are in [Build command](./cli.md).

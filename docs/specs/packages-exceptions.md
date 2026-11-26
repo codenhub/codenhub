@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-22
+last_updated: 2026-11-25
 scope: Approved exceptions for workspace packages.
 ---
 
@@ -36,6 +36,13 @@ An exception to a rule that `hub check` enforces MUST also declare a `Checks byp
 - **Why acceptable:** What the package renders is CSS alone, and the asserted contract is limited to token resolution, computed composition, state and accessibility behavior, material geometry, and related DOM behavior. The browser suite asserts those contracts directly in Chromium, Firefox, and WebKit, including glass and reduced-transparency behavior. These assertions do not detect every final-paint defect: clipping or compositing integration, font rendering, antialiasing, and interactions among properties that each compute correctly can still be wrong on screen. Screenshot baselines would add substantial platform variance without making those failures reliably diagnostic, so the current targeted assertions are the more effective gate for this package.
 - **Temporary or permanent:** Permanent while the package ships no JavaScript that runs in the browser and this computed-style, cross-browser strategy remains effective.
 - **Reevaluate when:** The package ships JavaScript that runs in the browser; the browser suite stops covering Chromium, Firefox, and WebKit or its glass and reduced-transparency branches; the public contract adds a visual outcome that computed styles and DOM behavior cannot assert; or a confirmed final-paint, clipping, compositing, font-rendering, antialiasing, or correct-property-interaction regression passes the suite. Reevaluation means choosing an effective test for the demonstrated gap and updating this exception; it does not presume screenshot baselines.
+
+## `@codenhub/styles`: the generator waits on its design
+
+- **Rules bypassed:** `docs/specs/packages-lifecycle.md`, "Versioning" (a feature on the package's roadmap ships in the release being prepared; deferring it because it needs its own design is rejected).
+- **Where it applies:** the Generator item under Planned in `packages/styles/docs/internal/roadmap.md`, for the next minor release of `@codenhub/styles`.
+- **Why acceptable:** That release carries the package's own checkbox marks and the Vite plugin, both additive and useful on their own. The generator's design still has open questions, listed in `packages/styles/docs/internal/generator.md`, and holding the release for them would delay both for an unknown time. Taken by the maintainer on 2026-11-25.
+- **Temporary or permanent:** Temporary. Remove this entry once that release has shipped and the open questions in `generator.md` are settled, whichever comes later; the next release after both carries the generator.
 
 ## `@codenhub/skills`: CLI-only package
 
