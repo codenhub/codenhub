@@ -581,6 +581,11 @@ describe("createVerifier payload types", () => {
     expectTypeOf<VerifiedJwt<TenantClaims>["payload"]>().toEqualTypeOf<TenantClaims>();
   });
 
+  it("should give ReturnType of createVerifier the default payload, other claims included", () => {
+    // TypeScript's ReturnType reads the last overload, with its type parameters at their constraints.
+    expectTypeOf<ReturnType<typeof createVerifier>>().toEqualTypeOf<Verifier<JwtPayload>>();
+  });
+
   it("should refuse a type argument whose registered claims have the wrong type", () => {
     // @ts-expect-error exp is a number of seconds.
     expect(typeof createVerifier<{ exp: string }>({ keys: keySetOf(secretKey) })).toBe("function");
