@@ -125,8 +125,10 @@ describe("importPublicKey with a certificate", () => {
     expect(await jwkOf(certificate, "ES256")).toEqual(await jwkOf(EC_SPKI, "ES256"));
   });
 
-  it("should refuse a certificate for a key of another type than alg as invalid_key", async () => {
-    expect(issuesOf(await importPublicKey(EC_CERTIFICATE, { alg: "RS256" }))).toEqual([{ code: "invalid_key" }]);
+  it("should refuse a certificate for a key of another type than alg as unsupported_key", async () => {
+    expect(issuesOf(await importPublicKey(EC_CERTIFICATE, { alg: "RS256" }))).toEqual([
+      { code: "unsupported_key", path: ["kty"] },
+    ]);
   });
 
   it.each([

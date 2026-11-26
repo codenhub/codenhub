@@ -5,7 +5,7 @@ import vitestConfig from "../vitest.config";
 
 describe("package configuration", () => {
   it("should declare the supported Node.js baseline", () => {
-    expect(packageJson.engines?.node).toBe(">=24");
+    expect(packageJson.engines?.node).toBe(">=26");
   });
 
   it("should link the package page on codenhub.dev as its homepage", () => {

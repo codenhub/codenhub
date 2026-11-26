@@ -1,3 +1,5 @@
+import { runInNewContext } from "node:vm";
+
 import { beforeAll, describe, expect, it } from "vitest";
 
 import type { PrivateKey, PublicKey, SecretKey } from "../core/types";
@@ -408,3 +410,250 @@ const valueOrThrow = <T>(result: { ok: true; value: T } | { ok: false }): T => {
   }
   return result.value;
 };
+
+describe("sign values from another realm", () => {
+  const foreign = <T>(source: string): T => runInNewContext(source) as T;
+
+  it("should accept a payload, a header and nested containers created in another realm", async () => {
+    const payload = foreign<Record<string, unknown>>(
+      '({ sub: "user-1", aud: ["a", "b"], extra: { list: [1, { deep: true }] } })',
+    );
+    const header = foreign<SignHeader>('({ typ: "JWT", custom: { list: [null] } })');
+
+    const token = await sign({ payload, key: secretKey, header });
+
+    expect(headerTextOf(token)).toBe('{"alg":"HS256","typ":"JWT","custom":{"list":[null]}}');
+    expect(payloadTextOf(token)).toBe('{"sub":"user-1","aud":["a","b"],"extra":{"list":[1,{"deep":true}]}}');
+  });
+
+  it.each([
+    ["an Array subclass", "({ aud: new (class extends Array {})() })", "must hold only plain objects and arrays."],
+    [
+      "an array with a swapped prototype",
+      '({ aud: Object.setPrototypeOf(["a"], { toJSON: () => 5 }) })',
+      "must hold only plain objects and arrays.",
+    ],
+    [
+      "an object with a swapped prototype",
+      "({ claim: Object.setPrototypeOf({}, { toJSON: () => 5 }) })",
+      "must hold only plain objects and arrays.",
+    ],
+    ["an object with an own toJSON", "({ claim: { toJSON: () => 5 } })", "must not hold toJSON methods."],
+    [
+      "an array with an own toJSON",
+      '({ claim: Object.defineProperty(["a"], "toJSON", { value: () => 5 }) })',
+      "must not hold toJSON methods.",
+    ],
+  ])("should throw for %s from another realm", async (_, source, message) => {
+    await expect(sign({ payload: foreign<Record<string, unknown>>(source), key: secretKey })).rejects.toThrow(
+      `sign: input.payload ${message}`,
+    );
+  });
+
+  it.each([
+    ["Object.prototype", "({ claim: { a: 1 } })"],
+    ["Array.prototype", '({ claim: ["a"] })'],
+  ])("should throw when the other realm's %s has a polluting toJSON", async (prototype, source) => {
+    const payload = foreign<Record<string, unknown>>(`${prototype}.toJSON = () => 5; ${source}`);
+
+    await expect(sign({ payload, key: secretKey })).rejects.toThrow(
+      "sign: input.payload must not hold toJSON methods.",
+    );
+  });
+});
+
+describe("sign reads each value once", () => {
+  it("should sign the exp a Proxy showed the checks, not a later read", async () => {
+    let reads = 0;
+    const later = (value: unknown): unknown => {
+      reads += 1;
+      return reads > 1 ? Date.now() : value;
+    };
+    const payload = new Proxy(
+      { exp: 100 },
+      {
+        get: (target, name) => (name === "exp" ? later(target.exp) : Reflect.get(target, name)),
+        getOwnPropertyDescriptor: (target, name) => {
+          const descriptor = Reflect.getOwnPropertyDescriptor(target, name);
+          return name === "exp" && descriptor !== undefined ? { ...descriptor, value: later(target.exp) } : descriptor;
+        },
+      },
+    );
+
+    const token = await sign({ payload, key: secretKey });
+
+    expect(payloadTextOf(token)).toBe('{"exp":100}');
+    expect(reads).toBe(1);
+  });
+
+  it("should read each member's descriptor once", async () => {
+    const seen: string[] = [];
+    const trace = <T extends object>(target: T): T =>
+      new Proxy(target, {
+        getOwnPropertyDescriptor: (inner, name) => {
+          seen.push(String(name));
+          return Reflect.getOwnPropertyDescriptor(inner, name);
+        },
+      });
+
+    await sign({ payload: trace({ sub: "u", list: trace(["a"]) }), key: secretKey, header: trace({ typ: "JWT" }) });
+
+    expect(seen.toSorted()).toEqual(["0", "list", "sub", "typ"]);
+  });
+});
+
+describe("sign claim options", () => {
+  const now = (): number => 1_700_000_000_999;
+
+  it("should write iat, nbf and exp in whole seconds of now, after the payload's own claims", async () => {
+    const token = await sign({
+      payload: { sub: "u" },
+      key: secretKey,
+      issuedAt: true,
+      notBefore: 10,
+      expiresIn: 300,
+      now,
+    });
+
+    expect(payloadTextOf(token)).toBe('{"sub":"u","iat":1700000000,"nbf":1700000010,"exp":1700000300}');
+  });
+
+  it("should read the clock once, and not at all without a time option", async () => {
+    let calls = 0;
+    const counting = (): number => {
+      calls += 1;
+      return 1_700_000_000_000;
+    };
+
+    await sign({ payload: {}, key: secretKey, now: counting, jti: true });
+    await sign({ payload: {}, key: secretKey, issuedAt: true, expiresIn: 1, now: counting });
+
+    expect(calls).toBe(1);
+  });
+
+  it("should default the clock to Date.now", async () => {
+    const before = Math.floor(Date.now() / 1000);
+
+    const token = await sign({ payload: {}, key: secretKey, issuedAt: true });
+
+    const { iat } = JSON.parse(payloadTextOf(token)) as { iat: number };
+    expect(iat).toBeGreaterThanOrEqual(before);
+    expect(iat).toBeLessThanOrEqual(Math.floor(Date.now() / 1000));
+  });
+
+  it("should write a random UUID as jti", async () => {
+    const jtiOf = async (): Promise<string> =>
+      (JSON.parse(payloadTextOf(await sign({ payload: {}, key: secretKey, jti: true }))) as { jti: string }).jti;
+
+    const first = await jtiOf();
+
+    expect(first).toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+    expect(await jtiOf()).not.toBe(first);
+  });
+
+  it("should add nothing when issuedAt and jti are false", async () => {
+    expect(payloadTextOf(await sign({ payload: {}, key: secretKey, issuedAt: false, jti: false }))).toBe("{}");
+  });
+
+  it("should sign a token the verifier accepts", async () => {
+    const token = await sign({ payload: { sub: "u" }, key: secretKey, issuedAt: true, expiresIn: 60 });
+
+    const verified = await createVerifier({ keys: createKeySet([secretKey]), maxAge: 60 })(token);
+
+    expect(verified.ok).toBe(true);
+  });
+
+  it.each([
+    ["issuedAt", "iat", { issuedAt: true }],
+    ["notBefore", "nbf", { notBefore: 0 }],
+    ["expiresIn", "exp", { expiresIn: 60 }],
+    ["jti", "jti", { jti: true }],
+  ] as const)("should throw when %s and the payload both set %s", async (option, claim, options) => {
+    const payload = { [claim]: claim === "jti" ? "id-1" : 1 };
+
+    await expect(sign({ payload, key: secretKey, ...options, now })).rejects.toThrow(
+      new TypeError(`sign: input.${option} and input.payload.${claim} both set ${claim}; give one.`),
+    );
+  });
+
+  it.each(["notBefore", "expiresIn"])("should throw when %s is in milliseconds", async (option) => {
+    await expect(sign({ payload: {}, key: secretKey, [option]: 604_800_000, now })).rejects.toThrow(
+      new TypeError(`sign: input.${option} must be seconds, at most 315360000, ten years; it looks like milliseconds.`),
+    );
+  });
+
+  it.each(["notBefore", "expiresIn"])("should accept %s of 0 and of ten years", async (option) => {
+    await expect(sign({ payload: {}, key: secretKey, [option]: 0, now })).resolves.toMatch(/\./);
+    await expect(sign({ payload: {}, key: secretKey, [option]: 315_360_000, now })).resolves.toMatch(/\./);
+  });
+
+  it.each([
+    ["a fraction", 1.5],
+    ["negative", -1],
+    ["a string", "300"],
+    ["NaN", Number.NaN],
+  ])("should throw when expiresIn is %s", async (_, expiresIn) => {
+    await expect(sign({ payload: {}, key: secretKey, expiresIn: expiresIn as number, now })).rejects.toThrow(
+      new TypeError("sign: input.expiresIn must be a whole, non-negative number of seconds."),
+    );
+  });
+
+  it.each(["issuedAt", "jti"])("should throw when %s is not a boolean", async (option) => {
+    await expect(sign({ payload: {}, key: secretKey, [option]: 1 })).rejects.toThrow(
+      new TypeError(`sign: input.${option} must be a boolean.`),
+    );
+  });
+
+  it("should throw when now is not a function", async () => {
+    await expect(sign({ payload: {}, key: secretKey, now: 1 as never })).rejects.toThrow(
+      new TypeError("sign: input.now must be a function."),
+    );
+  });
+
+  it.each([
+    ["NaN", Number.NaN, "sign: input.now must return a finite number of milliseconds."],
+    ["a string", "0", "sign: input.now must return a finite number of milliseconds."],
+    ["negative", -1, "sign: input.now must return milliseconds since the Unix epoch, before the year 9990."],
+    [
+      "microseconds",
+      1_700_000_000_000_000,
+      "sign: input.now must return milliseconds since the Unix epoch, before the year 9990.",
+    ],
+  ])("should throw when now returns %s", async (_, time, message) => {
+    await expect(sign({ payload: {}, key: secretKey, issuedAt: true, now: () => time as number })).rejects.toThrow(
+      new TypeError(message),
+    );
+  });
+
+  it("should still refuse an unknown option", async () => {
+    await expect(sign({ payload: {}, key: secretKey, expiresAt: 1 } as never)).rejects.toThrow(
+      new TypeError("sign: input.expiresAt is not an option."),
+    );
+  });
+});
+
+describe("sign header types", () => {
+  // Each header below is a compile error that `pnpm typecheck` checks; at runtime each one still throws.
+  it("should refuse each refused member at compile time", async () => {
+    const refused: SignHeader[] = [
+      // @ts-expect-error crit is refused.
+      { crit: ["exp"] },
+      // @ts-expect-error b64 is refused.
+      { b64: false },
+      // @ts-expect-error jwk is refused; embedKey writes it.
+      { jwk: { kty: "EC" } },
+      // @ts-expect-error jku is refused.
+      { jku: "https://attacker.example/jwks" },
+      // @ts-expect-error x5u is refused.
+      { x5u: "https://attacker.example/cert" },
+      // @ts-expect-error x5c is refused.
+      { x5c: ["MII"] },
+    ];
+
+    await Promise.all(
+      refused.map((header) =>
+        expect(sign({ payload: {}, key: secretKey, header })).rejects.toThrow("is not supported."),
+      ),
+    );
+  });
+});

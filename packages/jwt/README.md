@@ -57,14 +57,14 @@ const token = await sign({
 const result = await createVerifier({ keys: createKeySet([publicKey]) })(token);
 ```
 
-Times in claims are seconds since the Unix epoch. `sign` adds no claim of its own. A verifier requires `exp` unless `maxAge` is set, and refuses a token that names an audience when you named none.
+Times in claims are seconds since the Unix epoch. `sign` adds only the claims you ask for, such as `iat` with `issuedAt: true` and `exp` with `expiresIn: 300`. A verifier requires `exp` unless `maxAge` is set, and refuses a token that names an audience when you named none.
 
 ## What hostile input gets
 
 Each line runs against the built package with the result its comment states:
 
 ```ts
-import { createKeySet, createRemoteKeySet, createVerifier, generateKeyPair, generateSecretKey, sign } from "@codenhub/jwt";
+import { createKeySet, createRemoteKeySet, createVerifier, exportPublicJwk, generateKeyPair, generateSecretKey, sign } from "@codenhub/jwt";
 
 const { privateKey, publicKey } = await generateKeyPair({ alg: "RS256" });
 const verify = createVerifier({ keys: createKeySet([publicKey]) });
@@ -93,7 +93,7 @@ const remote = createRemoteKeySet({
   url: "https://issuer.example/jwks.json",
   fetch: async () => {
     fetches += 1;
-    return Response.json({ keys: [] });
+    return Response.json({ keys: [{ ...(await exportPublicJwk(publicKey)), kid: "real" }] });
   },
 });
 const viaRemote = createVerifier({ keys: remote });
@@ -110,6 +110,7 @@ fetches; // 1
 - [Signing tokens](docs/signing.md)
 - [Keys](docs/keys.md)
 - [Key sets](docs/key-sets.md)
+- [Key rotation](docs/rotation.md)
 - [Issues](docs/errors.md)
 - [API reference](docs/reference/index.md)
 - [Changelog](docs/changelog/index.md)
@@ -119,6 +120,7 @@ fetches; // 1
 - Node.js 26 or newer, or another runtime with Web Crypto, `TextEncoder` and `TextDecoder`, plus `fetch`, `AbortController` and `setTimeout` for remote key sets. No Node.js API is used, so browsers, Deno, Bun and Cloudflare Workers work too.
 - `EdDSA` and `Ed25519` need Web Crypto's Ed25519 support: Node.js 26, Chrome 137, Firefox 129 or Safari 17.
 - ESM-aware package resolution. The package is ESM only and marked `sideEffects: false`.
+- TypeScript 5.7 or newer, when you type-check against the package: its declarations use generic typed arrays such as `Uint8Array<ArrayBuffer>`, which earlier versions report as errors unless `skipLibCheck` is on.
 
 ## Notes
 

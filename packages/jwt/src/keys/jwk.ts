@@ -1,3 +1,4 @@
+import { isPlainObject } from "../core/plain";
 import type { JwsAlgorithm, JwtIssue } from "../core/types";
 import { decodeBase64Url, encodeBase64Url } from "../encoding";
 import { ALGORITHM_PARAMS, type AlgorithmParams } from "./algorithms";
@@ -40,11 +41,11 @@ const MEMBER_NAMES = [
   "oth",
   "k",
 ] as const;
-type MemberName = (typeof MEMBER_NAMES)[number];
-type Members = Partial<Record<MemberName, unknown>>;
+export type MemberName = (typeof MEMBER_NAMES)[number];
+export type Members = Partial<Record<MemberName, unknown>>;
 
 const RSA_PRIVATE_MEMBERS = ["d", "p", "q", "dp", "dq", "qi"] as const;
-const ASYMMETRIC_PRIVATE_MEMBERS = [...RSA_PRIVATE_MEMBERS, "oth", "k"] as const;
+export const ASYMMETRIC_PRIVATE_MEMBERS = [...RSA_PRIVATE_MEMBERS, "oth", "k"] as const;
 
 /** RFC 7517 §4.3 says unrelated operations SHOULD NOT share a key; a key that also encrypts is refused. */
 const SIGNATURE_OPERATIONS: ReadonlySet<string> = new Set(["sign", "verify"]);
@@ -55,7 +56,7 @@ const REQUIRED_OPERATION: Readonly<Record<KeyRole, readonly string[]>> = {
   secret: ["sign", "verify"],
 };
 
-const issue = (code: JwtIssue["code"], member?: MemberName, params?: JwtIssue["params"]): JwtIssue => ({
+export const issue = (code: JwtIssue["code"], member?: MemberName, params?: JwtIssue["params"]): JwtIssue => ({
   code,
   ...(member === undefined ? {} : { path: [member] }),
   ...(params === undefined ? {} : { params }),
@@ -75,7 +76,7 @@ export function checkJwk(jwk: unknown, alg: JwsAlgorithm, role: KeyRole): Checke
 }
 
 /** Snapshots the JWK's own data members, so later checks never run caller code. */
-function readMembers(jwk: unknown): Members | undefined {
+export function readMembers(jwk: unknown): Members | undefined {
   try {
     if (typeof jwk !== "object" || jwk === null || Array.isArray(jwk)) {
       return undefined;
@@ -99,23 +100,6 @@ function readMembers(jwk: unknown): Members | undefined {
     // A hostile Proxy can throw from any trap.
     return undefined;
   }
-}
-
-/**
- * Whether `value` is a plain object of this realm or another one, such as a Jest or jsdom sandbox's: its
- * prototype is null, or is an `Object.prototype` whose own prototype is null. A class instance, whose
- * prototype has `Object.prototype` above it, is not.
- */
-function isPlainObject(value: object): boolean {
-  const prototype: unknown = Object.getPrototypeOf(value);
-  if (prototype === null || prototype === Object.prototype) {
-    return true;
-  }
-  if (typeof prototype !== "object" || Object.getPrototypeOf(prototype) !== null) {
-    return false;
-  }
-  const constructor = Object.getOwnPropertyDescriptor(prototype, "constructor")?.value as unknown;
-  return typeof constructor === "function" && constructor.name === "Object" && constructor.prototype === prototype;
 }
 
 function copyArray(value: unknown): unknown {
@@ -192,7 +176,7 @@ function checkMaterial(members: Members, alg: JwsAlgorithm, role: KeyRole): Chec
   return { ...(kid === undefined ? {} : { kid }), ...result };
 }
 
-type Material = Omit<CheckedJwk, "kid"> | JwtIssue;
+export type Material = Omit<CheckedJwk, "kid"> | JwtIssue;
 
 function materialFor(members: Members, alg: JwsAlgorithm, role: KeyRole): Material {
   const params = ALGORITHM_PARAMS[alg];
@@ -200,7 +184,8 @@ function materialFor(members: Members, alg: JwsAlgorithm, role: KeyRole): Materi
     case "EC":
       return curveMaterial(members, ["x", "y"], role, params);
     case "OKP":
-      return curveMaterial(members, ["x"], role, params);
+      // An OKP key has no y (RFC 8037 §2).
+      return members.y === undefined ? curveMaterial(members, ["x"], role, params) : issue("invalid_key", "y");
     case "RSA":
       return rsaMaterial(members, role);
     case "oct":
@@ -227,7 +212,7 @@ function curveMaterial(
   return { importJwk, signatureLength: params.signatureBytes as number };
 }
 
-function rsaMaterial(members: Members, role: KeyRole): Material {
+export function rsaMaterial(members: Members, role: KeyRole): Material {
   const modulus = decodeMember(members.n);
   if (modulus === undefined) {
     return issue("invalid_key", "n");
@@ -261,29 +246,51 @@ function rsaMaterial(members: Members, role: KeyRole): Material {
       return issue("unsupported_key", "oth");
     }
     for (const name of RSA_PRIVATE_MEMBERS) {
-      if (!isNonEmptyMember(members[name])) {
+      // Every private member is below n, so one longer than n is refused before any arithmetic on it: the
+      // BigInt checks below took seconds on members of a few megabytes. n itself is at most 1 KB.
+      if (!isNonEmptyMember(members[name]) || !fitsIn(members[name], significant.length)) {
         return issue("invalid_key", name);
       }
       importJwk[name] = members[name] as string;
     }
-    if (!isPrivateExponentConsistent(importJwk)) {
-      return issue("invalid_key", "d");
+    const inconsistent = inconsistentPrivateMember(importJwk);
+    if (inconsistent !== undefined) {
+      return issue("invalid_key", inconsistent);
     }
   }
   return { importJwk, signatureLength: significant.length };
 }
 
+/** Whether a member's integer, without its leading zero bytes, is at most `bytes` long. */
+function fitsIn(value: unknown, bytes: number): boolean {
+  const decoded = decodeMember(value);
+  return decoded !== undefined && stripLeadingZeros(decoded).length <= bytes;
+}
+
 /**
- * Whether `d` agrees with the CRT members: `d mod (p - 1) = dp` and `d mod (q - 1) = dq`. Web Crypto signs with
- * the CRT members alone, so the probe signature cannot see a wrong `d`, which the exported JWK would carry to a
- * library that signs with it. The probe proves the CRT members themselves.
+ * The first private member that disagrees with the others, or `undefined` when they agree: `d` must give
+ * `d mod (p - 1) = dp` and `d mod (q - 1) = dq`, `qi` must be the inverse of `q` modulo `p`, and `p q` must be
+ * `n`, which the probe signature would otherwise be the first to find wrong. The probe
+ * signature cannot see either: OpenSSL, behind Node's Web Crypto, checks a CRT signature and signs again with `d`
+ * when it is wrong, so a wrong `qi` signs correctly, and a signer that uses only the CRT members never reads `d`.
+ * The exported JWK would carry the wrong member to a library that signs with it.
  */
-function isPrivateExponentConsistent(jwk: JsonWebKey): boolean {
-  const [d, p, q, dp, dq] = [jwk.d, jwk.p, jwk.q, jwk.dp, jwk.dq].map(memberToBigInt);
-  if (d === undefined || p === undefined || q === undefined || dp === undefined || dq === undefined) {
-    return false;
+function inconsistentPrivateMember(jwk: JsonWebKey): "d" | "qi" | "n" | undefined {
+  const [n, d, p, q, dp, dq, qi] = [jwk.n, jwk.d, jwk.p, jwk.q, jwk.dp, jwk.dq, jwk.qi].map(memberToBigInt);
+  if (
+    d === undefined ||
+    p === undefined ||
+    q === undefined ||
+    dp === undefined ||
+    dq === undefined ||
+    !(p > 1n && q > 1n && d % (p - 1n) === dp && d % (q - 1n) === dq)
+  ) {
+    return "d";
   }
-  return p > 1n && q > 1n && d % (p - 1n) === dp && d % (q - 1n) === dq;
+  if (qi === undefined || qi >= p || (q * qi) % p !== 1n) {
+    return "qi";
+  }
+  return p * q === n ? undefined : "n";
 }
 
 function memberToBigInt(value: string | undefined): bigint | undefined {
@@ -325,7 +332,7 @@ function secretMaterial(members: Members, params: AlgorithmParams): Material {
   return { importJwk: { kty: "oct", k: members.k as string }, signatureLength: minimum };
 }
 
-function decodeMember(value: unknown): Uint8Array | undefined {
+export function decodeMember(value: unknown): Uint8Array | undefined {
   return typeof value === "string" ? decodeBase64Url(value) : undefined;
 }
 

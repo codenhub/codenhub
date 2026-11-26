@@ -481,10 +481,11 @@ const readSerializedAppError = (value: unknown): AppErrorResolution | null => {
     return null;
   }
 
-  // Only a code or name match carries a code, and an unknown error carries no feedback at all, so
-  // these combinations are not something `toJSON()` produces.
+  // A code comes from a code or name match, or from a code alias, which a pattern can match too.
+  // An unknown error carries no feedback at all, so these combinations are not something
+  // `toJSON()` produces.
   if (
-    (type !== "known" && code !== null) ||
+    (type === "unknown" && code !== null) ||
     (type === "unknown" && (messageKey !== null || source !== null || isRetryable))
   ) {
     return null;

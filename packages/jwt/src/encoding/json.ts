@@ -1,5 +1,5 @@
 import { MAX_JSON_DEPTH } from "../core/limits";
-import { fail, ok } from "../core/result";
+import { fail, frozenOk } from "../core/result";
 import type { JwtIssue, JwtPathSegment, JwtResult } from "../core/types";
 import { decodeUtf8 } from "./text";
 
@@ -326,7 +326,8 @@ export function parseJsonObject(bytes: Uint8Array, path?: readonly JwtPathSegmen
     return fail(atPath(MALFORMED.issue));
   }
   try {
-    return ok(new StrictJsonParser(text).parseObject());
+    // The parser freezes each container as it closes it, so the result is deep-frozen already.
+    return frozenOk(new StrictJsonParser(text).parseObject());
   } catch (error) {
     if (error instanceof JsonRejection) {
       return fail(atPath(error.issue));

@@ -2,7 +2,7 @@
 title: Presets
 description: Cada fallo que reconocen los presets del navegador, de Node.js, de HTTP y de Supabase, con su clave de traducción, y lo que deja fuera cada preset.
 order: 4
-source: 518329420d7f1c7075340d363850a388c230cdcc
+source: 176c43fc5f1b9ee9aa52b37c0b9ea5882e632a2d
 ---
 
 # Presets
@@ -110,7 +110,7 @@ Notas:
 - **Solo son reintentables los fallos anteriores a establecer una conexión**: conexión rechazada, una dirección que no se resolvió, un host inalcanzable, un timeout de conexión. Un reset, un socket cerrado o un timeout de respuesta pueden venir después de una solicitud que el otro lado ya procesó. `ETIMEDOUT` tampoco es reintentable, porque Node.js lo lanza tanto para un intento de conexión como para un socket que ya transportó la solicitud.
 - **No se cubren:** los códigos del sistema de archivos, como `ENOENT`, porque el mensaje correcto depende de lo que estaba haciendo la aplicación, ni los códigos de certificados TLS, que solo puede arreglar quien opera el servicio.
 - **`TimeoutError` y `AbortError` también son nombres del preset del navegador.** Son los nombres de `DOMException` que lanza un `AbortSignal`, como en `fetch(url, { signal: AbortSignal.timeout(5000) })`. El código de servidor debería usar este preset para ellos: el mensaje de `TimeoutError` del preset del navegador le dice a quien lee que revise su conexión a internet. Cuando fusionas los dos, gana el que se fusionó último.
-- Los códigos se observaron en Node.js 24. Otros runtimes de servidor, como Deno o Bun, pueden informar los fallos de red de otra manera.
+- Los códigos se observaron en Node.js 24 y 26. Otros runtimes de servidor, como Deno o Bun, pueden informar los fallos de red de otra manera.
 
 ## HTTP
 

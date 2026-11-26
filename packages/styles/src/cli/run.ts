@@ -312,7 +312,7 @@ function describeWriteError(error: unknown): string {
 /* The output is replaced whole, so a file this command did not write is
    refused rather than lost: a template named as the output by mistake, as in
    `--content index.html --output index.html`, or a stylesheet written by hand.
-   What it writes starts with the package's notice, after Tailwind's banner, so
+   What it writes starts with the package's head, after Tailwind's banner, so
    a file that does is replaced; another banner or a layer order does not tell
    a stylesheet written by hand from a built one. A file of no bytes, or of
    whitespace alone, holds nothing to lose and is replaced too. What is not a
@@ -363,7 +363,7 @@ async function assertReplaceable(options: BuildOptions, cwd: string, output: str
     );
   }
 
-  // `\s` takes a byte order mark too. A notice past the bytes read is not found, and the file is refused.
+  // `\s` takes a byte order mark too. A head past the bytes read is not found, and the file is refused.
   if (head.trim() === "" && Buffer.byteLength(head) === size) {
     return;
   }

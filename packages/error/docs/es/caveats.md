@@ -2,7 +2,7 @@
 title: Salvedades y limitaciones
 description: Lo que ErrorKit no hace, las sorpresas que puede darte y cómo resolver cada una.
 order: 8
-source: 6f024af842dc897b5d6318419a12ba88efc3b6a1
+source: 4c367c180890188e093200e8d863a5e6d890279f
 ---
 
 # Salvedades y limitaciones
@@ -90,7 +90,7 @@ Todo lo que hay en esta página es deliberado, y cada punto ya sorprendió a alg
 ## Los presets no lo cubren todo
 
 - El preset del navegador reconoce un `fetch` fallido y un `import()` fallido por los mensajes que producen hoy Chromium, Firefox y Safari. Un navegador que los reescriba vuelve a `"unknown"` hasta que el preset se ponga al día.
-- El preset de Node.js cubre los fallos de red y los errores que lanza un `AbortSignal`, y se observó en Node.js 24. Otros runtimes de servidor pueden informar los mismos fallos de otra manera.
+- El preset de Node.js cubre los fallos de red y los errores que lanza un `AbortSignal`, y se observó en Node.js 24 y 26. Otros runtimes de servidor pueden informar los mismos fallos de otra manera.
 - El preset de Supabase cubre los códigos de Auth frente a los que una persona puede hacer algo, seis códigos de PostgreSQL y los nombres de error propios del cliente. Asigna a un mismo mensaje compartido los pocos fallos de desarrollador con los que suele toparse una aplicación en marcha, como una tabla o una columna que falta, así que son `"known"`: repórtalos por `messageKey`, no por tipo (consulta [Recetas](recipes.md#reportar-a-un-tracker-de-errores)). Otros códigos que solo un desarrollador puede arreglar, como `bad_jwt`, quedan sin mapear a propósito y llegan a tu tracker de errores como `"unknown"`.
 
 Registra tu propio mapeo para todo lo que un preset no cubra. [Presets](presets.md) enumera exactamente lo que cubre cada uno.

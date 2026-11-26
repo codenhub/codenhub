@@ -5,7 +5,9 @@ import { splitWords } from "@codenhub/scan";
 /* How much of a file is read to tell whether this package or its command wrote it. */
 export const HEAD_BYTES = 1024;
 /* What every stylesheet the command has written starts with: the package's
-   notice, after Tailwind's banner. The compiled stylesheets carry it too. */
+   head comment, after Tailwind's banner (`scripts/head.mjs`). The complete
+   compiled stylesheets carry it too. From 0.9.0 to 0.11.0 the comment went on
+   with the checkbox marks' licences, so an output written then matches. */
 export const WRITTEN_HEAD = /^\s*(?:\/\*! tailwindcss [^*]*\*\/\s*)?\/\*! @codenhub\/styles\b/;
 
 /* Content is read as text and never run, as Tailwind reads it: every run of
@@ -27,10 +29,10 @@ export function* findClasses(content: string, known: ReadonlySet<string>): Gener
    every class it holds, so read as content it kept them all: Django's
    `collectstatic` copies the package's `dist/` into `staticfiles/`, and two
    builds over one folder read each other. A file that starts with the
-   package's notice is one of them; so is a JSON list of class names holding at
+   package's head is one of them; so is a JSON list of class names holding at
    least half of this version's, as a copy of `purge/classes.json` from this or
    a nearby version does and a safelist does not; and so is a file the same as
-   one this version ships, such as an aesthetic, which carries no notice. */
+   one this version ships, such as an aesthetic, which carries no head. */
 export async function isPackageCopy(
   content: string,
   droppable: ReadonlySet<string>,

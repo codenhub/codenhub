@@ -12,6 +12,8 @@ import { classesOf, parse } from "../../src/trim/purge";
 
 const { version } = createRequire(import.meta.url)("../../package.json") as { version: string };
 const packageRoot = path.resolve(import.meta.dirname, "../..");
+// What every stylesheet the command writes starts with: Tailwind's banner, then the package's head.
+const HEADED = /^\/\*! tailwindcss [^*]*\*\/\n\/\*! @codenhub\/styles \| Apache-2\.0 \*\/\n/;
 
 let root: string;
 let project: string;
@@ -145,15 +147,10 @@ describe("build", () => {
     expect(await readOutput()).toMatch(ruleFor("soft"));
   });
 
-  it("keeps the licence notice of the checkbox marks", async () => {
-    await writeFile(
-      path.join(project, "app", "views", "form.html.erb"),
-      '<input type="checkbox" class="checkbox" />\n',
-    );
-
+  it("starts its output with the package's head after Tailwind's banner", async () => {
     await build("build", "-c", "app/views/**/*.erb", "-o", "app.css");
 
-    expect(await readOutput()).toMatch(/\/\*![^*]*Lucide[^*]*\*\//);
+    expect(await readOutput()).toMatch(HEADED);
   });
 
   /* `.theme-dark` is written by a script at run time, so no template names it. */
@@ -272,7 +269,7 @@ describe("build", () => {
     expect(await build("build", "-c", "app/views/**/*", "-o", "alone.css")).toBe(0);
     const alone = await readOutput("alone.css");
 
-    // Every file the package ships, as collectstatic copies them: the aesthetics and the theme carry no notice.
+    // Every file the package ships, as collectstatic copies them: the aesthetics and the theme carry no head.
     await cp(path.join(packageRoot, "dist"), path.join(project, "staticfiles"), { recursive: true });
     // An older version's class list, which this version's does not match byte for byte.
     const classes = JSON.parse(
@@ -587,11 +584,11 @@ describe("failures", () => {
 
   /* A stylesheet written by hand often opens with a layer order, and a vendor
      file with its own `/*!` banner; what this command writes carries the
-     package's notice after Tailwind's banner. */
+     package's head after Tailwind's banner. */
   it.each([
     ["a layer order", "@layer reset, theme, base, components, utilities;\n@layer reset { .mine { color: red; } }\n"],
     ["another banner", "/*! normalize.css v8.0.1 | MIT License */\nhtml { line-height: 1.15; }\n"],
-    ["a rule before the notice", "/*! vendor */\n.mine { color: red; }\n/*! @codenhub/styles | Apache-2.0 */\n"],
+    ["a rule before the head", "/*! vendor */\n.mine { color: red; }\n/*! @codenhub/styles | Apache-2.0 */\n"],
   ])("refuses a stylesheet written by hand that starts with %s, and leaves it", async (_, css) => {
     await writeFile(path.join(project, "app.css"), css);
 
@@ -668,7 +665,23 @@ describe("failures", () => {
     expect(await readOutput()).toMatch(ruleFor("btn"));
   });
 
-  // The compiled stylesheets carry the notice too, so a copy of one is replaced as before.
+  /* From 0.9.0 to 0.11.0 the head went on to carry the Lucide and Feather
+     licences of the old checkbox marks, past the bytes the command reads; a
+     stylesheet written then is still one this command wrote. */
+  it("replaces a stylesheet an earlier version wrote with the longer head", async () => {
+    const earlier =
+      "/*! tailwindcss v4.3.4 | MIT License | https://tailwindcss.com */\n" +
+      "/*! @codenhub/styles | Apache-2.0 | The checkbox marks are derived from the Lucide check and minus icons (ISC), which derive from Feather (MIT).\n\n" +
+      `${"This product contains SVG icon assets derived from Lucide.\n".repeat(40)}*/\n` +
+      "@layer theme{}@layer components{.btn{color:red}}";
+
+    await writeFile(path.join(project, "app.css"), earlier);
+
+    expect(await build("build", "-c", "app/views/**/*.erb", "-o", "app.css")).toBe(0);
+    expect(await readOutput()).toMatch(HEADED);
+  });
+
+  // The compiled stylesheets carry the head too, so a copy of one is replaced as before.
   it("replaces a copy of a compiled stylesheet", async () => {
     await writeFile(path.join(project, "app.css"), await readFile(path.join(packageRoot, "dist", "index.css"), "utf8"));
 

@@ -6,11 +6,11 @@ import {
   bindIssuer,
   compatibleAlgorithms,
   getKeyEntry,
-  importPublicKey,
   isAsymmetricAlgorithm,
   ownDataValue,
   readIssuer,
 } from "../keys";
+import { importPublicJwk } from "../keys/import";
 import { selectKey } from "./select";
 
 /** Most keys a JWKS may hold, so an oversized key set cannot make import cost unbounded. */
@@ -36,7 +36,10 @@ export interface ImportKeySetOptions {
   readonly issuer?: string;
 }
 
-const IMPORT_KEY_SET_OPTIONS: Readonly<Record<keyof ImportKeySetOptions, true>> = { algorithms: true, issuer: true };
+const IMPORT_KEY_SET_OPTIONS: Readonly<Record<keyof ImportKeySetOptions, true>> = {
+  algorithms: true,
+  issuer: true,
+};
 
 /** How {@link createKeySet} builds its set. */
 export interface CreateKeySetOptions {
@@ -130,8 +133,8 @@ export function createKeySet(keys: readonly VerificationKey[], options?: CreateK
  * @returns The frozen key set, or a failure with one issue: `malformed` when `jwks` is not an object
  * (path omitted) or its `keys` is not an array (path `["keys"]`), or `too_large` with
  * `{ limit: "keys", maximum: 100 }` for more than 100 keys. Never throws for any `jwks`.
- * @throws TypeError when `options` is not an object, `options.algorithms` is not a non-empty array of
- * asymmetric algorithms, or `options.issuer` is not a non-empty string.
+ * @throws TypeError when `options` is not an object, has a member that is not an option, `options.algorithms` is
+ * not a non-empty array of asymmetric algorithms, or `options.issuer` is not a non-empty string.
  */
 export async function importKeySet(jwks: unknown, options?: ImportKeySetOptions): Promise<JwtResult<LocalKeySet>> {
   const algorithms = readAlgorithms(options, "importKeySet");
@@ -190,7 +193,7 @@ export async function importKeys(
   }
   const attempts = entries.value.flatMap((jwk) =>
     bindableAlgorithms(jwk, algorithms).map(async (alg) => {
-      const result = await importPublicKey(jwk, { alg });
+      const result = await importPublicJwk(jwk, alg);
       // A freshly imported key has no issuer, so binding it cannot throw.
       return result.ok && issuer !== undefined ? ok(bindIssuer(result.value, issuer, "importKeys")) : result;
     }),
@@ -204,7 +207,7 @@ const MALFORMED_KEYS = fail({ code: "malformed", path: ["keys"] });
 const TOO_MANY_KEYS = fail({ code: "too_large", params: { limit: "keys", maximum: MAX_JWKS_KEYS } });
 
 /** Reads the entries of a JWKS. The result is not deep-frozen, since the entries belong to the caller. */
-function readEntries(jwks: unknown): JwtResult<readonly unknown[]> {
+export function readEntries(jwks: unknown): JwtResult<readonly unknown[]> {
   try {
     if (typeof jwks !== "object" || jwks === null || Array.isArray(jwks)) {
       return MALFORMED_JWKS;

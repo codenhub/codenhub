@@ -1,7 +1,7 @@
 ---
 title: Visión general
 description: Para qué sirve ErrorKit, la idea sobre la que está construido, un recorrido de cinco minutos y el orden en que leer el resto de la documentación.
-source: 2f96329b1cd9629ce0b944a81f0dfd91ea08a4b3
+source: 422b7b736b05cf60f3e99755bee5ff6638da8326
 ---
 
 # Convierte lo que atrapaste en un error que puedas usar
@@ -106,9 +106,9 @@ if (!result.ok) {
 
 ## Requisitos
 
-- Node.js 24 o posterior, o un navegador, worker o runtime de edge compatible con ES2022.
+- Node.js 26 o posterior, o un navegador, worker o runtime de edge compatible con ES2022.
 - Soporte nativo de `cause` en `Error`, que tienen todos los runtimes de arriba.
-- ESM. El código CommonJS puede cargar el paquete con `require()` en los runtimes que permiten hacer `require` de módulos ES, como Node.js 24.
+- ESM. El código CommonJS puede cargar el paquete con `require()` en los runtimes que permiten hacer `require` de módulos ES, como Node.js 26.
 - Solo para los adaptadores: React 18 o posterior para `@codenhub/error/react`, y Svelte 5.3 o posterior para `@codenhub/error/svelte`. Ambos son peer dependencies opcionales, así que el resto del paquete se instala sin ellos.
 
 El paquete nunca toca globales del navegador ni de Node.js, así que funciona igual en un navegador, en un servidor, durante el renderizado en el servidor, en un worker o en un runtime de edge. Importar un preset no contacta ningún servicio ni necesita ningún otro paquete.

@@ -5,6 +5,8 @@
  *
  * - `omit` names the utilities an entry leaves out of the ones its files
  *   define, given `{ name, file }`, `file` relative to `src/`.
+ * - `head` marks a complete stylesheet, which starts with the package's head
+ *   comment; see `scripts/head.mjs`.
  * - `tw` is what a consumer imports to get the same stylesheet from `/tw`,
  *   relative to `tw/`, or a bare specifier; `null` where `/tw` has no
  *   counterpart. The palette is the colour ramp alone, outside the theme.
@@ -18,7 +20,7 @@ const registry = JSON.parse(readFileSync(new URL("../../registry.json", import.m
 const LAYOUT_MODIFIERS = new Set([...registry.modifiers.layout, ...registry.modifiers.rule]);
 
 export const STYLES_ENTRIES = [
-  { input: "src/index.css", output: "dist/index.css", tw: ["index.css"] },
+  { input: "src/index.css", output: "dist/index.css", head: true, tw: ["index.css"] },
   /* `/theme` carries the class families and none of the modifiers, which
      modify components it does not ship. */
   {
@@ -31,10 +33,11 @@ export const STYLES_ENTRIES = [
   {
     input: "src/components/index.css",
     output: "dist/components.css",
+    head: true,
     omit: ({ name }) => LAYOUT_MODIFIERS.has(name),
     tw: ["components/index.css"],
   },
-  { input: "src/native.css", output: "dist/native.css", tw: ["native.css"] },
+  { input: "src/native.css", output: "dist/native.css", head: true, tw: ["native.css"] },
 ];
 
 export const AESTHETICS_ENTRIES = ["index", "neobrutalism", "glass", "pixel", "chunky-tile", "cyber", "sketch"].map(

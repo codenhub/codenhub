@@ -32,11 +32,12 @@ export type JwtIssueCode =
   | "issued_in_future"
   | "too_old"
   | "wrong_issuer"
+  | "wrong_subject"
   | "wrong_audience"
   | "wrong_type"
   | "missing_claim"
   | "invalid_claim"
-  | "invalid_claims"
+  | "schema_failed"
   // Key import
   | "invalid_key"
   | "unsupported_key"
@@ -49,7 +50,7 @@ export type JwtIssueCode =
  *
  * An issue this package creates never holds a value taken from the input: no token segment, claim value,
  * header value, or key material. It names which check failed and, where useful, the limit or the claim the
- * check used. An `invalid_claims` path is whatever the caller's schema reports, which for a record-style
+ * check used. A `schema_failed` path is whatever the caller's schema reports, which for a record-style
  * schema can include claim names from the token. A custom key set's issues are passed through, so those
  * hold only what the caller's code puts in them.
  */
@@ -178,25 +179,102 @@ export type SigningKey = PrivateKey | SecretKey;
 /** A key that can verify. */
 export type VerificationKey = PublicKey | SecretKey;
 
-/** A JSON Web Key as this package exports it. Every exported JWK is frozen. */
-export interface Jwk {
-  readonly kty: "EC" | "OKP" | "RSA" | "oct";
-  readonly alg: JwsAlgorithm;
+/** The key material members of a JWK, across every key type. */
+type JwkMaterialMember = "crv" | "x" | "y" | "n" | "e" | "d" | "p" | "q" | "dp" | "dq" | "qi" | "k";
+
+/**
+ * The members every JWK this package exports has, and every material member of other key types as absent, so
+ * a member of any JWK can still be read by name: `jwk.n` is `undefined` on an `EC` key rather than a compile
+ * error, and `jwk.d !== undefined` tells a private JWK from a public one.
+ */
+type JwkMembers<TAlgorithm extends JwsAlgorithm, TOwn extends JwkMaterialMember> = {
+  readonly alg: TAlgorithm;
   readonly use: "sig";
   readonly kid?: string;
-  readonly crv?: "P-256" | "P-384" | "P-521" | "Ed25519";
-  readonly x?: string;
-  readonly y?: string;
-  readonly n?: string;
-  readonly e?: string;
-  readonly d?: string;
-  readonly p?: string;
-  readonly q?: string;
-  readonly dp?: string;
-  readonly dq?: string;
-  readonly qi?: string;
-  readonly k?: string;
+} & { readonly [TMember in Exclude<JwkMaterialMember, TOwn>]?: never };
+
+/** An elliptic-curve public key (RFC 7518 §6.2), as {@link exportPublicJwk} exports an `ES*` key. */
+export interface EcPublicJwk extends JwkMembers<Extract<AsymmetricAlgorithm, `ES${string}`>, "crv" | "x" | "y"> {
+  readonly kty: "EC";
+  readonly crv: "P-256" | "P-384" | "P-521";
+  readonly x: string;
+  readonly y: string;
 }
+
+/** An elliptic-curve private key, as {@link exportPrivateJwk} exports an `ES*` key. */
+export interface EcPrivateJwk
+  extends
+    JwkMembers<Extract<AsymmetricAlgorithm, `ES${string}`>, "crv" | "x" | "y" | "d">,
+    Pick<EcPublicJwk, "kty" | "crv" | "x" | "y"> {
+  readonly d: string;
+}
+
+/** An Ed25519 public key (RFC 8037 §2), as {@link exportPublicJwk} exports an `EdDSA` or `Ed25519` key. */
+export interface OkpPublicJwk extends JwkMembers<Extract<AsymmetricAlgorithm, `Ed${string}`>, "crv" | "x"> {
+  readonly kty: "OKP";
+  readonly crv: "Ed25519";
+  readonly x: string;
+}
+
+/** An Ed25519 private key, as {@link exportPrivateJwk} exports an `EdDSA` or `Ed25519` key. */
+export interface OkpPrivateJwk
+  extends
+    JwkMembers<Extract<AsymmetricAlgorithm, `Ed${string}`>, "crv" | "x" | "d">,
+    Pick<OkpPublicJwk, "kty" | "crv" | "x"> {
+  readonly d: string;
+}
+
+/** An RSA public key (RFC 7518 §6.3), as {@link exportPublicJwk} exports an `RS*` or `PS*` key. */
+export interface RsaPublicJwk extends JwkMembers<
+  Extract<AsymmetricAlgorithm, `RS${string}` | `PS${string}`>,
+  "n" | "e"
+> {
+  readonly kty: "RSA";
+  readonly n: string;
+  readonly e: string;
+}
+
+/** An RSA private key with its CRT members, as {@link exportPrivateJwk} exports an `RS*` or `PS*` key. */
+export interface RsaPrivateJwk
+  extends
+    JwkMembers<
+      Extract<AsymmetricAlgorithm, `RS${string}` | `PS${string}`>,
+      "n" | "e" | "d" | "p" | "q" | "dp" | "dq" | "qi"
+    >,
+    Pick<RsaPublicJwk, "kty" | "n" | "e"> {
+  readonly d: string;
+  readonly p: string;
+  readonly q: string;
+  readonly dp: string;
+  readonly dq: string;
+  readonly qi: string;
+}
+
+/** An HMAC secret (RFC 7518 §6.4), as {@link exportSecretJwk} exports it. */
+export interface OctJwk extends JwkMembers<SymmetricAlgorithm, "k"> {
+  readonly kty: "oct";
+  readonly k: string;
+}
+
+/** An elliptic-curve JWK, public or private. */
+export type EcJwk = EcPublicJwk | EcPrivateJwk;
+/** An Ed25519 JWK, public or private. */
+export type OkpJwk = OkpPublicJwk | OkpPrivateJwk;
+/** An RSA JWK, public or private. */
+export type RsaJwk = RsaPublicJwk | RsaPrivateJwk;
+
+/** A public JWK, as {@link exportPublicJwk} exports it. Narrow it on `kty`. */
+export type PublicJwk = EcPublicJwk | OkpPublicJwk | RsaPublicJwk;
+/** A private JWK, its public members included, as {@link exportPrivateJwk} exports it. Narrow it on `kty`. */
+export type PrivateJwk = EcPrivateJwk | OkpPrivateJwk | RsaPrivateJwk;
+/** A secret JWK, as {@link exportSecretJwk} exports it. */
+export type SecretJwk = OctJwk;
+
+/**
+ * A JSON Web Key as this package exports it: one of the shapes above, told apart by `kty`, and by `d` or `k`
+ * for private material. Every exported JWK is frozen.
+ */
+export type Jwk = PublicJwk | PrivateJwk | SecretJwk;
 
 /** A verified or inspected JWS protected header. Frozen. */
 export interface JwtHeader {
@@ -294,7 +372,8 @@ export type KeySetResolver = (
 /**
  * What a {@link KeySetResolver} returns for an issuer whose tokens are checked differently from the verifier's
  * defaults, such as a tenant whose tokens name its own audience:
- * `{ keys: tenant.keySet, audience: tenant.clientId }`.
+ * `{ keys: tenant.keySet, audience: tenant.clientId }`. A route with any other member, such as a misspelled
+ * `audiance` or a `typ`, is invalid rather than ignored, like a route whose members have invalid values.
  */
 export interface KeySetRoute {
   /** The issuer's key set. */
@@ -326,7 +405,11 @@ export interface LocalKeySet extends KeySet {
 }
 
 /** A verified token. Frozen. */
-export interface VerifiedJwt<TPayload extends JwtPayload = JwtPayload> {
+export interface VerifiedJwt<
+  TPayload extends object & {
+    readonly [K in keyof TPayload & keyof JwtRegisteredClaims]?: JwtRegisteredClaims[K];
+  } = JwtPayload,
+> {
   /** The protected header. */
   readonly header: JwtHeader;
   /** The payload, after every configured claim check passed. */
@@ -344,6 +427,11 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
   readonly keys: KeySet | KeySetResolver;
   /** Accepted `iss` values. When set, `iss` is required and must equal one exactly. */
   readonly issuer?: string | readonly string[];
+  /**
+   * Accepted `sub` values, for a verifier that accepts tokens about known subjects only, such as a client
+   * assertion whose `sub` must be the client's own id. When set, `sub` is required and must equal one exactly.
+   */
+  readonly subject?: string | readonly string[];
   /**
    * Accepted audiences. When set, `aud` is required, and a token passes when its `aud` (a string or
    * an array) contains at least one of them.
@@ -402,7 +490,7 @@ export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = 
   readonly requiredClaims?: readonly string[];
   /**
    * Standard Schema run on the payload after every other check passed. Its issues become
-   * `invalid_claims` issues carrying only their path; its messages are dropped, since they may quote
+   * `schema_failed` issues carrying only their path; its messages are dropped, since they may quote
    * the input. The schema checks; it does not transform: the returned payload is the token's own.
    */
   readonly claims?: TSchema;
@@ -432,12 +520,15 @@ export type VerifiedPayload<TSchema extends StandardSchemaV1 | undefined> = TSch
 
 /**
  * A configured verifier. Call it with any value; it never throws for a token, whatever its content.
+ * `TPayload` is the payload type {@link createVerifier} gave it, from its `claims` schema or its type argument.
  * Only caller code makes its promise reject: a `claims` schema that throws or rejects, or an
  * `options.now` that returns something other than a finite number.
  *
  * @returns The verified token, or every issue found. Structural, key, and signature failures stop at
  * the first issue; claim checks report every failing claim.
  */
-export type Verifier<TPayload extends JwtPayload = JwtPayload> = (
-  token: unknown,
-) => Promise<JwtResult<VerifiedJwt<TPayload>>>;
+export type Verifier<
+  TPayload extends object & {
+    readonly [K in keyof TPayload & keyof JwtRegisteredClaims]?: JwtRegisteredClaims[K];
+  } = JwtPayload,
+> = (token: unknown) => Promise<JwtResult<VerifiedJwt<TPayload>>>;

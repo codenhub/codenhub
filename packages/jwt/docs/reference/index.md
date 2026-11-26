@@ -10,36 +10,37 @@ group: "Reference"
 
 ## Functions
 
-### createExternalSigningKey
+### createKeyRing
 
 ```ts
-export declare function createExternalSigningKey(options: ExternalSigningKeyOptions): PrivateKey;
+export declare function createKeyRing(options: KeyRingOptions): KeyRing;
 ```
 
-Creates a private key whose signatures come from a function, for a key held outside Web Crypto, such as in a cloud KMS or an HSM, whose private material never leaves it.
+Builds a key ring from an issuer's signing keys and when each one signs, for rotating keys without a window in which a verifier lacks the key a token names.
 
-The key signs with [`sign`](#sign) like any other private key: `alg` and `kid` come from `publicKey`, and [`getPublicKey`](#getpublickey), [`jwkThumbprint`](#jwkthumbprint) and `embedKey` work with it. Each signature the function returns is verified with `publicKey` before `sign` returns the token, so a signer holding another key, or returning malformed bytes, makes `sign` throw instead of handing out a token no one can verify. The key is never extractable, and the function is not called until a token is signed.
+A key signs from its `activeFrom` until the next key's `activeFrom` or its own `retiredAt`. It is published `publishAhead` seconds before it starts signing, so verifiers holding a cached JWKS already have it, and `publishAfter` seconds after it stops, so tokens it signed still verify until they expire. The ring stores nothing: keep the keys and their times in your own storage and build the ring from them, at startup or per request. [Key rotation](https://github.com/codenhub/codenhub/blob/main/packages/jwt/docs/rotation.md) gives the steps.
 
 **Parameters**
 
-- `options` — The public key and the signing function.
+- `options` — The keys and their times, how long ahead and after a key is published, the issuer they belong to, and the clock.
 
-**Returns** — The frozen private key, with `extractable: false`.
+**Returns** — The frozen ring.
 
-**Throws** — TypeError when `options` is not an object; `options.publicKey` is not a public key this package created; `options.sign` is not a function; `options.signatureFormat` is neither `"raw"` nor `"der"`, or is `"der"` for a key that is not ECDSA; or `options` has another member.
+**Throws** — TypeError when `options` is not an object or has a member that is not an option; `keys` is not an array of 1 to 100 entries; an entry is not an object, has a member other than `key`, `activeFrom` and `retiredAt`, holds a `key` that is not a private key created by this package or has no `kid`, or has an `activeFrom` or `retiredAt` that is not a whole number of seconds from 0 to 253402300799, as a time in milliseconds is not; a `retiredAt` is not later than its `activeFrom`; two keys share a `kid` or an `activeFrom`; `publishAhead` or `publishAfter` is not a whole number from 0 to 315360000; `now` is not a function; or `issuer` is not a non-empty string.
 
 **Example**
 
 ```ts
-const imported = await importPublicKey(kmsPublicKeyPem, { alg: "ES256", kid: "kms-2026" });
-if (!imported.ok) throw new Error("The KMS public key could not be imported.");
-const signingKey = createExternalSigningKey({
-  publicKey: imported.value,
-  signatureFormat: "der",
-  sign: async (data) => (await kms.sign({ KeyId, Message: data, MessageType: "RAW",
-    SigningAlgorithm: "ECDSA_SHA_256" })).Signature!,
+const ring = createKeyRing({
+  keys: [
+    { key: currentKey, activeFrom: 1_798_761_600 },
+    { key: nextKey, activeFrom: 1_801_440_000 },
+  ],
+  publishAhead: 86_400,
+  publishAfter: 172_800,
 });
-const token = await sign({ payload: { sub: "u1", exp }, key: signingKey });
+const token = await sign({ payload, key: ring.signingKey(), issuedAt: true, expiresIn: 3600 });
+const verify = createVerifier({ keys: ring, issuer: "https://issuer.example" });
 ```
 
 ### createKeySet
@@ -78,22 +79,22 @@ Builds a key set that fetches its keys from a JWKS URL, caches them, and refetch
 
 Nothing is fetched until the first `select`. Then:
 
-- **TTL.** A fetched JWKS is used for `cacheTtl` seconds. After that, for up to `maxStale` more seconds, a `select` still answers from it at once and starts a fetch in the background; past that, it waits for the fetch.
+- **TTL.** A fetched JWKS is used for `cacheTtl` seconds, or for the response's shorter `Cache-Control: max-age`, but at least `cooldown`. After that, for up to `maxStale` more seconds, a `select` still answers from it at once and starts a fetch in the background; past that, it waits for the fetch.
 - **One fetch at a time.** A `select` that needs keys the cache cannot give while a fetch is running waits for that fetch, at most until a second past its `timeout`; concurrent callers never start a second one. A fetch that misses that deadline, or rejects because a Workers runtime cancelled it with the request that started it, is fetched again by the waiting `select`, unless the cooldown is running and the cache is still usable, which then answers. Such a fetch also stops holding back a new one once it is past the deadline and the cooldown. `waitUntil` keeps fetches running past their request.
-- **Unknown `kid`.** When a token's `kid` is not in the cached JWKS, the JWKS is fetched again once, and the selection is repeated on the result, also when a key without a `kid` could stand in for it. A failing refetch gives `key_fetch_failed`, unless such a key stands in. A header without a `kid` never causes a refetch.
+- **Unknown `kid`.** When a token's `kid` is not in the cached JWKS, the JWKS is fetched again once, and the selection is repeated on the result, also when a key without a `kid` could stand in for it. A failing refetch gives `key_fetch_failed`, unless such a key stands in and the cached JWKS is still within `maxStale`. A header without a `kid` never causes a refetch.
 - **Cooldown.** A refetch for an unknown `kid`, or a retry after a failed fetch, starts only when `cooldown` seconds have passed since the last fetch started. Inside that window an unknown `kid` fails with `unknown_kid` at once, so a flood of tokens with invented `kid`s causes at most one fetch per window. `cooldown: 0` gives up that limit: each such `select` may start a fetch, though never while another is running.
 - **Stale keys.** When fetching fails, or a retry waits for the cooldown, the expired JWKS is used until `maxStale` runs out; past that, `select` fails with `key_fetch_failed`. Using stale keys does not extend them: every `select` after the cooldown tries to fetch again.
 - **Persisting.** `onFetch` hands out each fetched JWKS, and `seed` starts a new set from one, so a short-lived process need not fetch on its first `select`.
 
-Fetches are `GET` requests with `accept: application/json` that do not follow redirects; only status 200 is accepted. The body is capped at `maxResponseBytes`, and the whole fetch at `timeout` seconds. The JWKS is imported as [`importKeySet`](#importkeyset) does; a JWKS that is not one, including one with more than 100 keys, is an `invalid_response`.
+Fetches are `GET` requests with `accept: application/json` and `cache: "no-cache"`, so an HTTP cache revalidates rather than answers, that do not follow redirects; only status 200 is accepted. A runtime that refuses `cache`, as Cloudflare Workers does before compatibility date 2025-08-07, is asked again without it, for the rest of the key set's life. The body is capped at `maxResponseBytes`, and the whole fetch at `timeout` seconds. The JWKS is imported as [`importKeySet`](#importkeyset) does; a JWKS that is not one, including one with more than 100 keys, is an `invalid_response`, and one without a key this set can use is `no_usable_keys`.
 
 **Parameters**
 
 - `options` — Where to fetch the JWKS from, and how to cache it.
 
-**Returns** — A frozen key set. Its `select` never rejects for a fetch problem or a token: a failed fetch gives `key_fetch_failed` with `params.reason` of `timeout`, `network` (the fetch rejected), `status` (with `params.status`, also for a redirect), `too_large` (`Content-Length` or body over `maxResponseBytes`) or `invalid_response` (not a strict JSON object, or not a JWKS). Issues never contain anything from the response. `select` rejects with a `TypeError` only when `options.now` returns something other than a finite number, which is a bug in the caller's clock; a verifier that calls such a key set reports `key_fetch_failed` with `{ reason: "key_set_error" }` instead.
+**Returns** — A frozen key set. Its `select` never rejects for a fetch problem or a token: a failed fetch gives `key_fetch_failed` with `params.reason` of `timeout`, `network` (the fetch rejected), `status` (with `params.status`, also for a redirect), `too_large` (`Content-Length` or body over `maxResponseBytes`), `invalid_response` (not a strict JSON object, or not a JWKS) or `no_usable_keys` (a JWKS of which no key imports for `algorithms`). A failed fetch leaves the cache as it was. Issues never contain anything from the response. `select` rejects with a `TypeError` only when `options.now` returns something other than a finite number, which is a bug in the caller's clock; a verifier that calls such a key set reports `key_fetch_failed` with `{ reason: "key_set_error" }` instead.
 
-**Throws** — TypeError when `options` is not an object; `options` has a member that is not an option; `url` is not an absolute `https:` URL, or `http:` URL on a loopback host, or carries credentials; `fetch`, `now`, `onFetch`, `onFetchError` or `waitUntil` is not a function; `seed` has no finite `fetchedAt`; `algorithms` is not a non-empty array of asymmetric algorithms; `issuer` is not a non-empty string; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or `maxResponseBytes` is out of range.
+**Throws** — TypeError when `options` is not an object; `options` has a member that is not an option; `url` is not an absolute `https:` URL, or `http:` URL on a loopback host, or carries credentials; `fetch`, `now`, `onFetch`, `onFetchError` or `waitUntil` is not a function; `algorithms` is not a non-empty array of asymmetric algorithms; `issuer` is not a non-empty string; or `cacheTtl`, `cooldown`, `maxStale`, `timeout` or `maxResponseBytes` is out of range.
 
 **Example**
 
@@ -105,12 +106,14 @@ const verify = createVerifier({ keys, issuer: "https://issuer.example" });
 ### createVerifier
 
 ```ts
-export declare function createVerifier<TSchema extends StandardSchemaV1 | undefined = undefined>(options: VerifierOptions<TSchema>): Verifier<VerifiedPayload<TSchema>>;
+export declare function createVerifier<TSchema extends StandardSchemaV1>(options: VerifierOptions<TSchema> & {
+    readonly claims: TSchema;
+}): Verifier<VerifiedPayload<TSchema>>;
 ```
 
 Creates a verifier that checks a token's structure, signature and claims in one call.
 
-Each token goes through, in order: the length cap, before any decoding; strict parsing of its three segments and header; key selection from `options.keys`; the selected key's algorithm, which must equal the header's `alg`; the signature; and only then the payload, which is never read before its signature verifies, except for the `iss` a `keys` function routes by, which is untrusted until then. Claim checks then run and report every failing claim together: registered claim types, `exp` (expired once now ≥ `exp` + tolerance), `nbf`, `iat`, `maxAge`, issuer, audience, `typ`, and required claims. When all of them pass, `options.claims` runs last.
+Each token goes through, in order: the length cap, before any decoding; strict parsing of its three segments and header; key selection from `options.keys`; the selected key's algorithm, which must equal the header's `alg`; the signature; and only then the payload, which is never read before its signature verifies, except for the `iss` a `keys` function routes by, which is untrusted until then. Claim checks then run and report every failing claim together: registered claim types, `exp` (expired once now ≥ `exp` + tolerance), `nbf`, `iat`, `maxAge`, issuer, subject, audience, `typ`, and required claims. When all of them pass, `options.claims` runs last.
 
 When `options.keys` is a [`KeySetResolver`](#keysetresolver), the payload's `iss` is read before the signature, only to ask it for the issuer's key set; nothing else in the payload is used until the signature verifies.
 
@@ -124,9 +127,9 @@ Times compare in fractional seconds, `options.now() / 1000`, against the numeric
 
 - `TSchema` — The Standard Schema given as `options.claims`, which types the verified payload.
 
-**Returns** — A [`Verifier`](#verifier). It resolves to the frozen `{ header, payload, key }`, or to a failure and never throws for any token. A key set whose `select` throws or rejects, or returns something other than a result holding a public or secret key this package created, makes the verifier fail with `key_fetch_failed` and `{ reason: "key_set_error" }`, except that a failed result whose issues each have a string `code` is passed through. Caller code is not caught: a rejection from `options.claims` propagates, and so does a `TypeError` when `options.now` returns something other than a finite number, checked once per verification when the claims are checked, after the signature.
+**Returns** — A [`Verifier`](#verifier). It resolves to the frozen `{ header, payload, key }`, or to a failure and never throws for any token. A key set whose `select` throws or rejects, or returns something other than a result holding a public or secret key this package created, makes the verifier fail with `key_fetch_failed` and `{ reason: "key_set_error" }`, except that a failed result whose issues each have a string `code`, and a `path` that is absent or an array of strings and finite numbers, is passed through. Caller code is not caught: a rejection from `options.claims` propagates, and so does a `TypeError` when `options.now` returns something other than a finite number, checked once per verification when the claims are checked, after the signature.
 
-**Throws** — TypeError when `options` is not an object; `options` has a member that is not an option, such as a misspelled `audiance`; `keys` is neither a function nor an object with a `select` function; `issuer` is neither a non-empty string nor a non-empty array of them; `audience` is neither `false` nor one of those; `type` is neither a non-empty string other than `application/` nor a non-empty array of such strings and `null`; `requireExpiration` or `allowExpired` is not a boolean; `clockTolerance` is not an integer from 0 through 300; `maxAge` is not a positive integer; `maxLength` is not an integer from 1 through 65536; `requiredClaims` is not an array of non-empty strings; `claims` is not a version 1 Standard Schema; or `now` is not a function.
+**Throws** — TypeError when `options` is not an object; `options` has a member that is not an option, such as a misspelled `audiance`; `keys` is neither a function nor an object with a `select` function; `issuer` or `subject` is neither a non-empty string nor a non-empty array of them; `audience` is neither `false` nor one of those; `type` is neither a non-empty string other than `application/` nor a non-empty array of such strings and `null`; `requireExpiration` or `allowExpired` is not a boolean; `clockTolerance` is not an integer from 0 through 300; `maxAge` is not a positive integer; `maxLength` is not an integer from 1 through 65536; `requiredClaims` is not an array of non-empty strings; `claims` is not a version 1 Standard Schema; `now` is not a function; or `onKeySetError` is not a function.
 
 **Example**
 
@@ -143,6 +146,28 @@ if (!result.ok) {
 }
 const { sub } = result.value.payload;
 ```
+
+The verified payload's type comes from `options.claims` when it is given: `createVerifier({ keys, claims: schema })` returns a `Verifier` whose payload is the schema's input type. Without a schema, a type argument names it: `createVerifier<AccessClaims>({ keys })`, with `AccessClaims` any object type, an `interface` included, whose registered claims have their RFC 7519 types. That type is not checked at runtime: only the registered claims are, so a claim the token lacks or holds with another type still reaches your code as typed. Give a schema when the payload's other claims must be checked.
+
+```ts
+export declare function createVerifier<TPayload extends object & {
+    readonly [K in keyof TPayload & keyof JwtRegisteredClaims]?: JwtRegisteredClaims[K];
+} = JwtPayload>(options: VerifierOptions<StandardSchemaV1 | undefined>): Verifier<TPayload>;
+```
+
+Creates a verifier whose payload type is given rather than inferred from a `claims` schema; see the overload above for everything it checks. Options whose `claims` may or may not be set also come here.
+
+**Parameters**
+
+- `options` — Where keys come from and which claims to require; see [`VerifierOptions`](#verifieroptions).
+
+**Type parameters**
+
+- `TPayload` — The verified payload's type, unchecked at runtime beyond the registered claims: an object type, an `interface` included, whose registered claims have their RFC 7519 types.
+
+**Returns** — A [`Verifier`](#verifier) whose payload is typed `TPayload`.
+
+**Throws** — TypeError for the invalid options the overload above lists.
 
 ### decodeBase64Url
 
@@ -177,7 +202,7 @@ Encodes bytes as unpadded base64url (RFC 7515 §2), as JWS and JWK members are.
 ### exportPrivateJwk
 
 ```ts
-export declare function exportPrivateJwk(key: PrivateKey): Promise<Jwk>;
+export declare function exportPrivateJwk(key: PrivateKey): Promise<PrivateJwk>;
 ```
 
 Exports a private key's material as a JWK. Handle the result as a secret.
@@ -193,7 +218,7 @@ Exports a private key's material as a JWK. Handle the result as a secret.
 ### exportPublicJwk
 
 ```ts
-export declare function exportPublicJwk(key: PublicKey): Promise<Jwk>;
+export declare function exportPublicJwk(key: PublicKey): Promise<PublicJwk>;
 ```
 
 Exports a public key as a JWK, for publishing in a JWKS.
@@ -209,7 +234,7 @@ Exports a public key as a JWK, for publishing in a JWKS.
 ### exportSecretJwk
 
 ```ts
-export declare function exportSecretJwk(key: SecretKey): Promise<Jwk>;
+export declare function exportSecretJwk(key: SecretKey): Promise<SecretJwk>;
 ```
 
 Exports an HMAC secret as an `oct` JWK. Handle the result as a secret.
@@ -295,7 +320,7 @@ const jwks = { keys: [await exportPublicJwk(getPublicKey(result.value))] };
 export declare function importKeyPair(key: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<KeyPair>>;
 ```
 
-Imports an untrusted private JWK, a PEM `PRIVATE KEY` (PKCS#8), or a Web Crypto key pair, as a key pair bound to one algorithm: the private key, and the public key taken from the same key's public members.
+Imports an untrusted private JWK, a PEM private key as [`importPrivateKey`](#importprivatekey) reads it, or a Web Crypto key pair, as a key pair bound to one algorithm: the private key, and the public key taken from the same key's public members.
 
 The checks of [`importPrivateKey`](#importprivatekey) apply. The pair is proved to match before it is returned: the private key signs a fixed message and the public key must verify it, so a JWK whose public members belong to another key fails. Use it to load a signing key stored with [`exportPrivateJwk`](#exportprivatejwk), and publish `exportPublicJwk(pair.publicKey)` without storing a second JWK.
 
@@ -335,7 +360,7 @@ A JWK with an `alg` is bound to that algorithm when it is allowed; a JWK without
 
 **Returns** — The frozen key set, or a failure with one issue: `malformed` when `jwks` is not an object (path omitted) or its `keys` is not an array (path `["keys"]`), or `too_large` with `{ limit: "keys", maximum: 100 }` for more than 100 keys. Never throws for any `jwks`.
 
-**Throws** — TypeError when `options` is not an object, `options.algorithms` is not a non-empty array of asymmetric algorithms, or `options.issuer` is not a non-empty string.
+**Throws** — TypeError when `options` is not an object, has a member that is not an option, `options.algorithms` is not a non-empty array of asymmetric algorithms, or `options.issuer` is not a non-empty string.
 
 **Example**
 
@@ -350,16 +375,16 @@ if (result.ok) verify = createVerifier({ keys: result.value });
 export declare function importPrivateKey(key: unknown, options: ImportPrivateKeyOptions): Promise<JwtResult<PrivateKey>>;
 ```
 
-Imports an untrusted private JWK, a PEM `PRIVATE KEY` (PKCS#8), or a Web Crypto key pair, as a signing key bound to one algorithm.
+Imports an untrusted private JWK, a PEM `PRIVATE KEY` (PKCS#8), `RSA PRIVATE KEY` (PKCS#1) or `EC PRIVATE KEY` (SEC 1), or a Web Crypto key pair, as a signing key bound to one algorithm.
 
-The same checks as [`importPublicKey`](#importpublickey) apply, except that private members are required: `d` for EC and OKP keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for RSA keys. `key_ops`, when present, must include `sign`. A PEM string is read as for [`importPublicKey`](#importpublickey), and must be a `PRIVATE KEY` block: `RSA PRIVATE KEY` (PKCS#1) and `EC PRIVATE KEY` (SEC 1) are `invalid_key`. As for [`importKeyPair`](#importkeypair), the key's public members must belong to it, which a probe signature proves. A `CryptoKey` is read as [`importKeyPair`](#importkeypair) describes. [`getPublicKey`](#getpublickey) gives the public half.
+The same checks as [`importPublicKey`](#importpublickey) apply, except that private members are required: `d` for EC and OKP keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for RSA keys. `key_ops`, when present, must include `sign`. A PEM string is read as for [`importPublicKey`](#importpublickey), and must be a private key block; an `EC PRIVATE KEY` must name its curve. As for [`importKeyPair`](#importkeypair), the key's public members must belong to it, which a probe signature proves. A `CryptoKey` is read as [`importKeyPair`](#importkeypair) describes. [`getPublicKey`](#getpublickey) gives the public half.
 
 **Parameters**
 
 - `key` — The JWK, typically parsed from JSON, a PEM string, a `CryptoKeyPair`, or an extractable private `CryptoKey`. Any value is accepted.
 - `options` — The algorithm to bind the key to, its `kid`, and whether it may be exported again.
 
-**Returns** — The frozen key, or a failure with one issue: `invalid_key`, `unsupported_key` (also for multi-prime RSA keys with `oth`), `alg_mismatch`, `wrong_use` or `weak_key`, as described for [`importPublicKey`](#importpublickey), and `invalid_key` without a path when the public members do not belong to the private key, or at `["d"]` when an RSA key's `d` does not agree with `p`, `q`, `dp` and `dq`. Issues never contain key values. Never throws for any `key`.
+**Returns** — The frozen key, or a failure with one issue: `invalid_key`, `unsupported_key` (also for multi-prime RSA keys with `oth`), `alg_mismatch`, `wrong_use` or `weak_key`, as described for [`importPublicKey`](#importpublickey), and `invalid_key` without a path when the public members do not belong to the private key, at `["d"]` when an RSA key's `d` does not agree with `p`, `q`, `dp` and `dq`, or at `["qi"]` when its `qi` is not the inverse of `q` modulo `p`. Issues never contain key values. Never throws for any `key`.
 
 **Throws** — TypeError when `options` is not an object, has a member that is not an option, `options.alg` is not an asymmetric algorithm, `options.kid` is not a string, or `options.extractable` is not a boolean.
 
@@ -375,11 +400,11 @@ const result = await importPrivateKey(env.SIGNING_KEY_PEM, { alg: "RS256", kid: 
 export declare function importPublicKey(key: unknown, options: ImportPublicKeyOptions): Promise<JwtResult<PublicKey>>;
 ```
 
-Imports an untrusted public JWK, a PEM `PUBLIC KEY` (SPKI), the public key of a PEM `CERTIFICATE` (X.509), or a public Web Crypto `CryptoKey`, as a verification key bound to one algorithm.
+Imports an untrusted public JWK, a PEM `PUBLIC KEY` (SPKI) or `RSA PUBLIC KEY` (PKCS#1), the public key of a PEM `CERTIFICATE` (X.509), or a public Web Crypto `CryptoKey`, as a verification key bound to one algorithm.
 
 A `CryptoKey` must be an extractable public key, as every public key Web Crypto generates is. It is exported and checked as a JWK; a private one is `unexpected_private_key`, any other `invalid_key`. Its Web Crypto algorithm and hash must be the ones `alg` signs with, or it is `alg_mismatch`, so an `RSA-OAEP` or `ECDH` key is refused; and it must allow `verify`, or it is `wrong_use`.
 
-A PEM string is read into the JWK of its material, and every check below runs on that JWK. It must be one block of at most 16384 characters, with only whitespace around it and any whitespace inside it, so a PEM flattened onto one line imports too; anything else is `invalid_key`, and a `PRIVATE KEY` block is `unexpected_private_key`. Only a certificate's key is read: its validity, issuer, extensions and signature are not checked, so trust it as you would a bare public key.
+A PEM string is read into the JWK of its material, and every check below runs on that JWK. It must be one block of at most 16384 characters, with only whitespace around it and any whitespace inside it, so a PEM flattened onto one line imports too. A key of another type or curve than `alg` is `unsupported_key`, and a private key block is `unexpected_private_key`; anything else is `invalid_key`, with `{ reason: "encrypted" }` for an encrypted key and `{ reason: "unsupported_format" }` for a label or form this package does not read. Only a certificate's key is read: its validity, issuer, extensions and signature are not checked, so trust it as you would a bare public key.
 
 The JWK's `kty` and `crv` must fit `options.alg`; a JWK `alg`, `use` or `key_ops` member, when present, must agree with it. RSA moduli must be 2048 to 8192 bits. Private members are refused rather than ignored.
 
@@ -402,10 +427,10 @@ if (!result.ok) console.warn(result.error.issues);
 ### importSecretKey
 
 ```ts
-export declare function importSecretKey(input: Uint8Array | CryptoKey | object, options: ImportSecretKeyOptions): Promise<JwtResult<SecretKey>>;
+export declare function importSecretKey(input: Uint8Array | ArrayBuffer | ArrayBufferView | CryptoKey | object, options: ImportSecretKeyOptions): Promise<JwtResult<SecretKey>>;
 ```
 
-Imports an HMAC secret, given as raw bytes, as an untrusted `oct` JWK, or as a Web Crypto `CryptoKey`, bound to one algorithm.
+Imports an HMAC secret, given as raw bytes (any typed array, `DataView` or `ArrayBuffer`, from any realm), as an untrusted `oct` JWK, or as a Web Crypto `CryptoKey`, bound to one algorithm.
 
 The secret must be at least as long as the algorithm's hash output: 32 bytes for `HS256`, 48 for `HS384`, 64 for `HS512` (RFC 7518 §3.2). For a JWK, `alg`, `use` and `key_ops` (which must include `sign` or `verify`) and `kid` are checked as in [`importPublicKey`](#importpublickey). `key_ops` does not restrict the key: a secret imported with `key_ops: ["verify"]` can still sign.
 
@@ -413,7 +438,7 @@ A `CryptoKey` is kept as it is, so a non-extractable one stays so. It must be an
 
 **Parameters**
 
-- `input` — The secret's bytes, an `oct` JWK (untrusted, so any object is accepted), or a `CryptoKey`. A string is a compile error, because a string secret is ambiguous; at runtime any other value, a string included, still returns `invalid_key`.
+- `input` — The secret's bytes, as any typed array, `DataView` or `ArrayBuffer`, an `oct` JWK (untrusted, so any object is accepted), or a `CryptoKey`. A string is a compile error, because a string secret is ambiguous; at runtime any other value, a string included, still returns `invalid_key`.
 - `options` — The algorithm, the `kid`, and whether the secret may be exported again.
 
 **Returns** — The frozen key, or a failure with one issue: `weak_key` with `{ minimum }` in bytes for a short secret, `invalid_key` for an input that is neither bytes nor a well-formed JWK, and the JWK issues described for [`importPublicKey`](#importpublickey). Issues never contain the secret. Never throws for any `input`.
@@ -447,20 +472,20 @@ Whether `value` names a supported symmetric algorithm exactly (case-sensitive).
 ### jwkThumbprint
 
 ```ts
-export declare function jwkThumbprint(key: PublicKey | PrivateKey): Promise<string>;
+export declare function jwkThumbprint(key: PublicKey | PrivateKey | SecretKey): Promise<string>;
 ```
 
-Computes a key pair's JWK SHA-256 Thumbprint (RFC 7638), base64url-encoded without padding, from its public key or its private key.
+Computes a key's JWK SHA-256 Thumbprint (RFC 7638), base64url-encoded without padding: a key pair's from its public key or its private key, or a secret's from its `oct` material.
 
-The thumbprint names the key by its material alone: `alg`, `kid` and `use` do not change it, so the same key imported for two algorithms has one thumbprint. It is what DPoP binds a token to (RFC 9449 §6.1, the `jkt` of a `cnf` claim), and it makes a stable `kid`. A private key gives the thumbprint of its public half, also when it is not extractable.
+The thumbprint names the key by its material alone: `alg`, `kid` and `use` do not change it, so the same key imported for two algorithms has one thumbprint. It is what DPoP binds a token to (RFC 9449 §6.1, the `jkt` of a `cnf` claim), and it makes a stable `kid`. A private key gives the thumbprint of its public half, also when it is not extractable. A secret's thumbprint is computed from the secret itself, so the secret must be extractable. A thumbprint reveals nothing of a random secret; this package enforces a minimum length for secrets, not their entropy, so use secrets from `generateSecretKey` or another random source, never chosen by hand.
 
 **Parameters**
 
-- `key` — A public or private key created by this package.
+- `key` — A public, private or secret key created by this package.
 
 **Returns** — The 43-character thumbprint.
 
-**Throws** — TypeError when `key` is not a public or private key created by this package.
+**Throws** — TypeError when `key` is not a key created by this package, or is a secret created without `extractable: true`.
 
 **Example**
 
@@ -505,24 +530,26 @@ export declare function sign<TPayload extends object = JwtPayload>(input: SignIn
 
 Signs a payload into a compact JWS (a JWT) with a key's own algorithm.
 
-The header's `alg` always comes from the key, so a key can never sign under another algorithm. The header is written as `alg`, then `kid`, `typ` and `cty` when present, then `jwk` for an `embedKey`, then the other parameters in the order given. The payload is signed exactly as given: no claim, such as `iat`, is added.
+The header's `alg` always comes from the key, so a key can never sign under another algorithm. The header is written as `alg`, then `kid`, `typ` and `cty` when present, then `jwk` for an `embedKey`, then the other parameters in the order given. The payload is signed as given, plus only the claims `issuedAt`, `notBefore`, `expiresIn` and `jti` ask for, written after the payload's own members.
 
 **Parameters**
 
-- `input` — The payload, the signing key, optional header parameters, and an optional public key to embed.
+- `input` — The payload, the signing key, optional header parameters, an optional public key to embed, and the claims to add.
 
 **Returns** — The compact token, `<header>.<payload>.<signature>` in base64url.
 
-**Throws** — TypeError, as a rejected promise, when `input` is not an object; `input.key` is not a private or secret key this package created; `input.header` is not a plain object, names an `alg` other than the key's, holds `crit`, `b64`, `jwk`, `jku`, `x5u` or `x5c`, or a `kid`, `typ` or `cty` that is not a string; `input.payload` is not a plain object; the header or payload holds a value JSON cannot carry exactly (`undefined`, a function, a symbol, a bigint, a non-finite number or `-0`, a non-plain object, an accessor) or nests deeper than 32 levels; or a registered claim has the wrong type (`exp`, `nbf`, `iat` not finite numbers, or past 253402300799, the end of year 9999, as a time in milliseconds is; `iss`, `sub`, `jti` not strings; `aud` neither a string nor an array of strings); `input` has a member other than `payload`, `key`, `header` and `embedKey`; or `input.embedKey` is not a public key this package created, `input.key` is not a private key, or the two are not one key pair bound to one algorithm.
+**Throws** — TypeError, as a rejected promise, when `input` is not an object; `input.key` is not a private or secret key this package created; `input.header` is not a plain object, names an `alg` other than the key's, holds `crit`, `b64`, `jwk`, `jku`, `x5u` or `x5c`, or a `kid`, `typ` or `cty` that is not a string; `input.payload` is not a plain object; the header or payload holds a value JSON cannot carry exactly (`undefined`, a function, a symbol, a bigint, a non-finite number or `-0`, a non-plain object, an accessor) or nests deeper than 32 levels; or a registered claim has the wrong type (`exp`, `nbf`, `iat` not finite numbers, or past 253402300799, the end of year 9999, as a time in milliseconds is; `iss`, `sub`, `jti` not strings; `aud` neither a string nor an array of strings); `input` has a member other than `payload`, `key`, `header`, `embedKey`, `issuedAt`, `notBefore`, `expiresIn`, `jti` and `now`; `input.issuedAt` or `input.jti` is not a boolean, `input.notBefore` or `input.expiresIn` is not a whole number of seconds from 0 to 315360000, `input.now` is not a function or returns something other than milliseconds before the year 9990, or one of these options adds a claim the payload already has; or `input.embedKey` is not a public key this package created, `input.key` is not a private key, or the two are not one key pair bound to one algorithm.
 
 **Example**
 
 ```ts
 const { privateKey } = await generateKeyPair({ alg: "ES256", kid: "2026-10" });
 const token = await sign({
-  payload: { iss: "https://issuer.example", sub: "user-1", exp: Math.floor(Date.now() / 1000) + 300 },
+  payload: { iss: "https://issuer.example", sub: "user-1" },
   key: privateKey,
   header: { typ: "JWT" },
+  issuedAt: true,
+  expiresIn: 300,
 });
 ```
 
@@ -571,43 +598,166 @@ The issuer whose keys these are, as for `ImportKeySetOptions.issuer`. The set ho
 
 **Default** — the keys as given
 
-### ExternalSigningKeyOptions
+### EcPrivateJwk
 
 ```ts
-export interface ExternalSigningKeyOptions {
-    readonly publicKey: PublicKey;
-    readonly sign: (data: Uint8Array<ArrayBuffer>) => Promise<Uint8Array | ArrayBuffer>;
-    readonly signatureFormat?: "raw" | "der";
+export interface EcPrivateJwk extends JwkMembers<Extract<AsymmetricAlgorithm, `ES${string}`>, "crv" | "x" | "y" | "d">, Pick<EcPublicJwk, "kty" | "crv" | "x" | "y"> {
+    readonly d: string;
 }
 ```
 
-Options of [`createExternalSigningKey`](#createexternalsigningkey).
+An elliptic-curve private key, as [`exportPrivateJwk`](#exportprivatejwk) exports an `ES*` key.
 
-#### ExternalSigningKeyOptions › publicKey
+#### EcPrivateJwk › alg
 
-```ts
-readonly publicKey: PublicKey;
-```
+Inherited from [`JwkMembers`](#jwkmembers).
 
-The public key of the key the signer holds. It gives the signing key its `alg` and `kid`, and every signature is verified with it before a token is returned.
+#### EcPrivateJwk › crv
 
-#### ExternalSigningKeyOptions › sign
+Inherited from `Pick`.
 
-```ts
-readonly sign: (data: Uint8Array<ArrayBuffer>) => Promise<Uint8Array | ArrayBuffer>;
-```
-
-Signs `data`, the JWS signing input, with the external key, and resolves to the signature. Its rejection rejects the `sign` call unchanged. It is called once per token.
-
-#### ExternalSigningKeyOptions › signatureFormat
+#### EcPrivateJwk › d
 
 ```ts
-readonly signatureFormat?: "raw" | "der";
+readonly d: string;
 ```
 
-The form of the signatures `sign` resolves to: `"raw"`, as JWS writes them, or `"der"`, the DER `Ecdsa-Sig-Value` (RFC 3279 §2.2.3) that AWS KMS and Google Cloud KMS return for an ECDSA key, which is converted. A PKCS#11 `CKM_ECDSA` signature is already `r || s`, so it is `"raw"`. `"der"` is only for `ES256`, `ES384` and `ES512`.
+#### EcPrivateJwk › dp
 
-**Default** — `"raw"`
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPrivateJwk › dq
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPrivateJwk › e
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPrivateJwk › k
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPrivateJwk › kid
+
+Inherited from [`OctJwk`](#octjwk).
+
+#### EcPrivateJwk › kty
+
+Inherited from [`EcPublicJwk`](#ecpublicjwk--kty).
+
+#### EcPrivateJwk › n
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPrivateJwk › p
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPrivateJwk › q
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPrivateJwk › qi
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPrivateJwk › use
+
+Inherited from [`OctJwk`](#octjwk).
+
+#### EcPrivateJwk › x
+
+Inherited from [`EcPublicJwk`](#ecpublicjwk--x).
+
+#### EcPrivateJwk › y
+
+Inherited from [`EcPublicJwk`](#ecpublicjwk--y).
+
+### EcPublicJwk
+
+```ts
+export interface EcPublicJwk extends JwkMembers<Extract<AsymmetricAlgorithm, `ES${string}`>, "crv" | "x" | "y"> {
+    readonly kty: "EC";
+    readonly crv: "P-256" | "P-384" | "P-521";
+    readonly x: string;
+    readonly y: string;
+}
+```
+
+An elliptic-curve public key (RFC 7518 §6.2), as [`exportPublicJwk`](#exportpublicjwk) exports an `ES*` key.
+
+#### EcPublicJwk › alg
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPublicJwk › crv
+
+```ts
+readonly crv: "P-256" | "P-384" | "P-521";
+```
+
+#### EcPublicJwk › d
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPublicJwk › dp
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPublicJwk › dq
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPublicJwk › e
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPublicJwk › k
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPublicJwk › kid
+
+Inherited from [`OctJwk`](#octjwk).
+
+#### EcPublicJwk › kty
+
+```ts
+readonly kty: "EC";
+```
+
+#### EcPublicJwk › n
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPublicJwk › p
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPublicJwk › q
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPublicJwk › qi
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### EcPublicJwk › use
+
+Inherited from [`OctJwk`](#octjwk).
+
+#### EcPublicJwk › x
+
+```ts
+readonly x: string;
+```
+
+#### EcPublicJwk › y
+
+```ts
+readonly y: string;
+```
 
 ### GenerateKeyPairOptions
 
@@ -767,7 +917,7 @@ Whether [`exportPrivateJwk`](#exportprivatejwk) may later export the key's mater
 readonly kid?: string;
 ```
 
-Key identifier. A PEM key and a `CryptoKey` have no place for one; a JWK without a `kid` takes this one, and a JWK whose own `kid` differs is `invalid_key` at `["kid"]`.
+Key identifier. A PEM key and a `CryptoKey` have no place for one; a JWK without a `kid` takes this one, and a JWK whose own `kid` differs is `invalid_key` at `["kid"]`. The literal `"thumbprint"` is reserved: it names the key by its public key's RFC 7638 thumbprint, as [`jwkThumbprint`](#jwkthumbprint) computes it, which a JWK's own `kid` must then equal.
 
 **Default** — no `kid`
 
@@ -796,7 +946,7 @@ The one algorithm the key will verify with. The key's type and curve must fit it
 readonly kid?: string;
 ```
 
-Key identifier. A PEM key and a `CryptoKey` have no place for one; a JWK without a `kid` takes this one, and a JWK whose own `kid` differs is `invalid_key` at `["kid"]`.
+Key identifier. A PEM key and a `CryptoKey` have no place for one; a JWK without a `kid` takes this one, and a JWK whose own `kid` differs is `invalid_key` at `["kid"]`. The literal `"thumbprint"` is reserved: it names the key by its public key's RFC 7638 thumbprint, as [`jwkThumbprint`](#jwkthumbprint) computes it, which a JWK's own `kid` must then equal.
 
 **Default** — no `kid`
 
@@ -836,130 +986,9 @@ Whether [`exportSecretJwk`](#exportsecretjwk) may later export the secret.
 readonly kid?: string;
 ```
 
-Key identifier. Raw bytes and a `CryptoKey` have no place for one; a JWK without a `kid` takes this one, and a JWK whose own `kid` differs is `invalid_key` at `["kid"]`.
+Key identifier. Raw bytes and a `CryptoKey` have no place for one; a JWK without a `kid` takes this one, and a JWK whose own `kid` differs is `invalid_key` at `["kid"]`. The literal `"thumbprint"` is reserved: it names the secret by its RFC 7638 `oct` thumbprint, which a JWK's own `kid` must then equal, and needs an extractable `CryptoKey`, or it is `invalid_key`.
 
 **Default** — no `kid`
-
-### Jwk
-
-```ts
-export interface Jwk {
-    readonly kty: "EC" | "OKP" | "RSA" | "oct";
-    readonly alg: JwsAlgorithm;
-    readonly use: "sig";
-    readonly kid?: string;
-    readonly crv?: "P-256" | "P-384" | "P-521" | "Ed25519";
-    readonly x?: string;
-    readonly y?: string;
-    readonly n?: string;
-    readonly e?: string;
-    readonly d?: string;
-    readonly p?: string;
-    readonly q?: string;
-    readonly dp?: string;
-    readonly dq?: string;
-    readonly qi?: string;
-    readonly k?: string;
-}
-```
-
-A JSON Web Key as this package exports it. Every exported JWK is frozen.
-
-#### Jwk › alg
-
-```ts
-readonly alg: JwsAlgorithm;
-```
-
-#### Jwk › crv
-
-```ts
-readonly crv?: "P-256" | "P-384" | "P-521" | "Ed25519";
-```
-
-#### Jwk › d
-
-```ts
-readonly d?: string;
-```
-
-#### Jwk › dp
-
-```ts
-readonly dp?: string;
-```
-
-#### Jwk › dq
-
-```ts
-readonly dq?: string;
-```
-
-#### Jwk › e
-
-```ts
-readonly e?: string;
-```
-
-#### Jwk › k
-
-```ts
-readonly k?: string;
-```
-
-#### Jwk › kid
-
-```ts
-readonly kid?: string;
-```
-
-#### Jwk › kty
-
-```ts
-readonly kty: "EC" | "OKP" | "RSA" | "oct";
-```
-
-#### Jwk › n
-
-```ts
-readonly n?: string;
-```
-
-#### Jwk › p
-
-```ts
-readonly p?: string;
-```
-
-#### Jwk › q
-
-```ts
-readonly q?: string;
-```
-
-#### Jwk › qi
-
-```ts
-readonly qi?: string;
-```
-
-#### Jwk › use
-
-```ts
-readonly use: "sig";
-```
-
-#### Jwk › x
-
-```ts
-readonly x?: string;
-```
-
-#### Jwk › y
-
-```ts
-readonly y?: string;
-```
 
 ### JwtErr
 
@@ -1070,7 +1099,7 @@ export interface JwtIssue {
 
 A single reason a token or key was rejected.
 
-An issue this package creates never holds a value taken from the input: no token segment, claim value, header value, or key material. It names which check failed and, where useful, the limit or the claim the check used. An `invalid_claims` path is whatever the caller's schema reports, which for a record-style schema can include claim names from the token. A custom key set's issues are passed through, so those hold only what the caller's code puts in them.
+An issue this package creates never holds a value taken from the input: no token segment, claim value, header value, or key material. It names which check failed and, where useful, the limit or the claim the check used. A `schema_failed` path is whatever the caller's schema reports, which for a record-style schema can include claim names from the token. A custom key set's issues are passed through, so those hold only what the caller's code puts in them.
 
 #### JwtIssue › code
 
@@ -1256,6 +1285,146 @@ readonly publicKey: PublicKey;
 
 Verifies what `KeyPair.privateKey` signed.
 
+### KeyRing
+
+```ts
+export interface KeyRing extends KeySet {
+    signingKey(): PrivateKey;
+    jwks(): Promise<PublicJwks>;
+    select(header: JwtHeader): Promise<JwtResult<VerificationKey>>;
+}
+```
+
+An issuer's signing keys over time: which one signs now, which ones to publish, and a key set that verifies the issuer's own tokens. Frozen. It holds no state of its own; each method reads the clock.
+
+#### KeyRing › jwks
+
+```ts
+jwks(): Promise<PublicJwks>;
+```
+
+The JWKS to serve at your `jwks_uri`: the public half of every key published now, from `publishAhead` seconds before its `activeFrom` until `publishAfter` seconds after it stops signing, in `activeFrom` order.
+
+**Returns** — A frozen JWKS, possibly with no key.
+
+**Throws** — TypeError, as a rejected promise, when `now` returns something other than a finite number.
+
+#### KeyRing › select
+
+```ts
+select(header: JwtHeader): Promise<JwtResult<VerificationKey>>;
+```
+
+Selects from the keys `KeyRing.jwks` publishes now, as `KeySet.select` describes, so a verifier given the ring as its `keys` accepts exactly the keys verifiers reading your JWKS do.
+
+**Throws** — TypeError, as a rejected promise, when `now` returns something other than a finite number.
+
+#### KeyRing › signingKey
+
+```ts
+signingKey(): PrivateKey;
+```
+
+The key to sign with now: of the keys whose `activeFrom` has come, the one with the latest, unless its `retiredAt` has come too. A ring never falls back to a key a later one replaced. Call it for each token, just before `sign`: a key kept past its signing window signs tokens that can outlive its place in the JWKS.
+
+**Throws** — TypeError when no key signs now: every `activeFrom` is still to come, or the newest active key is retired; or when `now` returns something other than a finite number.
+
+### KeyRingEntry
+
+```ts
+export interface KeyRingEntry {
+    readonly key: PrivateKey;
+    readonly activeFrom: number;
+    readonly retiredAt?: number;
+}
+```
+
+One signing key of a [`KeyRing`](#keyring) and when it signs. Times are seconds since the Unix epoch.
+
+#### KeyRingEntry › activeFrom
+
+```ts
+readonly activeFrom: number;
+```
+
+When the key starts signing, as a whole number of seconds since the Unix epoch, like `exp`. It signs from then until the next key's `activeFrom` or its own `retiredAt`, whichever comes first. No two keys of a ring share it.
+
+#### KeyRingEntry › key
+
+```ts
+readonly key: PrivateKey;
+```
+
+A private key from `generateKeyPair`, `importPrivateKey` or `importKeyPair`, with a `kid` no other key of the ring has.
+
+#### KeyRingEntry › retiredAt
+
+```ts
+readonly retiredAt?: number;
+```
+
+When the key stops signing even if no later key has taken over, such as when it must leave service early. Later than `activeFrom`.
+
+**Default** — none: the key signs until the next key's `activeFrom`
+
+### KeyRingOptions
+
+```ts
+export interface KeyRingOptions {
+    readonly keys: readonly KeyRingEntry[];
+    readonly publishAhead: number;
+    readonly publishAfter: number;
+    readonly issuer?: string;
+    readonly now?: () => number;
+}
+```
+
+How [`createKeyRing`](#createkeyring) schedules an issuer's signing keys.
+
+#### KeyRingOptions › issuer
+
+```ts
+readonly issuer?: string;
+```
+
+The issuer whose keys these are, as for `createKeySet`: each key the ring selects is bound to it, so a token it verifies must carry this `iss`.
+
+**Default** — keys bound to no issuer
+
+#### KeyRingOptions › keys
+
+```ts
+readonly keys: readonly KeyRingEntry[];
+```
+
+The keys, in any order. Between 1 and 100.
+
+#### KeyRingOptions › now
+
+```ts
+readonly now?: () => number;
+```
+
+The current time in milliseconds, as `Date.now` returns it. Read at every call of a ring's methods.
+
+**Default** — `Date.now`
+
+#### KeyRingOptions › publishAfter
+
+```ts
+readonly publishAfter: number;
+```
+
+Seconds a key stays published after it stops signing. At least your longest token lifetime plus the clock tolerance of your verifiers and how far their clocks may lag yours, plus the longest delay you allow between `signingKey()` and `sign` reading the clock, a few seconds when you call one right before the other, so every token it signed expires before it leaves. A whole number from 0 to 315360000.
+
+#### KeyRingOptions › publishAhead
+
+```ts
+readonly publishAhead: number;
+```
+
+Seconds before its `activeFrom` that a key is published. At least as long as verifiers may keep an older copy of your JWKS: your JWKS response's `max-age` plus the `maxStale` of the remote key sets reading it, with a margin for the time a response takes to reach them. A whole number from 0 to 315360000.
+
 ### KeySet
 
 ```ts
@@ -1292,7 +1461,7 @@ export interface KeySetRoute {
 }
 ```
 
-What a [`KeySetResolver`](#keysetresolver) returns for an issuer whose tokens are checked differently from the verifier's defaults, such as a tenant whose tokens name its own audience: `{ keys: tenant.keySet, audience: tenant.clientId }`.
+What a [`KeySetResolver`](#keysetresolver) returns for an issuer whose tokens are checked differently from the verifier's defaults, such as a tenant whose tokens name its own audience: `{ keys: tenant.keySet, audience: tenant.clientId }`. A route with any other member, such as a misspelled `audiance` or a `typ`, is invalid rather than ignored, like a route whose members have invalid values.
 
 #### KeySetRoute › audience
 
@@ -1344,6 +1513,243 @@ The keys the set selects from, frozen. For [`createKeySet`](#createkeyset), the 
 
 Inherited from [`KeySet`](#keyset--select).
 
+### OctJwk
+
+```ts
+export interface OctJwk extends JwkMembers<SymmetricAlgorithm, "k"> {
+    readonly kty: "oct";
+    readonly k: string;
+}
+```
+
+An HMAC secret (RFC 7518 §6.4), as [`exportSecretJwk`](#exportsecretjwk) exports it.
+
+#### OctJwk › alg
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OctJwk › crv
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OctJwk › d
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OctJwk › dp
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OctJwk › dq
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OctJwk › e
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OctJwk › k
+
+```ts
+readonly k: string;
+```
+
+#### OctJwk › kid
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OctJwk › kty
+
+```ts
+readonly kty: "oct";
+```
+
+#### OctJwk › n
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OctJwk › p
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OctJwk › q
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OctJwk › qi
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OctJwk › use
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OctJwk › x
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OctJwk › y
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+### OkpPrivateJwk
+
+```ts
+export interface OkpPrivateJwk extends JwkMembers<Extract<AsymmetricAlgorithm, `Ed${string}`>, "crv" | "x" | "d">, Pick<OkpPublicJwk, "kty" | "crv" | "x"> {
+    readonly d: string;
+}
+```
+
+An Ed25519 private key, as [`exportPrivateJwk`](#exportprivatejwk) exports an `EdDSA` or `Ed25519` key.
+
+#### OkpPrivateJwk › alg
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPrivateJwk › crv
+
+Inherited from [`OkpPublicJwk`](#okppublicjwk--crv).
+
+#### OkpPrivateJwk › d
+
+```ts
+readonly d: string;
+```
+
+#### OkpPrivateJwk › dp
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPrivateJwk › dq
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPrivateJwk › e
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPrivateJwk › k
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPrivateJwk › kid
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPrivateJwk › kty
+
+Inherited from [`OkpPublicJwk`](#okppublicjwk--kty).
+
+#### OkpPrivateJwk › n
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPrivateJwk › p
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPrivateJwk › q
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPrivateJwk › qi
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPrivateJwk › use
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPrivateJwk › x
+
+Inherited from [`OkpPublicJwk`](#okppublicjwk--x).
+
+#### OkpPrivateJwk › y
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+### OkpPublicJwk
+
+```ts
+export interface OkpPublicJwk extends JwkMembers<Extract<AsymmetricAlgorithm, `Ed${string}`>, "crv" | "x"> {
+    readonly kty: "OKP";
+    readonly crv: "Ed25519";
+    readonly x: string;
+}
+```
+
+An Ed25519 public key (RFC 8037 §2), as [`exportPublicJwk`](#exportpublicjwk) exports an `EdDSA` or `Ed25519` key.
+
+#### OkpPublicJwk › alg
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPublicJwk › crv
+
+```ts
+readonly crv: "Ed25519";
+```
+
+#### OkpPublicJwk › d
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPublicJwk › dp
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPublicJwk › dq
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPublicJwk › e
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPublicJwk › k
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPublicJwk › kid
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPublicJwk › kty
+
+```ts
+readonly kty: "OKP";
+```
+
+#### OkpPublicJwk › n
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPublicJwk › p
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPublicJwk › q
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPublicJwk › qi
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPublicJwk › use
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### OkpPublicJwk › x
+
+```ts
+readonly x: string;
+```
+
+#### OkpPublicJwk › y
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
 ### PrivateKey
 
 ```ts
@@ -1388,6 +1794,24 @@ readonly kind: "private";
 ```
 
 Discriminates the three key kinds.
+
+### PublicJwks
+
+```ts
+export interface PublicJwks {
+    readonly keys: readonly PublicJwk[];
+}
+```
+
+A JWKS of public keys, as `KeyRing.jwks` returns it.
+
+#### PublicJwks › keys
+
+```ts
+readonly keys: readonly PublicJwk[];
+```
+
+The public JWKs.
 
 ### PublicKey
 
@@ -1461,7 +1885,7 @@ Maximum token length in characters, checked before any decoding. An integer from
 ```ts
 export interface RemoteKeySetOptions {
     readonly url: string | URL;
-    readonly fetch?: typeof fetch;
+    readonly fetch?: JwksFetch;
     readonly algorithms?: readonly AsymmetricAlgorithm[];
     readonly issuer?: string;
     readonly cacheTtl?: number;
@@ -1470,7 +1894,7 @@ export interface RemoteKeySetOptions {
     readonly timeout?: number;
     readonly maxResponseBytes?: number;
     readonly now?: () => number;
-    readonly seed?: RemoteKeySetSnapshot;
+    readonly seed?: RemoteKeySetSnapshot | null;
     readonly onFetch?: (snapshot: RemoteKeySetSnapshot) => void;
     readonly onFetchError?: (issue: JwtIssue) => void;
     readonly waitUntil?: (promise: Promise<unknown>) => void;
@@ -1495,7 +1919,7 @@ Algorithms keys may be bound to, as for `ImportKeySetOptions.algorithms`. Non-em
 readonly cacheTtl?: number;
 ```
 
-Seconds a fetched JWKS is used before it is fetched again. An integer of at least 1.
+Seconds a fetched JWKS is used before it is fetched again. An integer of at least 1. A response whose `Cache-Control` has a shorter `max-age` is used for that long instead, but never for less than `cooldown`; `no-store` or `no-cache` gives it `cooldown`.
 
 **Default** — 600
 
@@ -1512,7 +1936,7 @@ Least seconds between the starts of two fetches that a failure or an unknown `ki
 #### RemoteKeySetOptions › fetch
 
 ```ts
-readonly fetch?: typeof fetch;
+readonly fetch?: JwksFetch;
 ```
 
 The `fetch` to call, for runtimes or tests that supply their own.
@@ -1573,15 +1997,15 @@ Called after each successful fetch, with the JWKS as fetched and when, for a cal
 readonly onFetchError?: (issue: JwtIssue) => void;
 ```
 
-Called after each failed fetch with its `key_fetch_failed` issue, whether or not a `select` waited for the fetch, for logging. A promise it returns is handed to `waitUntil`; its errors, thrown or rejected, are ignored.
+Called after each failed fetch with its `key_fetch_failed` issue, whether or not a `select` waited for the fetch and whether or not a newer fetch replaced it, for logging. A promise it returns is handed to `waitUntil`; its errors, thrown or rejected, are ignored.
 
 #### RemoteKeySetOptions › seed
 
 ```ts
-readonly seed?: RemoteKeySetSnapshot;
+readonly seed?: RemoteKeySetSnapshot | null;
 ```
 
-A JWKS fetched earlier, such as one a previous instance saved from `RemoteKeySetOptions.onFetch`, used as if this set had fetched it at `fetchedAt`. It is imported at the first `select`; a `jwks` that is not a JWKS is ignored, and the set fetches as it would without a seed. A seed older than `cacheTtl` plus `maxStale` is never used, and neither is one whose `fetchedAt` is more than a minute ahead of `now`.
+A JWKS fetched earlier, such as one a previous instance saved from `RemoteKeySetOptions.onFetch`, used as if this set had fetched it at `fetchedAt` and kept for `cacheTtl`. It is imported at the first `select`. `null` means no seed, and a seed that is not a snapshot, was fetched from another `url`, or holds no usable key is ignored: the set fetches as it would without one. A seed older than `cacheTtl` plus `maxStale` is never used, and neither is one whose `fetchedAt` is more than a minute ahead of `now`.
 
 #### RemoteKeySetOptions › timeout
 
@@ -1599,7 +2023,7 @@ Seconds a fetch, body included, may take before it is abandoned. Greater than 0 
 readonly url: string | URL;
 ```
 
-Absolute `https:` URL of the JWKS, such as an issuer's `jwks_uri`. Plain `http:` is accepted only on a loopback host (`localhost`, `127.0.0.0/8` or `[::1]`), for a development issuer on the same machine. Credentials in the URL are refused.
+Absolute `https:` URL of the JWKS, such as an issuer's `jwks_uri`. Plain `http:` is accepted only on a loopback host (`localhost`, `127.0.0.0/8` or `[::1]`), for a development issuer on the same machine. Credentials in the URL are refused. The package cannot tell an internal address from a public one, so a URL someone else supplied, such as a client's registered `jwks_uri`, must be checked by the caller first: otherwise they choose where your server sends requests.
 
 #### RemoteKeySetOptions › waitUntil
 
@@ -1613,12 +2037,13 @@ Called with each fetch as it starts, to keep it running after the request that s
 
 ```ts
 export interface RemoteKeySetSnapshot {
+    readonly url: string;
     readonly jwks: unknown;
     readonly fetchedAt: number;
 }
 ```
 
-A fetched JWKS and when it was fetched, as `RemoteKeySetOptions.onFetch` receives it.
+A fetched JWKS, where from and when, as `RemoteKeySetOptions.onFetch` receives it.
 
 #### RemoteKeySetSnapshot › fetchedAt
 
@@ -1635,6 +2060,187 @@ readonly jwks: unknown;
 ```
 
 The JWKS document, a JSON value.
+
+#### RemoteKeySetSnapshot › url
+
+```ts
+readonly url: string;
+```
+
+The URL the JWKS was fetched from, as `URL.href` normalizes it; a seed from another URL is ignored.
+
+### RsaPrivateJwk
+
+```ts
+export interface RsaPrivateJwk extends JwkMembers<Extract<AsymmetricAlgorithm, `RS${string}` | `PS${string}`>, "n" | "e" | "d" | "p" | "q" | "dp" | "dq" | "qi">, Pick<RsaPublicJwk, "kty" | "n" | "e"> {
+    readonly d: string;
+    readonly p: string;
+    readonly q: string;
+    readonly dp: string;
+    readonly dq: string;
+    readonly qi: string;
+}
+```
+
+An RSA private key with its CRT members, as [`exportPrivateJwk`](#exportprivatejwk) exports an `RS*` or `PS*` key.
+
+#### RsaPrivateJwk › alg
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPrivateJwk › crv
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPrivateJwk › d
+
+```ts
+readonly d: string;
+```
+
+#### RsaPrivateJwk › dp
+
+```ts
+readonly dp: string;
+```
+
+#### RsaPrivateJwk › dq
+
+```ts
+readonly dq: string;
+```
+
+#### RsaPrivateJwk › e
+
+Inherited from [`RsaPublicJwk`](#rsapublicjwk--e).
+
+#### RsaPrivateJwk › k
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPrivateJwk › kid
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPrivateJwk › kty
+
+Inherited from [`RsaPublicJwk`](#rsapublicjwk--kty).
+
+#### RsaPrivateJwk › n
+
+Inherited from [`RsaPublicJwk`](#rsapublicjwk--n).
+
+#### RsaPrivateJwk › p
+
+```ts
+readonly p: string;
+```
+
+#### RsaPrivateJwk › q
+
+```ts
+readonly q: string;
+```
+
+#### RsaPrivateJwk › qi
+
+```ts
+readonly qi: string;
+```
+
+#### RsaPrivateJwk › use
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPrivateJwk › x
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPrivateJwk › y
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+### RsaPublicJwk
+
+```ts
+export interface RsaPublicJwk extends JwkMembers<Extract<AsymmetricAlgorithm, `RS${string}` | `PS${string}`>, "n" | "e"> {
+    readonly kty: "RSA";
+    readonly n: string;
+    readonly e: string;
+}
+```
+
+An RSA public key (RFC 7518 §6.3), as [`exportPublicJwk`](#exportpublicjwk) exports an `RS*` or `PS*` key.
+
+#### RsaPublicJwk › alg
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPublicJwk › crv
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPublicJwk › d
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPublicJwk › dp
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPublicJwk › dq
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPublicJwk › e
+
+```ts
+readonly e: string;
+```
+
+#### RsaPublicJwk › k
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPublicJwk › kid
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPublicJwk › kty
+
+```ts
+readonly kty: "RSA";
+```
+
+#### RsaPublicJwk › n
+
+```ts
+readonly n: string;
+```
+
+#### RsaPublicJwk › p
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPublicJwk › q
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPublicJwk › qi
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPublicJwk › use
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPublicJwk › x
+
+Inherited from [`JwkMembers`](#jwkmembers).
+
+#### RsaPublicJwk › y
+
+Inherited from [`JwkMembers`](#jwkmembers).
 
 ### SecretKey
 
@@ -1698,6 +2304,12 @@ export interface SignHeader {
     readonly kid?: string;
     readonly typ?: string;
     readonly cty?: string;
+    readonly crit?: never;
+    readonly b64?: never;
+    readonly jwk?: never;
+    readonly jku?: never;
+    readonly x5u?: never;
+    readonly x5c?: never;
     readonly [parameter: string]: unknown;
 }
 ```
@@ -1714,6 +2326,22 @@ The key's algorithm. It may be repeated here, but never changed.
 
 **Default** — the signing key's `alg`
 
+#### SignHeader › b64
+
+```ts
+readonly b64?: never;
+```
+
+Refused: unencoded payloads (RFC 7797) are not supported.
+
+#### SignHeader › crit
+
+```ts
+readonly crit?: never;
+```
+
+Refused: this package implements no extension a verifier must understand.
+
 #### SignHeader › cty
 
 ```ts
@@ -1721,6 +2349,22 @@ readonly cty?: string;
 ```
 
 Media type of the payload.
+
+#### SignHeader › jku
+
+```ts
+readonly jku?: never;
+```
+
+Refused: a verifier that trusts it lets the token choose its own key.
+
+#### SignHeader › jwk
+
+```ts
+readonly jwk?: never;
+```
+
+Refused: write it with `embedKey`, which proves it is the signing key's public half.
 
 #### SignHeader › kid
 
@@ -1740,13 +2384,29 @@ readonly typ?: string;
 
 Media type of the whole token, such as `JWT` or `at+jwt`.
 
+#### SignHeader › x5c
+
+```ts
+readonly x5c?: never;
+```
+
+Refused: a verifier that trusts it lets the token choose its own key.
+
+#### SignHeader › x5u
+
+```ts
+readonly x5u?: never;
+```
+
+Refused: a verifier that trusts it lets the token choose its own key.
+
 #### SignHeader index signature
 
 ```ts
 readonly [parameter: string]: unknown;
 ```
 
-Any other JSON header parameter. `crit`, `b64`, `jwk`, `jku`, `x5u` and `x5c` are refused: this package neither honours nor emits them.
+Any other JSON header parameter.
 
 ### SignInput
 
@@ -1756,6 +2416,11 @@ export interface SignInput<TPayload extends object = JwtPayload> {
     readonly key: SigningKey;
     readonly header?: SignHeader;
     readonly embedKey?: PublicKey;
+    readonly issuedAt?: boolean;
+    readonly notBefore?: number;
+    readonly expiresIn?: number;
+    readonly jti?: boolean;
+    readonly now?: () => number;
 }
 ```
 
@@ -1775,6 +2440,16 @@ A public key to embed in the header as `jwk`, so the token carries the key that 
 
 **Default** — no `jwk` header
 
+#### SignInput › expiresIn
+
+```ts
+readonly expiresIn?: number;
+```
+
+Writes `exp` this many whole seconds after the current time, the same time `issuedAt` writes, at most 315360000 (ten years), so a time in milliseconds throws. The payload must not set `exp` too.
+
+**Default** — no `exp` unless the payload has one
+
 #### SignInput › header
 
 ```ts
@@ -1783,6 +2458,26 @@ readonly header?: SignHeader;
 
 Extra protected header parameters.
 
+#### SignInput › issuedAt
+
+```ts
+readonly issuedAt?: boolean;
+```
+
+Writes `iat`, the current time in whole seconds. The payload must not set `iat` too.
+
+**Default** — false, no `iat` unless the payload has one
+
+#### SignInput › jti
+
+```ts
+readonly jti?: boolean;
+```
+
+Writes `jti`, a random UUID from `crypto.randomUUID()`. The payload must not set `jti` too.
+
+**Default** — false, no `jti` unless the payload has one
+
 #### SignInput › key
 
 ```ts
@@ -1790,6 +2485,26 @@ readonly key: SigningKey;
 ```
 
 A private or secret key this package created. It fixes the token's `alg`.
+
+#### SignInput › notBefore
+
+```ts
+readonly notBefore?: number;
+```
+
+Writes `nbf` this many whole seconds after the current time, at most 315360000 (ten years), so a time in milliseconds throws. The payload must not set `nbf` too.
+
+**Default** — no `nbf` unless the payload has one
+
+#### SignInput › now
+
+```ts
+readonly now?: () => number;
+```
+
+The clock `issuedAt`, `notBefore` and `expiresIn` read, in milliseconds since the Unix epoch, as a verifier's `now` is. It is called once, and only when one of them is given.
+
+**Default** — `Date.now`
 
 #### SignInput › payload
 
@@ -2050,7 +2765,9 @@ Result produced by Standard Schema validation.
 ### VerifiedJwt
 
 ```ts
-export interface VerifiedJwt<TPayload extends JwtPayload = JwtPayload> {
+export interface VerifiedJwt<TPayload extends object & {
+    readonly [K in keyof TPayload & keyof JwtRegisteredClaims]?: JwtRegisteredClaims[K];
+} = JwtPayload> {
     readonly header: JwtHeader;
     readonly payload: TPayload;
     readonly key: VerificationKey;
@@ -2089,6 +2806,7 @@ The payload, after every configured claim check passed.
 export interface VerifierOptions<TSchema extends StandardSchemaV1 | undefined = undefined> {
     readonly keys: KeySet | KeySetResolver;
     readonly issuer?: string | readonly string[];
+    readonly subject?: string | readonly string[];
     readonly audience?: string | readonly string[] | false;
     readonly type?: string | readonly (string | null)[];
     readonly requireExpiration?: boolean;
@@ -2131,7 +2849,7 @@ When unset, a token that carries `aud` fails with `wrong_audience`: RFC 7519 §4
 readonly claims?: TSchema;
 ```
 
-Standard Schema run on the payload after every other check passed. Its issues become `invalid_claims` issues carrying only their path; its messages are dropped, since they may quote the input. The schema checks; it does not transform: the returned payload is the token's own.
+Standard Schema run on the payload after every other check passed. Its issues become `schema_failed` issues carrying only their path; its messages are dropped, since they may quote the input. The schema checks; it does not transform: the returned payload is the token's own.
 
 #### VerifierOptions › clockTolerance
 
@@ -2215,6 +2933,14 @@ Whether `exp` is required. A token without `exp` never expires, so it is require
 
 **Default** — `true` when `maxAge` is unset, `false` when it is set
 
+#### VerifierOptions › subject
+
+```ts
+readonly subject?: string | readonly string[];
+```
+
+Accepted `sub` values, for a verifier that accepts tokens about known subjects only, such as a client assertion whose `sub` must be the client's own id. When set, `sub` is required and must equal one exactly.
+
 #### VerifierOptions › type
 
 ```ts
@@ -2235,6 +2961,14 @@ Asymmetric JWS algorithms this package signs and verifies with.
 
 A minor release may add an algorithm to this union, so code that switches over it keeps a default branch. An algorithm is removed or renamed only in a major release.
 
+### EcJwk
+
+```ts
+export type EcJwk = EcPublicJwk | EcPrivateJwk;
+```
+
+An elliptic-curve JWK, public or private.
+
 ### JsonCompatible
 
 ```ts
@@ -2244,6 +2978,22 @@ export type JsonCompatible<T> = unknown extends T ? T : T extends string | numbe
 ```
 
 `T` as JSON can carry it: every member that is a function, or an object with methods such as a `Date`, becomes `never`, so a value JSON would change fails to compile. Members typed `unknown` pass, and are checked when signing.
+
+### Jwk
+
+```ts
+export type Jwk = PublicJwk | PrivateJwk | SecretJwk;
+```
+
+A JSON Web Key as this package exports it: one of the shapes above, told apart by `kty`, and by `d` or `k` for private material. Every exported JWK is frozen.
+
+### JwksFetch
+
+```ts
+export type JwksFetch = (url: string, init: RequestInit) => Promise<Response>;
+```
+
+The `fetch` a remote key set calls: the JWKS URL, normalized, and a `GET` request init. The global `fetch` of every runtime fits, as does a stub that takes just these two arguments.
 
 ### JwsAlgorithm
 
@@ -2256,7 +3006,7 @@ Every JWS algorithm this package supports. `none` is never one of them. A minor 
 ### JwtIssueCode
 
 ```ts
-export type JwtIssueCode = "malformed" | "too_large" | "duplicate_key" | "unsupported_crit" | "unsupported_alg" | "unknown_kid" | "no_matching_key" | "ambiguous_key" | "alg_mismatch" | "bad_signature" | "key_fetch_failed" | "expired" | "not_yet_valid" | "issued_in_future" | "too_old" | "wrong_issuer" | "wrong_audience" | "wrong_type" | "missing_claim" | "invalid_claim" | "invalid_claims" | "invalid_key" | "unsupported_key" | "weak_key" | "unexpected_private_key" | "wrong_use";
+export type JwtIssueCode = "malformed" | "too_large" | "duplicate_key" | "unsupported_crit" | "unsupported_alg" | "unknown_kid" | "no_matching_key" | "ambiguous_key" | "alg_mismatch" | "bad_signature" | "key_fetch_failed" | "expired" | "not_yet_valid" | "issued_in_future" | "too_old" | "wrong_issuer" | "wrong_subject" | "wrong_audience" | "wrong_type" | "missing_claim" | "invalid_claim" | "schema_failed" | "invalid_key" | "unsupported_key" | "weak_key" | "unexpected_private_key" | "wrong_use";
 ```
 
 Stable category of a failure that callers can branch on without parsing messages.
@@ -2291,6 +3041,38 @@ Chooses the key set for a token by the issuer it claims, for a verifier that acc
 
 The verifier calls it after the token's structure and header passed and before its signature is checked, so `issuer` is the token's `iss` exactly as the token states it, and an attacker chooses it. Look it up in keys you already hold, such as a `Map`; never build a URL or a query from it without an allowlist. The token then verifies only with a key from the returned set, and its verified `iss` is the one passed here.
 
+### OkpJwk
+
+```ts
+export type OkpJwk = OkpPublicJwk | OkpPrivateJwk;
+```
+
+An Ed25519 JWK, public or private.
+
+### PrivateJwk
+
+```ts
+export type PrivateJwk = EcPrivateJwk | OkpPrivateJwk | RsaPrivateJwk;
+```
+
+A private JWK, its public members included, as [`exportPrivateJwk`](#exportprivatejwk) exports it. Narrow it on `kty`.
+
+### PublicJwk
+
+```ts
+export type PublicJwk = EcPublicJwk | OkpPublicJwk | RsaPublicJwk;
+```
+
+A public JWK, as [`exportPublicJwk`](#exportpublicjwk) exports it. Narrow it on `kty`.
+
+### RsaJwk
+
+```ts
+export type RsaJwk = RsaPublicJwk | RsaPrivateJwk;
+```
+
+An RSA JWK, public or private.
+
 ### RsaModulusLength
 
 ```ts
@@ -2298,6 +3080,14 @@ export type RsaModulusLength = 2048 | 3072 | 4096;
 ```
 
 RSA modulus lengths [`generateKeyPair`](#generatekeypair) accepts, in bits.
+
+### SecretJwk
+
+```ts
+export type SecretJwk = OctJwk;
+```
+
+A secret JWK, as [`exportSecretJwk`](#exportsecretjwk) exports it.
 
 ### SigningKey
 
@@ -2334,10 +3124,12 @@ The payload type a verifier with the given schema returns.
 ### Verifier
 
 ```ts
-export type Verifier<TPayload extends JwtPayload = JwtPayload> = (token: unknown) => Promise<JwtResult<VerifiedJwt<TPayload>>>;
+export type Verifier<TPayload extends object & {
+    readonly [K in keyof TPayload & keyof JwtRegisteredClaims]?: JwtRegisteredClaims[K];
+} = JwtPayload> = (token: unknown) => Promise<JwtResult<VerifiedJwt<TPayload>>>;
 ```
 
-A configured verifier. Call it with any value; it never throws for a token, whatever its content. Only caller code makes its promise reject: a `claims` schema that throws or rejects, or an `options.now` that returns something other than a finite number.
+A configured verifier. Call it with any value; it never throws for a token, whatever its content. `TPayload` is the payload type [`createVerifier`](#createverifier) gave it, from its `claims` schema or its type argument. Only caller code makes its promise reject: a `claims` schema that throws or rejects, or an `options.now` that returns something other than a finite number.
 
 ## Variables
 
@@ -2364,3 +3156,31 @@ export declare const SYMMETRIC_ALGORITHMS: readonly SymmetricAlgorithm[];
 ```
 
 Every symmetric algorithm, in a stable order.
+
+## Internal types
+
+### JwkMaterialMember
+
+```ts
+type JwkMaterialMember = "crv" | "x" | "y" | "n" | "e" | "d" | "p" | "q" | "dp" | "dq" | "qi" | "k";
+```
+
+The key material members of a JWK, across every key type.
+
+Not exported; declared in `src/core/types.ts`.
+
+### JwkMembers
+
+```ts
+type JwkMembers<TAlgorithm extends JwsAlgorithm, TOwn extends JwkMaterialMember> = {
+    readonly alg: TAlgorithm;
+    readonly use: "sig";
+    readonly kid?: string;
+} & {
+    readonly [TMember in Exclude<JwkMaterialMember, TOwn>]?: never;
+};
+```
+
+The members every JWK this package exports has, and every material member of other key types as absent, so a member of any JWK can still be read by name: `jwk.n` is `undefined` on an `EC` key rather than a compile error, and `jwk.d !== undefined` tells a private JWK from a public one.
+
+Not exported; declared in `src/core/types.ts`.

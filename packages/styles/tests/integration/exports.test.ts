@@ -288,26 +288,33 @@ test("no shipped stylesheet contains a sequence that ends an inline style elemen
   expect(unsafe).toEqual([]);
 });
 
-/* The checkbox's check and dash are drawn from Lucide's `check` and `minus`,
-   under ISC, which Lucide derives from Feather, under MIT. Both licences ask
-   for their notice in every copy, and a compiled stylesheet is copied on its
-   own: served from a CDN, or committed into a project's assets, apart from the
-   package's NOTICE. So a compiled file that carries the marks names them, and
-   so does a `/tw` source, which a consumer's Tailwind copies into its build. */
-test("every shipped stylesheet that carries the checkbox marks names their licence", async () => {
+/* `chs build` tells a stylesheet it wrote, or a copy of a complete one, by
+   the package's head comment after Tailwind's banner (`scripts/head.mjs`).
+   Exactly the complete stylesheets carry it: the theme, the palette, and the
+   aesthetics are told by their bytes, and `/tw` is never the command's. */
+const HEADED = /^\/\*! tailwindcss [^*]*\*\/\n\/\*! @codenhub\/styles \| Apache-2\.0 \*\/\n/;
+
+test("exactly the complete compiled stylesheets start with the package's head", async () => {
   const stylesheets = [...(await shippedStylesheets("dist")), ...(await shippedStylesheets("tw"))];
   const outputs = await Promise.all(stylesheets.map((file) => readFile(path.resolve(packageRoot, file), "utf8")));
-  const marked = stylesheets.filter((_, index) => outputs[index]!.includes("20 6 9 17 4 12"));
-  const unnoticed = marked.filter((file) => {
-    const notice = /\/\*![^*]*Lucide[^*]*\*\//.exec(outputs[stylesheets.indexOf(file)]!)?.[0] ?? "";
+  const headed = stylesheets.filter((_, index) => HEADED.test(outputs[index]!));
+  const named = stylesheets.filter((_, index) => outputs[index]!.includes("@codenhub/styles |"));
 
-    return !(notice.includes("ISC") && notice.includes("Feather") && notice.includes("MIT"));
-  });
+  expect(headed.toSorted()).toEqual([
+    "dist/components.css",
+    "dist/index.css",
+    "dist/native.css",
+    "dist/purge/index.css",
+  ]);
+  expect(named.toSorted()).toEqual(headed.toSorted());
+});
 
-  expect(marked).toContain("dist/index.css");
-  expect(marked).toContain("dist/purge/index.css");
-  expect(marked).toContain("tw/components/form.rules.css");
-  expect(unnoticed).toEqual([]);
+// The checkbox marks are the package's own drawings, so no third-party licence travels with them.
+test("no shipped stylesheet names Lucide or Feather", async () => {
+  const stylesheets = [...(await shippedStylesheets("dist")), ...(await shippedStylesheets("tw"))];
+  const outputs = await Promise.all(stylesheets.map((file) => readFile(path.resolve(packageRoot, file), "utf8")));
+
+  expect(stylesheets.filter((_, index) => /lucide|feather/i.test(outputs[index]!))).toEqual([]);
 });
 
 /* A `--tw-*` variable is Tailwind's own, renamed or dropped in any release. The
