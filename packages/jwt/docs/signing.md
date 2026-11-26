@@ -1,6 +1,6 @@
 ---
 title: Signing tokens
-description: What sign writes into the header, which payloads it accepts, and why it adds no claims of its own.
+description: What sign writes into the header, which payloads it accepts, and the claims it adds only when asked.
 order: 2
 ---
 
@@ -26,9 +26,9 @@ The payload, key and header are your own data, not input from outside, so a mist
 
 ## The payload is signed as given
 
-`sign` adds no claim. It does not set `iat`, `exp` or `jti`, and does not check that `exp` is in the future. Every claim the token should carry is one you write, which keeps what a token says visible at the call that signs it. Write times as whole seconds since the Unix epoch, `Math.floor(Date.now() / 1000)`, since that is what verifiers, this one included, read them as. An `exp`, `nbf` or `iat` past 253402300799, the last second of year 9999, throws: it is almost certainly `Date.now()` in milliseconds, which would sign a token that expires in some 55,000 years.
+`sign` adds no claim unless you ask for one with the options below, and does not check that `exp` is in the future. Write times as seconds since the Unix epoch, `Math.floor(Date.now() / 1000)`, since that is what verifiers, this one included, read them as. Write them as whole seconds: RFC 7519 allows fractions, but many verifiers parse numeric dates as integers and refuse or misread `1700000000.5`. An `exp`, `nbf` or `iat` past 253402300799, the last second of year 9999, throws: it is almost certainly `Date.now()` in milliseconds, which would sign a token that expires in some 55,000 years.
 
-The payload must be a plain object whose values JSON represents exactly: strings, finite numbers, booleans, `null`, arrays and plain objects, nested at most 32 levels deep. `undefined`, functions, symbols, bigints, `NaN`, `Infinity` and `-0`, `Date`s and other class instances, getters, sparse arrays and cycles all throw. `JSON.stringify` would drop or rewrite most of these silently, so the token would not say what your code meant. A `Date` in `exp` is the classic: it would sign as a string, and every verifier would then refuse a token whose expiry is not a number.
+The payload must be a plain object whose values JSON represents exactly: strings, finite numbers, booleans, `null`, arrays and plain objects, nested at most 32 levels deep. `undefined`, functions, symbols, bigints, `NaN`, `Infinity` and `-0`, `Date`s and other class instances, getters, sparse arrays and cycles all throw. `JSON.stringify` would drop or rewrite most of these silently, so the token would not say what your code meant. A `Date` in `exp` is the classic: it would sign as a string, and every verifier would then refuse a token whose expiry is not a number. Objects and arrays from another realm, such as a `vm` context or an iframe, are plain too. `sign` reads each member once, through its property descriptor, and writes the token from the values it checked, so a `Proxy` cannot show the checks one value and the token another.
 
 In TypeScript, the payload may have any object type, an `interface` included, as long as its registered claims have their RFC 7519 types and every member is a JSON value: a `Date` member or an `exp` typed as a string is a compile error, before it is a `TypeError`.
 
@@ -47,6 +47,31 @@ The registered claims are checked for the types RFC 7519 gives them: `exp`, `nbf
 
 `sign` does not limit a token's length, but verifiers do: a token longer than the verifier's `maxLength`, 8192 characters by default, fails with `too_large`. A payload of a few kilobytes reaches that, so raise `maxLength` on the verifier, up to 65536, when your tokens are large.
 
+## Claims sign can add
+
+Four options write a claim for you, after the payload's own members:
+
+| Option              | Writes                                          |
+| ------------------- | ----------------------------------------------- |
+| `issuedAt: true`    | `iat`, the current time                         |
+| `notBefore: number` | `nbf`, that many seconds after the current time |
+| `expiresIn: number` | `exp`, that many seconds after the current time |
+| `jti: true`         | `jti`, a random UUID from `crypto.randomUUID()` |
+
+```ts
+const token = await sign({
+  payload: { iss: "https://issuer.example", sub: "user-1", aud: "api" },
+  key: privateKey,
+  issuedAt: true,
+  expiresIn: 300,
+});
+// payload: {"iss":"https://issuer.example","sub":"user-1","aud":"api","iat":1700000000,"exp":1700000300}
+```
+
+The times are whole seconds, the clock read once and rounded down, so `exp - iat` is exactly `expiresIn`. `notBefore` and `expiresIn` are seconds, never milliseconds, from 0 to 315360000, ten years; a larger one throws, since it is almost certainly a duration in milliseconds. That bound catches milliseconds only from four days up: `expiresIn: 300_000`, meant as five minutes, signs a token that lasts three and a half days, so write durations in seconds. Setting an option and the claim it writes in the payload too throws, rather than choosing one of them.
+
+The clock is `Date.now` unless you pass `now`, a function that returns milliseconds since the Unix epoch, as a verifier's `now` does. It is called only when `issuedAt`, `notBefore` or `expiresIn` is given.
+
 ## The header
 
 The header's `alg` always comes from the key. You may repeat it in `header.alg`, but a different value throws: a key signs under its own algorithm only.
@@ -58,12 +83,14 @@ Other header parameters are written as given, with the same JSON rules as the pa
 | Parameter                  | Why it is refused                                                                                                                                                                     |
 | -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `crit`                     | It asks the verifier to understand an extension. This package implements none, and its own verifier rejects every token with `crit`.                                                  |
-| `b64`                      | Unencoded payloads (RFC 7797) are not supported.                                                                                                                                      |
+| `b64`                      | RFC 7797 §7 keeps unencoded payloads out of JWTs, and this package does not support them.                                                                                             |
 | `jwk`, `jku`, `x5u`, `x5c` | They tell the verifier where to find the key. A verifier that trusts them lets the token choose its own key, so this package never reads them, and writes `jwk` only from `embedKey`. |
+
+In TypeScript, `SignHeader` types these members as `never`, so writing one is a compile error too.
 
 The header is written in a fixed order: `alg`, then `kid`, `typ` and `cty` when present, then `jwk` for an `embedKey`, then the other parameters in the order you gave them.
 
-`sign`'s input takes only `payload`, `key`, `header` and `embedKey`; any other member throws (`sign: input.headers is not an option.`).
+`sign`'s input takes only `payload`, `key`, `header`, `embedKey`, `issuedAt`, `notBefore`, `expiresIn`, `jti` and `now`; any other member throws (`sign: input.headers is not an option.`).
 
 ## Which key signs
 
@@ -82,8 +109,6 @@ const signingKey = imported.value;
 
 export const issue = (sub: string) => sign({ payload: { sub, exp: Math.floor(Date.now() / 1000) + 300 }, key: signingKey });
 ```
-
-A key held by a cloud KMS or an HSM signs through `createExternalSigningKey`; [Keys](keys.md#keys-held-by-a-kms-or-hsm) shows it.
 
 ## DPoP proofs
 

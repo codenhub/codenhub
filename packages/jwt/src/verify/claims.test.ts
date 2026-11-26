@@ -199,6 +199,53 @@ describe("issuer", () => {
   });
 });
 
+describe("subject", () => {
+  it("should accept a subject equal to one in the list", async () => {
+    expect(await verify({ sub: "client-2" }, { subject: ["client-1", "client-2"] })).toEqual(
+      passed({ sub: "client-2" }),
+    );
+  });
+
+  it("should reject a different subject, compared exactly", async () => {
+    expect(await verify({ sub: "Client-1" }, { subject: "client-1" })).toEqual(
+      failure({ code: "wrong_subject", path: ["payload", "sub"] }),
+    );
+  });
+
+  it("should require sub, and report it once with requiredClaims", async () => {
+    expect(await verify({}, { subject: "client-1", requiredClaims: ["sub"] })).toEqual(
+      failure({ code: "missing_claim", path: ["payload", "sub"], params: { claim: "sub" } }),
+    );
+  });
+
+  it("should report a sub that is not a string once, as invalid_claim", async () => {
+    const token = await signRaw(key, '{"alg":"HS256"}', '{"sub":1}');
+    const verifySubject = createVerifier({
+      keys: keySetOf(key),
+      now: clockAt(),
+      requireExpiration: false,
+      subject: "a",
+    });
+
+    expect(await verifySubject(token)).toEqual(failure({ code: "invalid_claim", path: ["payload", "sub"] }));
+  });
+
+  it("should report the subject after the issuer and before the audience", async () => {
+    expect(
+      await verify(
+        { iss: "https://c.example", sub: "x", aud: "web" },
+        { issuer: "https://a.example", subject: "y", audience: "api" },
+      ),
+    ).toEqual(
+      failure(
+        { code: "wrong_issuer", path: ["payload", "iss"] },
+        { code: "wrong_subject", path: ["payload", "sub"] },
+        { code: "wrong_audience", path: ["payload", "aud"] },
+      ),
+    );
+  });
+});
+
 describe("a key bound to an issuer", () => {
   const TENANT_A = "https://a.example";
   const TENANT_B = "https://b.example";
@@ -581,14 +628,14 @@ describe("claims schema", () => {
 
   it("should report a schema issue by path and drop its message", async () => {
     expect(await verify({ sub: "SUBJECT-SECRET" }, { claims: schemaOf(requireRole) })).toEqual(
-      failure({ code: "invalid_claims", path: ["payload", "role"] }),
+      failure({ code: "schema_failed", path: ["payload", "role"] }),
     );
   });
 
   it("should await an asynchronous schema", async () => {
     const claims = schemaOf(async (value) => requireRole(value));
 
-    expect(await verify({}, { claims })).toEqual(failure({ code: "invalid_claims", path: ["payload", "role"] }));
+    expect(await verify({}, { claims })).toEqual(failure({ code: "schema_failed", path: ["payload", "role"] }));
   });
 
   it("should map path segment objects to their keys and drop symbol keys", async () => {
@@ -598,8 +645,8 @@ describe("claims schema", () => {
 
     expect(await verify({}, { claims })).toEqual(
       failure(
-        { code: "invalid_claims", path: ["payload", "profile", 0, "name"] },
-        { code: "invalid_claims", path: ["payload"] },
+        { code: "schema_failed", path: ["payload", "profile", 0, "name"] },
+        { code: "schema_failed", path: ["payload"] },
       ),
     );
   });
@@ -607,7 +654,7 @@ describe("claims schema", () => {
   it("should report a failure the schema gives without issues", async () => {
     const claims = schemaOf(() => ({ issues: [] }));
 
-    expect(await verify({}, { claims })).toEqual(failure({ code: "invalid_claims", path: ["payload"] }));
+    expect(await verify({}, { claims })).toEqual(failure({ code: "schema_failed", path: ["payload"] }));
   });
 
   it("should return the token's payload, not the schema's output", async () => {
@@ -650,7 +697,7 @@ describe("claims schema", () => {
   it("should keep a path naming a payload key", async () => {
     const claims = schemaOf(() => ({ issues: [{ message: "m", path: ["PAYLOAD-KEY"] }] }));
 
-    expect(await verify({}, { claims })).toEqual(failure({ code: "invalid_claims", path: ["payload", "PAYLOAD-KEY"] }));
+    expect(await verify({}, { claims })).toEqual(failure({ code: "schema_failed", path: ["payload", "PAYLOAD-KEY"] }));
   });
 
   it("should accept a callable schema", async () => {

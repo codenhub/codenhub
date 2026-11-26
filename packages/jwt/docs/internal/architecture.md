@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-18
+last_updated: 2026-11-25
 scope: How `@codenhub/jwt` is built and why, for whoever changes it next.
 ---
 
@@ -16,7 +16,7 @@ In scope, and the package must get right:
 - **Algorithm substitution**: `alg: none`, RS/HS confusion, and any token that tries to choose how it is verified, including through `jwk`, `jku`, `x5u` or `x5c` headers.
 - **Parser differentials**: input that one JSON or base64 parser reads differently from another, such as duplicate member names, padding, or non-canonical trailing bits, so that what was signed and what is read could differ.
 - **Leaks through failures**: no issue, `TypeError` message or result holds a value of a token, claim, header, JWK or response.
-- **Forced work against an issuer**: a stream of tokens with invented `kid`s costs the issuer at most one fetch per cooldown window.
+- **Forced work against an issuer**: while the cache is usable, a stream of tokens with invented `kid`s costs the issuer at most one fetch per cooldown window. A fetch that misses its deadline or is cancelled with its request (decision 42) may be fetched again inside the window, but only when no usable cache can answer, so invented `kid`s alone never reach that path. `cooldown: 0` gives the bound up, never more than one fetch at a time.
 
 Out of scope, and documented rather than defended:
 
@@ -32,7 +32,7 @@ Out of scope, and documented rather than defended:
 | `encoding/` | Strict base64url, the strict JSON object parser, and UTF-8 helpers.                                           |
 | `jws/`      | Compact parsing (`checkSegments`, `parseCompact`, `parsePayload`) and the public `readHeader`.                |
 | `keys/`     | The algorithm table, the key registry, JWK and PEM checks, import, generation, export and thumbprints.        |
-| `keysets/`  | Selection, local key sets, JWKS import, and the remote key set.                                               |
+| `keysets/`  | Selection, local key sets, JWKS import, the remote key set, and the issuer's key ring.                        |
 | `sign/`     | `sign`.                                                                                                       |
 | `verify/`   | Option resolution, claim checks, and `createVerifier`.                                                        |
 | `interop/`  | A local copy of the Standard Schema v1 types, so the package has no dependency for them.                      |
@@ -123,12 +123,13 @@ A DPoP proof (RFC 9449) carries its public key in a `jwk` header. `sign` writes 
 
 `keysets/select.ts` is shared by every built-in key set:
 
-- With a `kid`: candidates are the keys with that `kid`; none is `unknown_kid`. Among them, exactly one must have the header's `alg`: none is `alg_mismatch`, several `ambiguous_key`.
+- With a `kid`: candidates are the keys with that `kid`. Among them, exactly one must have the header's `alg`: none is `alg_mismatch`, several `ambiguous_key`.
+- With a `kid` no key has: a key without a `kid` stands in (decision 35), as a PEM key has none. Exactly one key without a `kid` must have the header's `alg`: several is `ambiguous_key`, none `unknown_kid`. A `kid` that is not a string never gets a stand-in.
 - Without a `kid`: exactly one key in the set must have the header's `alg`: none is `no_matching_key`, several `ambiguous_key`.
 
 Keys are never tried in turn. Trial verification would accept a token under a key it did not name, would make the cost of a forged token grow with the size of the set, and would make the outcome depend on the order of the set.
 
-`alg_mismatch` for a known `kid` is distinct from `unknown_kid` because only the latter can be fixed by refetching a JWKS; a remote key set refetches on `unknown_kid` alone.
+`alg_mismatch` for a known `kid` is distinct from `unknown_kid` because only the latter can be fixed by refetching a JWKS. A remote key set refetches when `lacksKid` holds: the header names a `kid` that no key in the cache carries, whatever the selection gave, `unknown_kid`, a stand-in key, or `ambiguous_key` among several stand-ins. Refetching only on `unknown_kid` would let a stand-in answer a rotated-in `kid` with `bad_signature` until the cache expired.
 
 Scope section 4 asked selection to filter by `use` and `key_ops` too. That filter runs once, at import: a JWK with `use` other than `sig` or `key_ops` without the needed operation is refused (`wrong_use`) or, in a JWKS, skipped, so every key that reaches a set is a signature key and selection needs no second filter.
 
@@ -140,32 +141,49 @@ Scope section 4 asked selection to filter by `use` and `key_ops` too. That filte
 
 ## Remote key set
 
-`keysets/remote.ts` keeps four pieces of state in the closure of `createRemoteKeySet`; the returned object is frozen and holds only `select`:
+`keysets/remote.ts` keeps its state in the closure of `createRemoteKeySet`; the returned object is frozen and holds only `select`:
 
-| State                | Meaning                                                                  |
-| -------------------- | ------------------------------------------------------------------------ |
-| `cached`             | The last successfully fetched keys and when they expire.                 |
-| `lastFailure`        | The failure of the last fetch, cleared by the next success.              |
-| `lastFetchStartedAt` | When the last fetch started, for the cooldown.                           |
-| `inFlight`           | The running fetch, shared by every caller that needs keys while it runs. |
+| State                | Meaning                                                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `cached`             | The last keys fetched successfully, or imported from the seed: the keys, `fetchedAt` (from `now()` when the fetch completed) and `ttlMs`.         |
+| `lastFailure`        | The failure of the last fetch, cleared by the next success.                                                                                       |
+| `lastFetchStartedAt` | When the last fetch started, for the cooldown and for the fetch's deadline.                                                                       |
+| `inFlight`           | The running fetch, shared by every caller that needs keys while it runs.                                                                          |
+| `generation`         | Counts fetches started. A fetch that settles after a newer one replaced it changes no state; a failure it ends with still reaches `onFetchError`. |
+| `seeding`            | The import of the seed, started by the first `select` and awaited by every one.                                                                   |
+| `fetchState`         | Whether to pass `cache: "no-cache"`, cleared for the key set's life when the runtime refused it ([fetching](#fetching)).                          |
+
+The terms the steps use:
+
+- The cache is **fresh** while its age is under `ttlMs`, and **usable** while it is under `ttlMs` plus `maxStale`. The age is `now()` minus `fetchedAt`; an age down to minus a minute counts as 0, and a cache further in the future is neither.
+- The **cooldown** runs while less than `cooldown` has passed since `lastFetchStartedAt`; a clock earlier than that start ends it.
+- A fetch is **live** while it is in flight and its **deadline**, its start plus `timeout` plus a second, has not passed. It **counts as running** while it is live or the cooldown runs, so invented `kid`s cannot start fetches faster than one per cooldown even when fetches hang.
 
 A `select` call:
 
-1. If a fetch is running, answers from the cache when it is fresh and the selection is not `unknown_kid`, and otherwise waits for the fetch. Otherwise, if there is no cache or it has expired, fetches, unless the cooldown since the last fetch start has not passed.
-2. Takes the usable keys: the cache while `now < expiresAt + maxStale`, otherwise the last failure.
-3. Selects. If the result is `unknown_kid`, this call has not fetched yet, and the cooldown has passed, it refetches once (sharing any fetch in flight) and selects again from the fresh keys.
+1. Awaits the seed's import, once per key set.
+2. If a fetch counts as running: when the cache is usable, selects from it and answers, unless the header lacks a `kid` the cache carries and the fetch is live; otherwise joins the fetch. If none runs and the cache is not fresh, outside the cooldown: a usable cache answers this call and a fetch starts in the background to replace it (decision 37); without one, the call joins a new fetch.
+3. Takes the usable keys: the cache while it is usable, otherwise the last failure.
+4. Selects. When the header lacks a `kid` the keys carry, as `lacksKid` decides, this call has not fetched, and the cooldown is not running with no live fetch to join, it joins a fetch once more and selects from its keys. If that fetch fails, a stand-in key the first selection found still answers while the cache is usable, since the fetch may have outlasted it; otherwise the failure does.
 
-So each `select` starts at most one fetch, concurrent callers never start a second, and fetches caused by failures or unknown `kid`s are at least `cooldown` apart. A header without `kid` never refetches: `no_matching_key` cannot be fixed by a rotation the issuer announces through `kid`s, and refetching on it would let any token without a `kid` force fetches.
+Joining a fetch (decision 42) starts one when none counts as running. Otherwise it waits for the running fetch until its deadline. A fetch that settles in time gives its result. One that misses the deadline, or rejects, as on Workers when the request that started it ended, is given up: inside the cooldown a usable cache answers instead, and otherwise the call starts a fetch of its own, once.
 
-The TTL counts from when a fetch completes. Stale keys are served under the bound of decision 5 and are never re-dated: `expiresAt` only moves on a successful fetch, so `maxStale` is a hard limit from the last success. The default cooldown is `min(30, cacheTtl)`, since a cooldown longer than the TTL would keep an expired cache from refreshing.
+So each `select` starts at most two fetches, the second only after the first was given up, concurrent callers never start a second fetch while one is live, and fetches caused by failures or unknown `kid`s are at least `cooldown` apart. A header without `kid` never refetches: `no_matching_key` cannot be fixed by a rotation the issuer announces through `kid`s, and refetching on it would let any token without a `kid` force fetches.
+
+The TTL counts from when a fetch completes. `ttlMs` is `cacheTtl`, shortened by the response's `Cache-Control` ([fetching](#fetching)); a seed gets `cacheTtl`, since a snapshot does not record the response's headers. Stale keys are served under the bound of decision 5 and are never re-dated: `fetchedAt` only moves on a successful fetch, so `maxStale` is a hard limit from the last success. A failed fetch, `no_usable_keys` included, leaves `cached` as it was. The default cooldown is `min(30, cacheTtl)`, since a cooldown longer than the TTL would keep an expired cache from refreshing.
+
+The seed is read when the key set is created and imported at the first `select`. Anything but an object with a finite `fetchedAt` and a string `url` whose normalized `href` is the key set's own is no seed, and neither is a `jwks` that imports no usable key (decision 38): a seed comes from storage, which another key set or an older build may have written.
 
 ### Fetching
 
-- **`GET` with `accept: application/json`, `redirect: "manual"`.** A redirect is a `status` failure: following one would let whoever controls the redirect target supply keys, and the URL is what the consumer configured. `credentials` and `cache` are not passed, because Cloudflare Workers rejects some of their values, and neither is needed for a public JWKS.
+- **`GET` with `accept: application/json`, `redirect: "manual"`.** A redirect is a `status` failure: following one would let whoever controls the redirect target supply keys, and the URL is what the consumer configured. `credentials` is not passed: a public JWKS needs none, and Cloudflare Workers rejects some of its values.
+- **`cache: "no-cache"`.** A browser's HTTP cache honours the issuer's `Cache-Control`, so without it a refetch for a rotated-in `kid` or after `cacheTtl` could be answered from the browser's copy, and the TTL, the refetch on an unknown `kid` and `maxStale` would no longer bound how old the keys are. A `Cache-Control: no-cache` request header would do the same but is not CORS-safelisted, so a cross-origin JWKS would need a preflight. Workers before compatibility date 2025-08-07 reject the member (see the trap in the package's `AGENTS.md`), so a rejection whose message names `cache` is tried once more without it, and `fetchState` then leaves `cache` out for the key set's life. A network failure also rejects with a `TypeError` but names no `cache`, so it is not retried and a failing issuer still costs one request per fetch.
 - **HTTPS only, no credentials in the URL**, checked at creation. `http:` is accepted on a loopback host, `localhost`, `127.0.0.0/8` or `[::1]`, matched on the parsed URL's `hostname` so that spellings such as `127.1` normalize first (decision 29). A URL with a user name or password would put a secret where logs and error trackers print URLs.
 - **`fetch` is looked up at each call** when not injected, so test stubs and polyfills installed after creation are used, and it is called through a local so a browser's `fetch` never runs with a foreign `this`.
 - **Timeout** by racing the request against a timer that aborts the `AbortController`. The race, not the abort signal alone, bounds the time: a `fetch` or body stream that ignores the signal still cannot hold the caller past `timeout`.
 - **Size cap.** A `Content-Length` over the cap fails before the body is read. The body is read from its stream, and the read stops and the stream is cancelled as soon as the total passes the cap, so a server that lies about or omits `Content-Length` still cannot make the package buffer more than the cap plus one chunk. A response without a body stream falls back to `arrayBuffer()` and is checked after.
+- **Body.** One leading UTF-8 byte order mark is dropped, since some servers write one, and the rest is parsed as a strict JSON object, as a token's header is. Token parsing drops nothing: a token's segments are base64url, where a byte order mark is never legitimate. A JWKS that imports no key for `algorithms` is `no_usable_keys` rather than an empty cache, which would turn every token into `unknown_kid` until the next fetch.
+- **`Cache-Control`.** `max-age` shortens the TTL, clamped to `cooldown` at least and `cacheTtl` at most, so an issuer that announces a short lifetime ahead of a rotation is fetched sooner, and neither a header nor its absence lifts the bound the consumer set. `no-store` and `no-cache` give the minimum. Directives are split on commas, names compared case-insensitively, and a `max-age` whose value is not all digits ignored; the first well-formed `max-age` wins, as RFC 9111 §4.2.1 allows. `s-maxage` is for shared caches and ignored.
 - **Never throws.** Every failure, including an unexpected exception from a stub, becomes `key_fetch_failed` with a `reason`. Rejections that arrive after the outcome is decided are caught so they are not reported as unhandled.
 
 ## Limits
@@ -179,7 +197,7 @@ The TTL counts from when a fetch completes. Stale keys are served under the boun
 | HMAC secret                   | 32, 48 or 64 bytes minimum | no                                 | RFC 7518 §3.2 requires a key at least as long as the hash output of `HS256`, `HS384` or `HS512`.                                                                                                                                          |
 | PEM text                      | 16384 characters           | no                                 | A PKCS#8 RSA-8192 key, the largest imported, is about 6.4 KB; the cap bounds the scan before any decoding.                                                                                                                                |
 | Clock tolerance               | 0 s, at most 300 s         | `clockTolerance`                   | Decision 6. `nbf` and `iat` use at least 60 s (decision 26).                                                                                                                                                                              |
-| Remote TTL / cooldown / stale | 600 s / 30 s / 3600 s      | `cacheTtl`, `cooldown`, `maxStale` | Typical issuer rotation windows; decision 5 for stale.                                                                                                                                                                                    |
+| Remote TTL / cooldown / stale | 600 s / 30 s / 3600 s      | `cacheTtl`, `cooldown`, `maxStale` | Typical issuer rotation windows; decision 5 for stale. A response's `max-age` shortens the TTL, never below `cooldown`.                                                                                                                   |
 | Remote timeout                | 5 s, at most 60 s          | `timeout`                          | A JWKS is small; a slow issuer should fail a request, not hold it.                                                                                                                                                                        |
 | Remote response               | 65536 bytes, at most 1 MiB | `maxResponseBytes`                 | A typical JWKS is a few kilobytes; the 1 MiB ceiling holds 100 RSA-8192 JWKs with room to spare.                                                                                                                                          |
 
@@ -196,7 +214,7 @@ The source uses only `globalThis.crypto.subtle`, `TextEncoder`, `TextDecoder`, `
 
 - **No `Buffer` and no `node:` imports**, so the package runs unchanged in browsers, Deno, Bun and workerd.
 - **No `atob`/`btoa`**, because their leniency is exactly what the strict decoder exists to refuse.
-- **No `credentials` or `cache` in `fetch` options**, for workerd (see [Fetching](#fetching)).
+- **No `credentials` in `fetch` options, and `cache` only while the runtime takes it**, for workerd (see [Fetching](#fetching)).
 
 `tsconfig.src.json` sets `types: []`, so a Node.js global used in `src/` fails the type check.
 

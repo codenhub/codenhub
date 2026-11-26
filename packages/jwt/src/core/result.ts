@@ -47,5 +47,12 @@ export function deepFreeze<T>(value: T): T {
  */
 export const ok = <T>(value: T): JwtOk<T> => deepFreeze({ ok: true, value });
 
+/**
+ * Wraps a value that is already deep-frozen, such as the JSON parser's output, freezing only the wrapper.
+ * It skips the walk {@link ok} would repeat over every member, which a verifier would otherwise pay on each
+ * token, before its signature is checked. Pass only a value whose every plain object and array is frozen.
+ */
+export const frozenOk = <T>(value: T): JwtOk<T> => Object.freeze({ ok: true as const, value });
+
 /** Builds a failed, deep-frozen result from one or more issues, kept in order and frozen in place. */
 export const fail = (...issues: [JwtIssue, ...JwtIssue[]]): JwtErr => deepFreeze({ ok: false, error: { issues } });

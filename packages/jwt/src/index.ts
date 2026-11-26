@@ -33,13 +33,27 @@ export type {
   Verifier,
   VerifierOptions,
 } from "./core/types";
+export type {
+  EcJwk,
+  EcPrivateJwk,
+  EcPublicJwk,
+  OctJwk,
+  OkpJwk,
+  OkpPrivateJwk,
+  OkpPublicJwk,
+  PrivateJwk,
+  PublicJwk,
+  RsaJwk,
+  RsaPrivateJwk,
+  RsaPublicJwk,
+  SecretJwk,
+} from "./core/types";
 export type { StandardSchemaV1 } from "./interop/standard-schema";
 export { JWS_ALGORITHMS, isJwsAlgorithm } from "./core/limits";
 export { decodeBase64Url, encodeBase64Url } from "./encoding";
 export { readHeader, type ReadHeaderOptions } from "./jws/read-header";
 export {
   ASYMMETRIC_ALGORITHMS,
-  createExternalSigningKey,
   exportPrivateJwk,
   exportPublicJwk,
   exportSecretJwk,
@@ -55,7 +69,6 @@ export {
   jwkThumbprint,
   SYMMETRIC_ALGORITHMS,
   tokenHash,
-  type ExternalSigningKeyOptions,
   type GenerateKeyPairOptions,
   type GenerateSecretKeyOptions,
   type ImportPrivateKeyOptions,
@@ -65,11 +78,17 @@ export {
   type RsaModulusLength,
 } from "./keys";
 export {
+  createKeyRing,
   createKeySet,
   createRemoteKeySet,
   importKeySet,
   type CreateKeySetOptions,
   type ImportKeySetOptions,
+  type JwksFetch,
+  type KeyRing,
+  type KeyRingEntry,
+  type KeyRingOptions,
+  type PublicJwks,
   type RemoteKeySetOptions,
   type RemoteKeySetSnapshot,
 } from "./keysets";

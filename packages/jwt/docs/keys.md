@@ -76,26 +76,28 @@ You always name the algorithm. A JWK's own `alg` member is optional in RFC 7517,
 
 The JWK is untrusted input, so the import never throws for it, whatever it is: a failure is a result with one issue, and the issue never holds a value of the JWK. The checks, in order:
 
-| Issue                    | When                                                                                                                                                                                                                           |
-| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| `invalid_key`            | The JWK is not a plain object, `kty`, `crv`, `alg`, `use`, `key_ops` or `kid` has the wrong type, or `key_ops` repeats an operation.                                                                                           |
-| `unsupported_key`        | `kty` or `crv` does not fit the algorithm: `ES256`, `ES384` and `ES512` take `EC` on `P-256`, `P-384` and `P-521`; `EdDSA` and `Ed25519` take `OKP` on `Ed25519`; `RS*` and `PS*` take `RSA`; `HS*` takes `oct`.               |
-| `alg_mismatch`           | The JWK has an `alg` member naming another algorithm.                                                                                                                                                                          |
-| `wrong_use`              | `use` is present and is not `sig`, or `key_ops` is present and lacks `verify` (`sign` for a private key; either for a secret) or allows anything but `sign` and `verify`.                                                      |
-| `unexpected_private_key` | A public import holds a private member: `d`, `p`, `q`, `dp`, `dq`, `qi`, `oth` or `k`. A private JWK is refused rather than quietly stripped.                                                                                  |
-| `weak_key`               | An RSA modulus under 2048 bits, with `{ minimum: 2048 }`, or a secret shorter than its hash, with `{ minimum: 32 }`, `48` or `64`.                                                                                             |
-| `unsupported_key`        | An RSA modulus over 8192 bits, with `{ maximum: 8192 }`, which bounds the cost of a verification.                                                                                                                              |
-| `invalid_key`            | Key material is missing, is not canonical base64url, has the wrong length (coordinates are 32 bytes for P-256 and Ed25519, 48 for P-384 and 66 for P-521), or Web Crypto rejects it, such as a point that is not on the curve. |
+| Issue                    | When                                                                                                                                                                                                                                                                                |
+| ------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `invalid_key`            | The JWK is not a plain object, `kty`, `crv`, `alg`, `use`, `key_ops` or `kid` has the wrong type, or `key_ops` repeats an operation.                                                                                                                                                |
+| `unsupported_key`        | `kty` or `crv` does not fit the algorithm: `ES256`, `ES384` and `ES512` take `EC` on `P-256`, `P-384` and `P-521`; `EdDSA` and `Ed25519` take `OKP` on `Ed25519`; `RS*` and `PS*` take `RSA`; `HS*` takes `oct`.                                                                    |
+| `alg_mismatch`           | The JWK has an `alg` member naming another algorithm.                                                                                                                                                                                                                               |
+| `wrong_use`              | `use` is present and is not `sig`, or `key_ops` is present and lacks `verify` (`sign` for a private key; either for a secret) or allows anything but `sign` and `verify`.                                                                                                           |
+| `unexpected_private_key` | A public import holds a private member: `d`, `p`, `q`, `dp`, `dq`, `qi`, `oth` or `k`. A private JWK is refused rather than quietly stripped.                                                                                                                                       |
+| `weak_key`               | An RSA modulus under 2048 bits, with `{ minimum: 2048 }`, or a secret shorter than its hash, with `{ minimum: 32 }`, `48` or `64`.                                                                                                                                                  |
+| `unsupported_key`        | An RSA modulus over 8192 bits, with `{ maximum: 8192 }`, which bounds the cost of a verification.                                                                                                                                                                                   |
+| `invalid_key`            | Key material is missing, is not canonical base64url, has the wrong length (coordinates are 32 bytes for P-256 and Ed25519, 48 for P-384 and 66 for P-521), or Web Crypto rejects it, such as a point that is not on the curve. An `OKP` JWK with a `y` is `invalid_key` at `["y"]`. |
 
 Issue paths name the JWK member at fault, such as `["kty"]` or `["n"]`.
 
 The `kid` option names a JWK that has no `kid`, so a JWK stored without one gets an identifier on import. A JWK whose own `kid` differs from the option is `invalid_key` at `["kid"]`, rather than one of them silently winning; the same `kid` in both is fine.
 
+As for `generateKeyPair`, `kid: "thumbprint"` names the key by its public key's [thumbprint](#thumbprints), for every import function and every form of key: a JWK, a PEM string or a `CryptoKey`. A JWK with its own `kid` is then accepted only when that `kid` is the thumbprint, so the literal string `"thumbprint"` cannot be a `kid` given to an import.
+
 Import ignores a JWK's `ext` and any member it does not know. A public key is always exportable. For a private or secret key, only the `extractable` option decides whether it can be exported again, so a JWK that says `ext: true` still gives a non-extractable key unless you pass `extractable: true`.
 
 ## Importing a PEM key
 
-`importPublicKey`, `importPrivateKey` and `importKeyPair` also take a PEM string, as OpenSSL, cloud key services and secret stores hand keys out. A public key is a `PUBLIC KEY` block (SPKI) or a `CERTIFICATE` block (X.509), and a private key a `PRIVATE KEY` block (PKCS#8). A PEM has no `kid`, so pass one as an option, as for a JWK without one:
+`importPublicKey`, `importPrivateKey` and `importKeyPair` also take a PEM string, as OpenSSL, cloud key services and secret stores hand keys out. A public key is a `PUBLIC KEY` block (SPKI), an `RSA PUBLIC KEY` block (PKCS#1) or a `CERTIFICATE` block (X.509), and a private key a `PRIVATE KEY` block (PKCS#8), an `RSA PRIVATE KEY` block (PKCS#1) or an `EC PRIVATE KEY` block (SEC 1). A PEM has no `kid`, so pass one as an option, as for a JWK without one:
 
 ```ts
 import { importKeyPair } from "@codenhub/jwt";
@@ -103,7 +105,11 @@ import { importKeyPair } from "@codenhub/jwt";
 const result = await importKeyPair(process.env.SIGNING_KEY_PEM ?? "", { alg: "RS256", kid: "2026-11" });
 ```
 
-The PEM is read into the JWK of its key and every check in the table above runs on that, so a 1024-bit RSA key is `weak_key` whichever way it arrives. The string must be one block of at most 16384 characters, with nothing but whitespace around it. Whitespace inside the block is ignored, so either line ending works, and so does a PEM flattened onto one line, as an environment variable often holds it. Line breaks written as the two characters `\n` or `\r\n`, as a `.env` file or a JSON-encoded secret often leaves them, count as line breaks too. Anything else is `invalid_key`: other labels, including `RSA PRIVATE KEY` (PKCS#1), `EC PRIVATE KEY` (SEC 1) and encrypted keys, which Web Crypto cannot read; a key of another type or curve than `alg`; and a `PUBLIC KEY` given to a private import. A `PRIVATE KEY` given to `importPublicKey` is `unexpected_private_key`. Convert other formats to PKCS#8 first, such as with `openssl pkcs8 -topk8 -nocrypt -in key.pem`.
+The PEM is read into the JWK of its key and every check in the table above runs on that, so a 1024-bit RSA key is `weak_key` whichever way it arrives. The string must be one block of at most 16384 characters, with nothing but whitespace around it. Whitespace inside the block is ignored, so either line ending works, and so does a PEM flattened onto one line, as an environment variable often holds it. Line breaks written as the two characters `\n` or `\r\n`, as a `.env` file or a JSON-encoded secret often leaves them, count as line breaks too. A PKCS#1 or SEC 1 key is wrapped into SPKI or PKCS#8 as it is read, and an `EC PRIVATE KEY` must name its curve, as OpenSSL writes it by default. A key of another type or curve than `alg` is `unsupported_key` at `["kty"]` or `["crv"]`, as for a JWK. A private key block given to `importPublicKey` is `unexpected_private_key`. The rest is `invalid_key`:
+
+- with `{ reason: "encrypted" }`, an encrypted key: an `ENCRYPTED PRIVATE KEY` block, or a block whose headers say `Proc-Type: 4,ENCRYPTED`. Decrypt it first, such as with `openssl pkcs8 -topk8 -nocrypt -in key.pem`, and keep it in a secret store instead.
+- with `{ reason: "unsupported_format" }`, a label this package does not read, such as `OPENSSH PRIVATE KEY` or `DSA PRIVATE KEY`, headers that do not say the key is encrypted, and an `EC PRIVATE KEY` without its curve.
+- without `params`, anything malformed, and a public key block given to a private import. The DER of a `PUBLIC KEY`, `PRIVATE KEY`, `RSA PUBLIC KEY` or `RSA PRIVATE KEY` block, and the key inside a `CERTIFICATE`, must be strict DER all the way down, as an `EC PRIVATE KEY` must: every length in its shortest form, every element exactly filling the one around it, every integer minimal and not negative, nothing after the key, and the same for the DER inside it, such as an RSA key's modulus or an Ed25519 private key's octet string. Web Crypto engines disagree on the rest: Node.js imports a `PUBLIC KEY` with bytes after it that browsers refuse, and WebKit reads a negative RSA modulus as a different key, so the same PEM would import on one runtime and fail, or import as another key, on the next.
 
 From a certificate, `importPublicKey` takes the public key and nothing else. It does not check the certificate's dates, issuer, chain, extensions or signature, so a certificate is exactly as trusted as the key in it would be: use one you got from a source you already trust, such as an identity provider's admin console, and not one a token or a client sent you. A `CERTIFICATE` given to a private import is `invalid_key`.
 
@@ -111,7 +117,7 @@ Without a `kid`, the key still verifies tokens that name a `kid`, as long as it 
 
 ## Importing a private key
 
-`importPrivateKey` takes the same arguments and runs the same checks, except that the private members are required: `d` for `EC` and `OKP` keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for `RSA` keys. Multi-prime RSA keys, with `oth`, are `unsupported_key`. The public members must belong to the private key: the key signs a fixed message that they must verify, and a JWK whose halves come from two keys is `invalid_key`. For RSA, `d` must also agree with `p`, `q`, `dp` and `dq`, or it is `invalid_key` at `["d"]`: Web Crypto signs with the other members alone, so the signature cannot catch a wrong `d`, but another library signing with the exported JWK would use it. Pass `extractable: true` if the key must be exportable again.
+`importPrivateKey` takes the same arguments and runs the same checks, except that the private members are required: `d` for `EC` and `OKP` keys, and `d`, `p`, `q`, `dp`, `dq` and `qi` for `RSA` keys. Multi-prime RSA keys, with `oth`, are `unsupported_key`. The public members must belong to the private key: the key signs a fixed message that they must verify, and a JWK whose halves come from two keys is `invalid_key`. For RSA, no private member may be longer than `n`, without its leading zero bytes, or it is `invalid_key` at that member, which bounds the arithmetic below. `d` must agree with `p`, `q`, `dp` and `dq`, or it is `invalid_key` at `["d"]`; `qi` must be the inverse of `q` modulo `p`, or it is `invalid_key` at `["qi"]`; and `p` times `q` must be `n`, or it is `invalid_key` at `["n"]`. The signature cannot catch either: a signer that uses only `p`, `q`, `dp`, `dq` and `qi` never reads `d`, and OpenSSL, behind Node's Web Crypto, signs again with `d` when that result is wrong, so a wrong `qi` still signs correctly. Another library signing with the exported JWK would use the wrong member. Pass `extractable: true` if the key must be exportable again.
 
 ```ts
 import { importPrivateKey } from "@codenhub/jwt";
@@ -140,7 +146,7 @@ Before returning the pair, it signs a fixed message with the private key and ver
 
 ## Importing a secret
 
-`importSecretKey` takes either the secret's raw bytes or an `oct` JWK. A string is a compile error, since it could be text, base64 or hex; encode it to bytes first. A string that reaches it anyway, from untyped code, returns `invalid_key`:
+`importSecretKey` takes either the secret's raw bytes, as any typed array, `DataView` or `ArrayBuffer`, including one from another realm such as an iframe or a `node:vm` context, or an `oct` JWK. A string is a compile error, since it could be text, base64 or hex; encode it to bytes first. A string that reaches it anyway, from untyped code, returns `invalid_key`:
 
 ```ts
 import { importSecretKey } from "@codenhub/jwt";
@@ -163,7 +169,7 @@ The secret must be at least as long as the hash, 32 bytes for `HS256`, 48 for `H
 
 A JWK's `key_ops` is checked but does not restrict the secret key: one imported with `key_ops: ["verify"]` can still sign. Whoever holds an HMAC secret can compute the same signature with any other library, so a verify-only secret would protect nothing.
 
-`kid` sets the identifier for raw bytes, and for a JWK as [for a public JWK](#importing-a-public-key): it names a JWK without a `kid`, and one with another `kid` is `invalid_key` at `["kid"]`.
+`kid` sets the identifier for raw bytes, and for a JWK as [for a public JWK](#importing-a-public-key): it names a JWK without a `kid`, and one with another `kid` is `invalid_key` at `["kid"]`. `kid: "thumbprint"` names the secret by its `oct` thumbprint (RFC 7638 §3.2), a SHA-256 hash of the secret; a `CryptoKey` must then be extractable, or the result is `invalid_key`, since its secret cannot be read.
 
 ## Importing a Web Crypto key
 
@@ -187,32 +193,6 @@ A `CryptoKey` must have been made for signing with `alg`: one whose Web Crypto a
 
 A `CryptoKey` has no `kid`, so pass one as an option. A public key is always exportable. For a private or secret key, `extractable: true` needs an extractable `CryptoKey`, or the result is `invalid_key`; without it, the imported key cannot be exported even when the `CryptoKey` could be.
 
-## Keys held by a KMS or HSM
-
-A key held by a cloud KMS or an HSM never leaves it: the service signs on request. `createExternalSigningKey` makes a private key from the public key and a function that asks the service for a signature, and `sign` uses it like any other private key:
-
-```ts
-import { createExternalSigningKey, importPublicKey, sign } from "@codenhub/jwt";
-
-const imported = await importPublicKey(kmsPublicKeyPem, { alg: "ES256", kid: "kms-2026" });
-if (!imported.ok) throw new Error("The KMS public key could not be imported.");
-
-const signingKey = createExternalSigningKey({
-  publicKey: imported.value,
-  signatureFormat: "der",
-  sign: async (data) => {
-    const { Signature } = await kms.send(new SignCommand({ KeyId, Message: data, MessageType: "RAW", SigningAlgorithm: "ECDSA_SHA_256" }));
-    return Signature!;
-  },
-});
-const token = await sign({ payload: { sub: "u1", exp }, key: signingKey });
-```
-
-- `alg` and `kid` come from `publicKey`, so import it with the `kid` your JWKS publishes. `getPublicKey`, `jwkThumbprint` and `embedKey` work with the key; `exportPrivateJwk` throws, since the material is not here.
-- `sign` receives the JWS signing input, the bytes the service must sign with `alg`'s hash, and resolves to a `Uint8Array` or an `ArrayBuffer`. It is called once per token, and only then: creating the key calls nothing.
-- `signatureFormat: "der"` converts the DER `Ecdsa-Sig-Value` that AWS KMS and Google Cloud KMS return for an ECDSA key into the `r || s` form JWS uses. A PKCS#11 token's `CKM_ECDSA` signature is already `r || s`, so leave the default `"raw"` for it, unless an adapter in between returns DER. It is only for `ES256`, `ES384` and `ES512`; RSA and EdDSA signatures have one form. The DER must be strict, or `sign` throws.
-- Every signature is verified with `publicKey` before `sign` returns the token, so a function that signs with another key, or the wrong format, makes `sign` throw a `TypeError` rather than hand out a token no one can verify. A rejection from the function rejects `sign` unchanged.
-
 ## Exporting keys
 
 Export functions are separate and named for what they reveal, so code that exports private material says so:
@@ -233,9 +213,11 @@ const privateJwk = await exportPrivateJwk(privateKey); // store it as you would 
 
 Every exported JWK is frozen, names `kty`, `alg` and `use: "sig"`, includes `kid` when the key has one, lists its members in a stable order, and carries no `ext` or `key_ops`. Re-importing it with the same `alg` gives an equivalent key.
 
+The results are typed by what they hold: `exportPublicJwk` returns a `PublicJwk`, `exportPrivateJwk` a `PrivateJwk` and `exportSecretJwk` a `SecretJwk`, and `Jwk` is the union of all three. Narrow one on `kty` to reach its members: `EcPublicJwk` and `EcPrivateJwk` for `EC`, `OkpPublicJwk` and `OkpPrivateJwk` for `OKP`, `RsaPublicJwk` and `RsaPrivateJwk` for `RSA`, and `OctJwk` for `oct`. A member another key type has is typed as absent, so `jwk.n` is `undefined` on an `EC` JWK rather than a compile error, and `jwk.d !== undefined` narrows a `Jwk` to a `PrivateJwk`. The import functions take any value, so a JWK parsed from JSON needs none of these types.
+
 ## Thumbprints
 
-`jwkThumbprint` computes a key pair's JWK SHA-256 Thumbprint (RFC 7638): 43 base64url characters that name the key by its material alone, whatever its `alg` or `kid`. Pass the public key or the private key; both give the same thumbprint, and a private key need not be extractable.
+`jwkThumbprint` computes a key's JWK SHA-256 Thumbprint (RFC 7638): 43 base64url characters that name the key by its material alone, whatever its `alg` or `kid`. Pass the public key or the private key; both give the same thumbprint, and a private key need not be extractable.
 
 ```ts
 import { importPrivateKey, jwkThumbprint } from "@codenhub/jwt";
@@ -245,9 +227,11 @@ if (!result.ok) throw new Error("The signing key could not be imported.");
 const kid = await jwkThumbprint(result.value);
 ```
 
-To generate a pair already named by its thumbprint, pass `kid: "thumbprint"` to `generateKeyPair`.
+To generate or import a key already named by its thumbprint, pass `kid: "thumbprint"` to `generateKeyPair` or to an import function.
 
 Use it for a `kid` that follows from the key, or for the `jkt` that binds an access token to a DPoP key, as [Signing tokens](signing.md#dpop-proofs) shows.
+
+A secret has a thumbprint too, of its `oct` JWK, so `jwkThumbprint` takes a secret created with `extractable: true` and throws a `TypeError` for one created without it, since the thumbprint is computed from the secret itself.
 
 ## Algorithms
 

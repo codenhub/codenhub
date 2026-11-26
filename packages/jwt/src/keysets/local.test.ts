@@ -195,6 +195,16 @@ describe("importKeySet", () => {
     expect(await selection(keys, { alg: "ES256", kid: "e" })).toEqual({ kind: "public", alg: "ES256", kid: "e" });
   });
 
+  it("should skip an entry that is a PEM string, which only importPublicKey reads", async () => {
+    const { publicKey } = await crypto.subtle.generateKey({ name: "ECDSA", namedCurve: "P-256" }, true, ["sign"]);
+    const spki = Buffer.from(await crypto.subtle.exportKey("spki", publicKey)).toString("base64");
+    const pem = `-----BEGIN PUBLIC KEY-----
+${spki}
+-----END PUBLIC KEY-----
+`;
+    expect(valueOf(await importKeySet({ keys: [pem] })).keys).toEqual([]);
+  });
+
   it("should give an empty set when no key is usable", async () => {
     const keys = valueOf(await importKeySet({ keys: [] }));
     expect(await selection(keys, { alg: "ES256" })).toEqual(["no_matching_key"]);

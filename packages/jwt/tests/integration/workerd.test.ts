@@ -92,7 +92,9 @@ beforeAll(async () => {
             compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2024 },
           }).outputText,
         },
-        ...readdirSync(dist)
+        // The build writes one file per module, in subdirectories; paths are joined with "/" on Windows too.
+        ...readdirSync(dist, { recursive: true, encoding: "utf8" })
+          .map((file) => file.replaceAll("\\", "/"))
           .filter((file) => file.endsWith(".js"))
           .map((file) => ({
             type: "ESModule" as const,
