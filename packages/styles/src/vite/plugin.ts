@@ -86,6 +86,11 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
 
     return isInside(root.vite, resolved) ? path.join(root.real, path.relative(root.vite, resolved)) : resolved;
   };
+  /* A path the scan names, as Vite names it. The watcher is given this one:
+     on Linux one folder named two ways is watched once, so a file watched
+     under the real path is reported under Vite's and never rebuilds. */
+  const toVitePath = (file: string): string =>
+    isInside(root.real, file) ? path.join(root.vite, path.relative(root.real, file)) : file;
   const changeOnce = (key: string, file: string, event: FileEvent): Promise<string[]> => {
     const now = Date.now();
 
@@ -298,7 +303,7 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
         rewritten.forBuild = rewritten.sinceBuild;
         rewritten.sinceBuild = false;
         for (const file of started().files()) {
-          this.addWatchFile(file);
+          this.addWatchFile(toVitePath(file));
         }
       }
     },
