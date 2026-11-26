@@ -269,6 +269,58 @@ describe("importPublicKey for ES256 only", () => {
   });
 });
 
+describe.each(["ES256", "ES384", "ES512"] as const)(
+  "importPublicKey and importPrivateKey for %s off the curve",
+  (alg) => {
+    /** The JWK with the last byte of `y` flipped, which moves the point off the curve. */
+    const flipY = <T extends JsonWebKey>(jwk: T): T => {
+      const y = decodeBase64Url(jwk.y as string) as Uint8Array;
+      y[y.length - 1] = (y[y.length - 1] as number) ^ 1;
+      return { ...jwk, y: encodeBase64Url(y) };
+    };
+
+    it("should refuse the point as invalid_key before Web Crypto sees it", async () => {
+      const pair = await generateKeyPair({ alg, extractable: true });
+      const publicJwk = await exportPublicJwk(pair.publicKey);
+      const privateJwk = await exportPrivateJwk(pair.privateKey);
+      const importKey = vi.spyOn(crypto.subtle, "importKey");
+      try {
+        expect(issuesOf(await importPublicKey(flipY(publicJwk), { alg }))).toEqual([{ code: "invalid_key" }]);
+        expect(issuesOf(await importPublicKey({ ...publicJwk, y: publicJwk.x }, { alg }))).toEqual([
+          { code: "invalid_key" },
+        ]);
+        expect(issuesOf(await importPrivateKey(flipY(privateJwk), { alg }))).toEqual([{ code: "invalid_key" }]);
+        expect(issuesOf(await importKeyPair(flipY(privateJwk), { alg }))).toEqual([{ code: "invalid_key" }]);
+        expect(importKey).not.toHaveBeenCalled();
+      } finally {
+        importKey.mockRestore();
+      }
+      expect((await importPublicKey(publicJwk, { alg })).ok).toBe(true);
+    });
+
+    it("should refuse a coordinate equal to the field prime as invalid_key", async () => {
+      const { publicKey } = await generateKeyPair({ alg });
+      const jwk = await exportPublicJwk(publicKey);
+      const length = ALGORITHM_PARAMS[alg].coordinateBytes as number;
+      const p = {
+        ES256: 2n ** 256n - 2n ** 224n + 2n ** 192n + 2n ** 96n - 1n,
+        ES384: 2n ** 384n - 2n ** 128n - 2n ** 96n + 2n ** 32n - 1n,
+        ES512: 2n ** 521n - 1n,
+      }[alg];
+      const bytes = Uint8Array.from(
+        p
+          .toString(16)
+          .padStart(length * 2, "0")
+          .match(/../g) ?? [],
+        (byte) => Number.parseInt(byte, 16),
+      );
+      expect(issuesOf(await importPublicKey({ ...jwk, x: encodeBase64Url(bytes) }, { alg }))).toEqual([
+        { code: "invalid_key" },
+      ]);
+    });
+  },
+);
+
 describe("importPublicKey for RSA", () => {
   it("should report weak_key with minimum 2048 for a 1024-bit modulus", async () => {
     expect(issuesOf(await importPublicKey(RSA_1024_PUBLIC_JWK, { alg: "RS256" }))).toEqual([

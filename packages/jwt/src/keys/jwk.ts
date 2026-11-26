@@ -2,6 +2,7 @@ import { isPlainObject } from "../core/plain";
 import type { JwsAlgorithm, JwtIssue } from "../core/types";
 import { decodeBase64Url, encodeBase64Url } from "../encoding";
 import { ALGORITHM_PARAMS, type AlgorithmParams } from "./algorithms";
+import { isOnNistCurve } from "./on-curve";
 
 /** What the imported key will be used as. */
 export type KeyRole = "public" | "private" | "secret";
@@ -182,7 +183,7 @@ function materialFor(members: Members, alg: JwsAlgorithm, role: KeyRole): Materi
   const params = ALGORITHM_PARAMS[alg];
   switch (params.kty) {
     case "EC":
-      return curveMaterial(members, ["x", "y"], role, params);
+      return ecMaterial(members, role, params);
     case "OKP":
       // An OKP key has no y (RFC 8037 §2).
       return members.y === undefined ? curveMaterial(members, ["x"], role, params) : issue("invalid_key", "y");
@@ -191,6 +192,20 @@ function materialFor(members: Members, alg: JwsAlgorithm, role: KeyRole): Materi
     case "oct":
       return secretMaterial(members, params);
   }
+}
+
+/**
+ * An EC key's point must be on its curve as well: Linux WebKit's Web Crypto imports one that is not, which the
+ * other engines refuse, so the package checks it and every runtime gives the same `invalid_key`.
+ */
+function ecMaterial(members: Members, role: KeyRole, params: AlgorithmParams): Material {
+  const material = curveMaterial(members, ["x", "y"], role, params);
+  if ("code" in material) {
+    return material;
+  }
+  const curve = params.crv as "P-256" | "P-384" | "P-521";
+  const onCurve = isOnNistCurve(curve, decodeMember(members.x) as Uint8Array, decodeMember(members.y) as Uint8Array);
+  return onCurve ? material : issue("invalid_key");
 }
 
 /** Every coordinate, and `d`, must be exactly as long as the curve's coordinates (RFC 7518 §6.2.1.2). */

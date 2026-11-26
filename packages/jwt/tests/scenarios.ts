@@ -385,6 +385,24 @@ const leadingZeroImports = Object.fromEntries(
   ]),
 );
 
+/*
+ * An ECDSA public key moved off its curve by flipping the last byte of `y`. Linux WebKit's Web Crypto imports such
+ * a point, which every other engine refuses, so the package checks it itself (#678).
+ */
+const offCurveImports = Object.fromEntries(
+  (["ES256", "ES384", "ES512"] as const).map((alg): [string, Scenario] => [
+    `${alg} public JWK off the curve is invalid_key`,
+    async (module) => {
+      const { publicKey } = await module.generateKeyPair({ alg });
+      const jwk = await module.exportPublicJwk(publicKey);
+      const y = module.decodeBase64Url(jwk.y as string) as Uint8Array;
+      y[y.length - 1] = (y[y.length - 1] as number) ^ 1;
+      const refused = await module.importPublicKey({ ...jwk, y: module.encodeBase64Url(y) }, { alg });
+      check(!refused.ok && refused.error.issues[0]?.code === "invalid_key", "an off-curve point was accepted", refused);
+    },
+  ]),
+);
+
 const tamperedSignatures = Object.fromEntries(
   ALGORITHMS.map((alg): [string, Scenario] => [
     `${alg} tampered signature is refused`,
@@ -403,6 +421,7 @@ export const scenarios: Readonly<Record<string, Scenario>> = {
   ...jwkRoundtrips,
   ...tamperedSignatures,
   ...leadingZeroImports,
+  ...offCurveImports,
   ...keyPairImports,
   ...pemImports,
   ...legacyPemImports,
