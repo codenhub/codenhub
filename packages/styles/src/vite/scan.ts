@@ -240,28 +240,21 @@ function readWalked(file: string): string | undefined {
    the change in between. Chokidar 3, which Vite 5 to 8 bundle, drops a second
    change within 50 ms, so the write that follows may never be reported, and
    the file's classes would be lost until it changes again. A file that is
-   empty is waited on until its modified time moves, for at most 100 ms, as
-   Vite's own `read()` waits (vitejs/vite#610). A file that cannot be read is
-   left to the read, which reports it. */
+   empty is waited on until it holds text, for at most 100 ms, as Vite's own
+   `read()` waits (vitejs/vite#610); one emptied again in that time is still
+   waited on. A file that cannot be read is left to the read, which reports it. */
 async function untilWritten(file: string): Promise<void> {
-  const statOf = (): fs.Stats | undefined => {
+  const isEmpty = (): boolean => {
     try {
-      return fs.statSync(file);
+      return fs.statSync(file).size === 0;
     } catch {
-      return undefined;
+      return false;
     }
   };
-  const before = statOf();
 
-  if (before === undefined || before.size > 0) {
-    return;
-  }
-  for (let poll = 0; poll < WRITE_POLLS; poll += 1) {
+  for (let poll = 0; poll < WRITE_POLLS && isEmpty(); poll += 1) {
     // oxlint-disable-next-line no-await-in-loop -- each poll waits on the one before
     await delay(WRITE_POLL_MS);
-    if (statOf()?.mtimeMs !== before.mtimeMs) {
-      return;
-    }
   }
 }
 
