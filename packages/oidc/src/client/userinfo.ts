@@ -112,9 +112,10 @@ export function createUserinfoFetcher(options: ResolvedClientOptions, keys: KeyS
       ? undefined
       : createVerifier({
           keys,
-          // A signed response may carry `aud` and `iss`, and need carry neither, nor `exp` (OpenID Connect Core
-          // §5.3.2): jwtClaimIssues checks the first two when present, so @codenhub/jwt checks no audience and
-          // requires no expiry, and still refuses an `exp` that has passed.
+          // A signed response must carry `iss` and `aud`, and need not carry `exp` (OpenID Connect Core §5.3.2).
+          // @codenhub/jwt requires the first two and jwtClaimIssues checks their values, so @codenhub/jwt checks
+          // no audience and requires no expiry, and still refuses an `exp` that has passed.
+          requiredClaims: ["iss", "aud"],
           audience: false,
           requireExpiration: false,
           clockTolerance: options.clockTolerance,

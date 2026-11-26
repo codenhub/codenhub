@@ -1287,9 +1287,37 @@ describe("userinfo: application/jwt", () => {
       { code: "invalid_userinfo", path: ["userinfo", "payload", "aud"], params: { jwtCode: "wrong_audience" } },
       { code: "subject_mismatch", path: ["userinfo", "sub"] },
     ]);
-    op.userinfoReply = jwtReply(await signUserinfo({ sub: "user-1" }, "at+jwt"));
+    op.userinfoReply = jwtReply(await signUserinfo({ iss: ISSUER, aud: CLIENT_ID, sub: "user-1" }, "at+jwt"));
     expect(issuesOf(await ask())).toEqual([
       { code: "invalid_userinfo", path: ["userinfo", "header", "typ"], params: { jwtCode: "wrong_type" } },
+    ]);
+  });
+
+  it("refuses a signed response without iss or aud", async () => {
+    const op = createFakeOp();
+    const rp = clientFor(op);
+    const ask = () => rp.userinfo({ accessToken: "at-1", subject: "user-1" });
+
+    op.userinfoReply = jwtReply(await signUserinfo({ sub: "user-1", name: "Ada" }));
+    expect(issuesOf(await ask())).toEqual([
+      {
+        code: "invalid_userinfo",
+        path: ["userinfo", "payload", "iss"],
+        params: { claim: "iss", jwtCode: "missing_claim" },
+      },
+      {
+        code: "invalid_userinfo",
+        path: ["userinfo", "payload", "aud"],
+        params: { claim: "aud", jwtCode: "missing_claim" },
+      },
+    ]);
+    op.userinfoReply = jwtReply(await signUserinfo({ iss: ISSUER, sub: "user-1" }));
+    expect(issuesOf(await ask())).toEqual([
+      {
+        code: "invalid_userinfo",
+        path: ["userinfo", "payload", "aud"],
+        params: { claim: "aud", jwtCode: "missing_claim" },
+      },
     ]);
   });
 
