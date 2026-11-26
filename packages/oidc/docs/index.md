@@ -77,7 +77,7 @@ The detailed steps are in [Client](client.md) and [Provider](provider.md). The g
 ## Requirements
 
 - Node.js 26 or newer, or a browser or edge runtime that provides Web Crypto, `fetch`, `Request`, `Response`, `URL`, `URL.canParse`, `URLSearchParams`, `AbortController`, `setTimeout`, `clearTimeout`, `TextEncoder`, `TextDecoder`, `String.prototype.isWellFormed` and `Object.hasOwn`.
-- `@codenhub/jwt` as a peer dependency, `^0.0.1`. Install one copy of it, because keys it creates are recognized only by the copy that created them.
+- `@codenhub/jwt` as a peer dependency, `^0.1.0`. Install one copy of it, because keys it creates are recognized only by the copy that created them.
 - ES modules only. Ed25519 requires Web Crypto's Ed25519 support.
 
 Every URL the package uses must be `https`, including the issuer, every endpoint and the JWKS URL, with no exception for `localhost`. The one exception is the redirect URI, which may use any scheme except `javascript:`, `data:`, `vbscript:` and `file:`, so a native app can register a custom scheme.

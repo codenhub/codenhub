@@ -10,17 +10,18 @@ import { scenarios } from "../scenarios";
 /*
  * Runs the end-to-end scenarios in workerd, Cloudflare's Workers runtime, against the built package. Its
  * Web Crypto, `Request` and `Response` are its own, not Node.js's, so the Node.js run says nothing about
- * it. Miniflare loads every file of `dist/`, the installed `@codenhub/jwt`, the scenarios compiled from
+ * it. Miniflare loads every file of `dist/` and of the installed `@codenhub/jwt`, the scenarios compiled from
  * TypeScript, and a worker that runs the scenario a request names. workerd resolves a bare specifier
  * relative to the importing module, so imports of `@codenhub/jwt` are pointed at the module loaded here.
  */
 
 const packageRoot = new URL("../../", import.meta.url);
 const dist = new URL("dist/", packageRoot);
-const jwtEntry = new URL("node_modules/@codenhub/jwt/dist/index.js", packageRoot);
+// Every file of it: from 0.1.0 its build emits one file per module.
+const jwtDist = new URL("node_modules/@codenhub/jwt/dist/", packageRoot);
 
 const WORKER = `
-import * as jwt from "./codenhub-jwt.js";
+import * as jwt from "./codenhub-jwt/index.js";
 import * as client from "./dist/client.js";
 import * as provider from "./dist/provider.js";
 import * as testing from "./dist/testing.js";
@@ -47,7 +48,13 @@ beforeAll(async () => {
       modulesRoot: fileURLToPath(packageRoot),
       modules: [
         { type: "ESModule", path: "worker.js", contents: WORKER },
-        { type: "ESModule", path: "codenhub-jwt.js", contents: readFileSync(jwtEntry, "utf8") },
+        ...readdirSync(jwtDist, { recursive: true, encoding: "utf8" })
+          .filter((file) => file.endsWith(".js"))
+          .map((file) => ({
+            type: "ESModule" as const,
+            path: `codenhub-jwt/${file.replaceAll("\\", "/")}`,
+            contents: readFileSync(new URL(file.replaceAll("\\", "/"), jwtDist), "utf8"),
+          })),
         {
           type: "ESModule",
           path: "tests/scenarios.js",
@@ -62,7 +69,7 @@ beforeAll(async () => {
             path: `dist/${file}`,
             contents: readFileSync(new URL(file, dist), "utf8").replaceAll(
               /(from|import)\s*(["'])@codenhub\/jwt\2/g,
-              '$1 "../codenhub-jwt.js"',
+              '$1 "../codenhub-jwt/index.js"',
             ),
           })),
       ],

@@ -58,7 +58,7 @@ To issue tokens as an OpenID Provider instead, see [Provider](docs/provider.md).
 ## Requirements
 
 - Node.js 26 or newer. Browsers and edge runtimes such as Cloudflare Workers work too, when they provide Web Crypto, `fetch`, `Request`, `Response`, `URL`, `URL.canParse`, `URLSearchParams`, `AbortController`, `setTimeout`, `clearTimeout`, `TextEncoder`, `TextDecoder`, `String.prototype.isWellFormed` and `Object.hasOwn`. The package uses no Node.js API.
-- `@codenhub/jwt` `^0.0.1` as a peer dependency. The keys `@codenhub/jwt` creates are recognized only by the copy that created them. Your provider's signing keys and your client's keys must come from the copy this package loads, so install one version of it: `pnpm why @codenhub/jwt` should list one.
+- `@codenhub/jwt` `^0.1.0` as a peer dependency. The keys `@codenhub/jwt` creates are recognized only by the copy that created them. Your provider's signing keys and your client's keys must come from the copy this package loads, so install one version of it: `pnpm why @codenhub/jwt` should list one.
 - ES modules only. `EdDSA` and `Ed25519` ID tokens need Web Crypto's Ed25519 support, which Node.js 26, Chrome 137, Firefox 129 and Safari 17 provide.
 
 ## Notes
@@ -156,7 +156,7 @@ The detailed steps are in [Client](docs/client.md) and [Provider](docs/provider.
 ## Requirements
 
 - Node.js 26 or newer, or a browser or edge runtime that provides Web Crypto, `fetch`, `Request`, `Response`, `URL`, `URL.canParse`, `URLSearchParams`, `AbortController`, `setTimeout`, `clearTimeout`, `TextEncoder`, `TextDecoder`, `String.prototype.isWellFormed` and `Object.hasOwn`.
-- `@codenhub/jwt` as a peer dependency, `^0.0.1`. Install one copy of it, because keys it creates are recognized only by the copy that created them.
+- `@codenhub/jwt` as a peer dependency, `^0.1.0`. Install one copy of it, because keys it creates are recognized only by the copy that created them.
 - ES modules only. Ed25519 requires Web Crypto's Ed25519 support.
 
 Every URL the package uses must be `https`, including the issuer, every endpoint and the JWKS URL, with no exception for `localhost`. The one exception is the redirect URI, which may use any scheme except `javascript:`, `data:`, `vbscript:` and `file:`, so a native app can register a custom scheme.
@@ -247,7 +247,7 @@ const client = createClient({
 | `tenantIssuer`      | `true`, or `{ tenants }`, a non-empty array of at most 100 tenant identifiers, to accept tokens from the tenants of a `{tenantid}` issuer template. Required when `metadata.issuer` holds `{tenantid}`, and refused when it does not. See [Multi-tenant providers](#multi-tenant-providers).                                                                                                                                                                                                                                                  | None                      |
 | `now`               | The current time in milliseconds since the Unix epoch. For tests.                                                                                                                                                                                                                                                                                                                                                                                                                                                                             | `Date.now`                |
 
-The client accepts an ID token only when its signature verifies with one of the provider's keys, and only with an asymmetric algorithm the provider advertises in `id_token_signing_alg_values_supported` that this package supports: `ES256`, `EdDSA`, `Ed25519`, `RS256` or `PS256`. An ID token signed with `HS256` or `none` is never accepted. The keys come from the provider's `jwks_uri`, which the client fetches on first use and caches.
+The client accepts an ID token only when its signature verifies with one of the provider's keys, and only with an asymmetric algorithm the provider advertises in `id_token_signing_alg_values_supported` that this package supports: `ES256`, `ES384`, `ES512`, `EdDSA`, `Ed25519`, `RS256`, `RS384`, `RS512`, `PS256`, `PS384` or `PS512`. An ID token signed with `HS256` or `none` is never accepted. The keys come from the provider's `jwks_uri`, which the client fetches on first use and caches.
 
 `createClient` throws `TypeError` when:
 
@@ -380,7 +380,7 @@ The ID token's signature and its registered claims are checked by `@codenhub/jwt
 - `azp`, when present, must equal the client identifier, and it is required when `aud` has more than one value. A wrong value, or a missing one where `aud` has several, is `azp_mismatch`.
 - `nonce` equals `pending.nonce`. Otherwise `nonce_mismatch`.
 - `auth_time`, when present, is a number. Otherwise `invalid_id_token` with `jwtCode` of `invalid_claim`. When `pending.maxAge` is set, `auth_time` is required, and `auth_time_missing` is reported when it is absent. The age is measured to the request, `pending.requestedAt`, not to the callback: the token is too old when `requestedAt` minus `auth_time` is more than `maxAge` plus `clockTolerance`, which is `auth_too_old`. Time the user spends on the provider's login and consent pages does not count. `maxAge: 0` therefore accepts only an authentication at or after the request, within `clockTolerance`.
-- `at_hash`, when present, equals the hash of the access token, which is the left half of SHA-256 for `ES256`, `RS256`, `PS256` and `HS256`, and of SHA-512 for `EdDSA` and `Ed25519`. Otherwise `at_hash_mismatch`.
+- `at_hash`, when present, equals the hash of the access token, which is the left half of the digest the token's `alg` uses: SHA-256 for the `*256` algorithms, SHA-384 for the `*384` ones, and SHA-512 for the `*512` ones and for `EdDSA` and `Ed25519`. Otherwise `at_hash_mismatch`.
 
 A successful callback returns the claims as the verifier read them, after these checks.
 
@@ -790,7 +790,7 @@ The JWKS endpoint publishes the public key of every pair in `signingKeys`, then 
 
 Which pair signs a client's ID tokens depends on the client:
 
-- A client record with `idTokenSigningAlg` gets the first pair of that algorithm. A record that names an algorithm none of the pairs has, or a value that is not one of `ES256`, `EdDSA`, `Ed25519`, `RS256` or `PS256`, makes the provider throw `TypeError` when it reads the record.
+- A client record with `idTokenSigningAlg` gets the first pair of that algorithm. A record that names an algorithm none of the pairs has, or a value that is not one of `ES256`, `ES384`, `ES512`, `EdDSA`, `Ed25519`, `RS256`, `RS384`, `RS512`, `PS256`, `PS384` or `PS512`, makes the provider throw `TypeError` when it reads the record.
 - A client without it gets the first `RS256` pair when there is one, and otherwise the first pair. The reason is that [OpenID Connect Core §15.1](https://openid.net/specs/openid-connect-core-1_0.html#Signing) requires every provider to support `RS256`, and [OpenID Connect Registration](https://openid.net/specs/openid-connect-registration-1_0.html#ClientMetadata) makes it the default for a client that registers no algorithm, so a relying party library that never asked for an algorithm expects it. Listing an `RS256` pair therefore changes the algorithm of every ID token of the clients that name none, even when another algorithm comes first in the list.
 - JWT access tokens are signed with the first pair, whatever the client says. A resource server verifies each with the published key named by the `kid` in its header, which after a rotation is the retiring pair for a token issued before it.
 

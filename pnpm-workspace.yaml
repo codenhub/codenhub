@@ -13,7 +13,7 @@ catalog:
   "@astrojs/markdown-remark": 7.3.9
   "@cloudflare/workers-types": ^5.20261104.1
   "@codenhub/error": ^0.3.0
-  "@codenhub/jwt": ^0.0.1
+  "@codenhub/jwt": ^0.1.0
   "@codenhub/styles": ^0.6.0
   "@tailwindcss/cli": ^4.3.4
   "@tailwindcss/node": ^4.3.4
@@ -86,3 +86,5 @@ patchedDependencies:
 # mismatch surfaces before it turns into a failure no one can reproduce (docs/workspace.md, "Toolchain"). It lives
 # here because pnpm ignores `engine-strict` in .npmrc: checked with pnpm 11.7 and 12.16.
 engineStrict: true
+minimumReleaseAgeExclude:
+  - "@codenhub/jwt@0.1.0"

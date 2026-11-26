@@ -1,4 +1,4 @@
-import { sign } from "@codenhub/jwt";
+import { sign, tokenHash } from "@codenhub/jwt";
 
 import { assertBodyUnread, readBody } from "../shared/body";
 import { isFormContentType } from "../shared/content-type";
@@ -6,7 +6,6 @@ import { digestKey, randomToken, timingSafeEqual } from "../shared/encoding";
 import { MAX_BODY_BYTES } from "../shared/limits";
 import { parseParameters } from "../shared/parameters";
 import { computeCodeChallenge, isCodeVerifier } from "../shared/pkce";
-import { computeTokenHash } from "../shared/token-hash";
 import type { OAuthErrorCode } from "../shared/types";
 import { ownDataValue, releaseClaims } from "./claims";
 import { authenticateClient } from "./client-auth";
@@ -667,7 +666,7 @@ async function issueIdToken(
   extra: { readonly nonce?: string },
 ): Promise<string> {
   const { privateKey } = selectIdTokenKey(options, client);
-  const atHash = await computeTokenHash(accessToken, privateKey.alg);
+  const atHash = await tokenHash(accessToken, privateKey.alg);
   const scopeClaims = client.idTokenClaims === true ? await releasedForIdToken(options, grant, scopes) : {};
   return sign({
     payload: {
@@ -682,7 +681,7 @@ async function issueIdToken(
       ...optionalAuthContext(grant),
       ...(grant.sessionId !== undefined ? { sid: grant.sessionId } : {}),
       ...(extra.nonce !== undefined ? { nonce: extra.nonce } : {}),
-      ...(atHash !== undefined ? { at_hash: atHash } : {}),
+      at_hash: atHash,
     },
     key: privateKey,
     header: { typ: "JWT" },

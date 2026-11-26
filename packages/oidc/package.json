@@ -83,7 +83,7 @@
     "vitest": "catalog:"
   },
   "peerDependencies": {
-    "@codenhub/jwt": "^0.0.1"
+    "@codenhub/jwt": "^0.1.0"
   },
   "engines": {
     "node": ">=26"

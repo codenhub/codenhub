@@ -5,13 +5,13 @@ import {
   type JwtIssue,
   type JwtPayload,
   type KeySet,
+  tokenHash,
   type VerifiedJwt,
 } from "@codenhub/jwt";
 
 import { timingSafeEqual } from "../shared/encoding";
 import { MAX_ID_TOKEN_LENGTH } from "../shared/limits";
 import { fail, ok } from "../shared/result";
-import { computeTokenHash } from "../shared/token-hash";
 import type { IdTokenClaims, OidcIssue, OidcResult } from "../shared/types";
 import { tenantIssuerIssues } from "./issuer";
 import type { ResolvedClientOptions } from "./options";
@@ -202,9 +202,8 @@ async function atHashIssues(payload: JwtPayload, header: JwtHeader, accessToken:
   if (payload.at_hash === undefined) {
     return [];
   }
-  const expectedHash = await computeTokenHash(accessToken, header.alg);
-  const matches =
-    typeof payload.at_hash === "string" && expectedHash !== undefined && timingSafeEqual(payload.at_hash, expectedHash);
+  const expectedHash = await tokenHash(accessToken, header.alg);
+  const matches = typeof payload.at_hash === "string" && timingSafeEqual(payload.at_hash, expectedHash);
   return matches ? [] : [{ code: "at_hash_mismatch", path: claimPath("at_hash") }];
 }
 

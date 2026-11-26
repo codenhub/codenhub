@@ -1,6 +1,5 @@
 import { createKeySet, createVerifier } from "@codenhub/jwt";
 
-import { decodeBase64Url } from "../shared/encoding";
 import { MAX_ID_TOKEN_LENGTH } from "../shared/limits";
 import type { ResolvedOptions } from "./options";
 
@@ -22,8 +21,8 @@ export interface IdTokenHint {
  *
  * @remarks
  * It may have expired, as a hint normally has by the time it is sent back (RP-Initiated Logout 1.0 §2, OpenID
- * Connect Core §3.1.2.1): when `@codenhub/jwt` reports expiry as its only fault, it is verified again at the moment it
- * was issued (scope.md decision 45). The type keeps a JWT access token (`at+jwt`) and a logout token
+ * Connect Core §3.1.2.1), so `@codenhub/jwt` accepts one that is expired when every other check passes (scope.md
+ * decision 45). The type keeps a JWT access token (`at+jwt`) and a logout token
  * (`logout+jwt`), signed by the same keys, from passing as a hint. A hint with several audiences and no `azp` among
  * them names no client, so it is ignored rather than trusted for any of them.
  */
@@ -34,27 +33,27 @@ export async function verifyIdTokenHint(
   if (idTokenHint === undefined) {
     return undefined;
   }
-  const verifyAt = (now: number): ReturnType<ReturnType<typeof createVerifier>> =>
-    createVerifier({
-      keys: createKeySet(options.publishedKeys),
-      issuer: options.issuer,
-      type: "JWT",
-      // As long as the ID tokens a client of this package accepts; the default of @codenhub/jwt is 8192.
-      maxLength: MAX_ID_TOKEN_LENGTH,
-      requiredClaims: ["sub", "aud", "exp", "iat"],
-      now: () => now * MILLISECONDS_PER_SECOND,
-    })(idTokenHint);
-  let verified = await verifyAt(options.now());
-  if (!verified.ok && verified.error.issues.length === 1 && verified.error.issues[0].code === "expired") {
-    // Expiry is the hint's only fault, so its signature and every other claim were just verified. It is verified
-    // again at the moment it was issued, which is how `@codenhub/jwt` hands over the payload of an expired token.
-    const issuedAt = issueTimeOf(idTokenHint);
-    verified = issuedAt === undefined ? verified : await verifyAt(issuedAt);
-  }
+  const verified = await createVerifier({
+    keys: createKeySet(options.publishedKeys),
+    issuer: options.issuer,
+    // The hint names its clients in `aud`, which the code below reads: any audience is accepted here.
+    audience: false,
+    type: "JWT",
+    // An expired hint whose other checks pass is still a hint (decision 45).
+    allowExpired: true,
+    // As long as the ID tokens a client of this package accepts; the default of @codenhub/jwt is 8192.
+    maxLength: MAX_ID_TOKEN_LENGTH,
+    requiredClaims: ["sub", "aud", "exp", "iat"],
+    now: () => options.now() * MILLISECONDS_PER_SECOND,
+  })(idTokenHint);
   if (!verified.ok || typeof verified.value.payload.sub !== "string") {
     return undefined;
   }
-  const { aud, azp, sub, sid } = verified.value.payload;
+  const { aud, azp, sub, sid, exp, iat } = verified.value.payload;
+  // allowExpired accepts any `exp` in the past; one before `iat` was never valid at all (decision 45).
+  if (exp === undefined || iat === undefined || exp < iat) {
+    return undefined;
+  }
   const audiences = typeof aud === "string" ? [aud] : (aud ?? []);
   const clientId =
     audiences.length === 1 ? audiences[0] : typeof azp === "string" && audiences.includes(azp) ? azp : undefined;
@@ -64,15 +63,4 @@ export async function verifyIdTokenHint(
   return typeof sid === "string" && sid !== ""
     ? { subject: sub, sessionId: sid, audiences, clientId }
     : { subject: sub, audiences, clientId };
-}
-
-/** The `iat` of a token whose signature and claim types `@codenhub/jwt` has already verified. */
-function issueTimeOf(token: string): number | undefined {
-  try {
-    const payload: unknown = JSON.parse(new TextDecoder().decode(decodeBase64Url(token.split(".")[1] ?? "")));
-    const iat = typeof payload === "object" && payload !== null ? (payload as { iat?: unknown }).iat : undefined;
-    return typeof iat === "number" ? iat : undefined;
-  } catch {
-    return undefined;
-  }
 }

@@ -8,7 +8,19 @@ import { isTenantTemplate, tenantOf } from "./issuer";
  * The asymmetric algorithms this package verifies ID tokens with. A provider must advertise at least one,
  * or no ID token it issues could be checked.
  */
-export const ID_TOKEN_ALGORITHMS = ["ES256", "EdDSA", "Ed25519", "RS256", "PS256"] as const;
+export const ID_TOKEN_ALGORITHMS = [
+  "ES256",
+  "ES384",
+  "ES512",
+  "EdDSA",
+  "Ed25519",
+  "RS256",
+  "RS384",
+  "RS512",
+  "PS256",
+  "PS384",
+  "PS512",
+] as const;
 
 /** One of {@link ID_TOKEN_ALGORITHMS}. */
 export type IdTokenAlgorithm = (typeof ID_TOKEN_ALGORITHMS)[number];

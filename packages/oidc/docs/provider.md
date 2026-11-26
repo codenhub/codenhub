@@ -73,7 +73,7 @@ The JWKS endpoint publishes the public key of every pair in `signingKeys`, then 
 
 Which pair signs a client's ID tokens depends on the client:
 
-- A client record with `idTokenSigningAlg` gets the first pair of that algorithm. A record that names an algorithm none of the pairs has, or a value that is not one of `ES256`, `EdDSA`, `Ed25519`, `RS256` or `PS256`, makes the provider throw `TypeError` when it reads the record.
+- A client record with `idTokenSigningAlg` gets the first pair of that algorithm. A record that names an algorithm none of the pairs has, or a value that is not one of `ES256`, `ES384`, `ES512`, `EdDSA`, `Ed25519`, `RS256`, `RS384`, `RS512`, `PS256`, `PS384` or `PS512`, makes the provider throw `TypeError` when it reads the record.
 - A client without it gets the first `RS256` pair when there is one, and otherwise the first pair. The reason is that [OpenID Connect Core §15.1](https://openid.net/specs/openid-connect-core-1_0.html#Signing) requires every provider to support `RS256`, and [OpenID Connect Registration](https://openid.net/specs/openid-connect-registration-1_0.html#ClientMetadata) makes it the default for a client that registers no algorithm, so a relying party library that never asked for an algorithm expects it. Listing an `RS256` pair therefore changes the algorithm of every ID token of the clients that name none, even when another algorithm comes first in the list.
 - JWT access tokens are signed with the first pair, whatever the client says. A resource server verifies each with the published key named by the `kid` in its header, which after a rotation is the retiring pair for a token issued before it.
 

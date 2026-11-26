@@ -216,7 +216,8 @@ describe("endSession", () => {
     ],
     ["an expired JWT access token", (pair: KeyPair) => idToken(pair, EXPIRED, "at+jwt")],
     ["a hint that expired before it was issued", (pair: KeyPair) => idToken(pair, { exp: NOW_SECONDS - 120 })],
-    ["a hint issued in the future", (pair: KeyPair) => idToken(pair, { iat: NOW_SECONDS + 60 })],
+    // @codenhub/jwt allows any iat up to 60 seconds ahead, for clock skew.
+    ["a hint issued in the future", (pair: KeyPair) => idToken(pair, { iat: NOW_SECONDS + 120 })],
     ["a hint from another issuer", (pair: KeyPair) => idToken(pair, { iss: "https://evil.example" })],
     ["a hint signed by another key", async () => idToken(await generateKeyPair({ alg: "ES256", kid: "k1" }))],
     ["a hint that is not a JWT", async () => "not-a-jwt"],

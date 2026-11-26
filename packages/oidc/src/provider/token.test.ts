@@ -1,10 +1,9 @@
-import { type KeyPair, createKeySet, createVerifier, generateKeyPair } from "@codenhub/jwt";
+import { type KeyPair, createKeySet, createVerifier, generateKeyPair, tokenHash } from "@codenhub/jwt";
 import { describe, expect, it } from "vitest";
 
 import { digestKey, randomToken } from "../shared/encoding";
 import { MAX_BODY_BYTES } from "../shared/limits";
 import { computeCodeChallenge } from "../shared/pkce";
-import { computeTokenHash } from "../shared/token-hash";
 import { type MemoryStore, createMemoryStore } from "../testing/memory-store";
 import { reportRefusal } from "./diagnostics";
 import { type ResolvedOptions, resolveOptions } from "./options";
@@ -348,7 +347,7 @@ describe("handleToken: authorization_code grant", () => {
 
     const body = await redeemCode(options, store);
 
-    expect(payloadOf(body.id_token).at_hash).toBe(await computeTokenHash(body.access_token, "ES256"));
+    expect(payloadOf(body.id_token).at_hash).toBe(await tokenHash(body.access_token, "ES256"));
   });
 
   it("omits nonce from the ID token when the code had none", async () => {
@@ -1224,7 +1223,7 @@ describe("handleToken: scope claims in the ID token", () => {
       nonce: "nonce-1",
       sid: "session-1",
       name: "Ada Lovelace",
-      at_hash: await computeTokenHash(body.access_token, "ES256"),
+      at_hash: await tokenHash(body.access_token, "ES256"),
     });
   });
 
@@ -1280,7 +1279,7 @@ describe("handleToken: scope claims in the ID token", () => {
       await handleToken(options, tokenRequest(refreshBody(issued.refresh_token ?? "")))
     ).json()) as TokenBody;
 
-    const atHashes = await Promise.all([issued, refreshed].map((body) => computeTokenHash(body.access_token, "ES256")));
+    const atHashes = await Promise.all([issued, refreshed].map((body) => tokenHash(body.access_token, "ES256")));
 
     for (const [index, body] of [issued, refreshed].entries()) {
       const payload = payloadOf(body.id_token);
@@ -1467,7 +1466,7 @@ describe("handleToken: the ID token's signing key", () => {
     const body = await redeemCode(options, store);
 
     expect(headerOf(body.id_token)).toMatchObject({ alg: "RS256", kid: "RS256-1" });
-    expect(payloadOf(body.id_token).at_hash).toBe(await computeTokenHash(body.access_token, "RS256"));
+    expect(payloadOf(body.id_token).at_hash).toBe(await tokenHash(body.access_token, "RS256"));
   });
 
   it("signs with the first key when no key is RS256", async () => {
@@ -1486,7 +1485,17 @@ describe("handleToken: the ID token's signing key", () => {
     const body = await redeemCode(options, store);
 
     expect(headerOf(body.id_token)).toMatchObject({ alg: "ES256", kid: "ES256-1" });
-    expect(payloadOf(body.id_token).at_hash).toBe(await computeTokenHash(body.access_token, "ES256"));
+    expect(payloadOf(body.id_token).at_hash).toBe(await tokenHash(body.access_token, "ES256"));
+  });
+
+  it("writes the at_hash of an ID token signed with ES384, from its SHA-384 digest", async () => {
+    const keys = [await generateKeyPair({ alg: "ES384", kid: "ES384-0" })];
+    const { options, store } = await setup({ keys, clients: withClient({ idTokenSigningAlg: "ES384" }) });
+
+    const body = await redeemCode(options, store);
+
+    expect(headerOf(body.id_token)).toMatchObject({ alg: "ES384", kid: "ES384-0" });
+    expect(payloadOf(body.id_token).at_hash).toBe(await tokenHash(body.access_token, "ES384"));
   });
 
   it("signs the ID token of a refresh with the same key", async () => {
@@ -1509,7 +1518,7 @@ describe("handleToken: the ID token's signing key", () => {
     const refreshed = (await response.json()) as TokenBody;
 
     expect(headerOf(refreshed.id_token)).toMatchObject({ alg: "ES256", kid: "ES256-1" });
-    expect(payloadOf(refreshed.id_token).at_hash).toBe(await computeTokenHash(refreshed.access_token, "ES256"));
+    expect(payloadOf(refreshed.id_token).at_hash).toBe(await tokenHash(refreshed.access_token, "ES256"));
   });
 
   it("verifies against the published key of that algorithm", async () => {
