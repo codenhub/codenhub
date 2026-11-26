@@ -112,6 +112,11 @@ export function createUserinfoFetcher(options: ResolvedClientOptions, keys: KeyS
       ? undefined
       : createVerifier({
           keys,
+          // A signed response may carry `aud` and `iss`, and need carry neither, nor `exp` (OpenID Connect Core
+          // §5.3.2): jwtClaimIssues checks the first two when present, so @codenhub/jwt checks no audience and
+          // requires no expiry, and still refuses an `exp` that has passed.
+          audience: false,
+          requireExpiration: false,
           clockTolerance: options.clockTolerance,
           // The response that carries it is already capped at this size.
           maxLength: MAX_RESPONSE_BYTES,

@@ -7,10 +7,16 @@ import type { ClientRecord, GrantType, OidcStore } from "./types";
 /** Every algorithm a signing key may have; a `Record`, so a new `@codenhub/jwt` algorithm fails to compile here. */
 const ID_TOKEN_ALGORITHMS: Readonly<Record<AsymmetricAlgorithm, true>> = {
   ES256: true,
+  ES384: true,
+  ES512: true,
   EdDSA: true,
   Ed25519: true,
   RS256: true,
+  RS384: true,
+  RS512: true,
   PS256: true,
+  PS384: true,
+  PS512: true,
 };
 
 const AUTH_METHODS = new Set([

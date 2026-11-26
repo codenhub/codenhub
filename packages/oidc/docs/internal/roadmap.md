@@ -1,6 +1,6 @@
 ---
 status: DRAFT
-last_updated: 2026-11-19
+last_updated: 2026-11-26
 scope: What `@codenhub/oidc` needs between 0.0.1 and its 0.1.0 release.
 ---
 
@@ -17,7 +17,7 @@ Many items below change a contract: a record the store persists, a client record
 The SSO application is the package's first real consumer, and a review of its scope against this package found what it needs and the package lacks. The order follows the SSO application's own roadmap.
 
 - **Release what `main` already holds.** The fixes after 0.0.1, the 60-second client clock tolerance (decision 44) and the expired `id_token_hint` at logout (decision 45), are not on npm. The SSO application installs from npm, so it needs a release that carries them.
-- **Run the OpenID conformance plans.** Every change the review found is built, and scope.md decisions 47 to 56 record them; the record shapes are settled before the SSO application writes its `OidcStore` adapters. What its data API needs is built too: `authenticate`, `accessTokenClaims` and resource indicators on both sides, in decisions 57 to 59, its privacy asks for pairwise subjects, in decision 60, and its audit for the refused request in `onDiagnostic`, in decision 61. What is left before 0.1 is the move to `@codenhub/jwt` 0.1.0, the conformance run below and the release ("Release" below).
+- **Run the OpenID conformance plans.** Every change the review found is built, and scope.md decisions 47 to 56 record them; the record shapes are settled before the SSO application writes its `OidcStore` adapters. What its data API needs is built too: `authenticate`, `accessTokenClaims` and resource indicators on both sides, in decisions 57 to 59, its privacy asks for pairwise subjects, in decision 60, and its audit for the refused request in `onDiagnostic`, in decision 61. It builds on `@codenhub/jwt` 0.1.0. What is left before 0.1 is the conformance run below and the release ("Release" below).
 
 ## Planned
 
@@ -30,14 +30,11 @@ The target is that the provider passes the Basic OP and Config OP plans; no plan
 ### Release
 
 - **What the SSO application finds next.** 0.0.1 aimed to be the last release before a breaking change (`docs/specs/packages-lifecycle.md`, "Versioning"). What the first look at the consumer found is built, as scope.md decisions 47 to 61 record; a change building it shows the public API needs ships in the release that makes it, as a breaking change if it is one. 0.1.0 is the judgment that the SSO application builds on the package without such changes.
-- **A changelog from 0.1.0**, opened by `hub release --cut` with the release, per `docs/specs/packages-changelog.md`. An adapter or app written for 0.0.1 breaks in ways the page must mark, each with what to do: `engines.node` is `>=26`; `secretHash` is `secretHashes` (decision 48); `client_secret_jwt` takes `keys` rather than `key` (decision 82); `CodeRecord.maxAgeRequested` is gone (decision 71); saves must reject an existing key and `findClient` matches byte for byte (decisions 29 and 68); a client assertion's `aud` is the issuer alone (decision 66); `createProvider` refuses unknown options and a non-canonical issuer or endpoint (decisions 95 and 96); `refresh` takes `previous` rather than `subject` (decision 92); `callback` results carry `parameters`, and `ProviderDiagnostic` carries `grantId` and `subject` and reports `token_revoked` with status 200 (decisions 78 and 89).
+- **A changelog from 0.1.0**, opened by `hub release --cut` with the release, per `docs/specs/packages-changelog.md`. An adapter or app written for 0.0.1 breaks in ways the page must mark, each with what to do: `engines.node` is `>=26`; the `@codenhub/jwt` peer is `^0.1.0`; `secretHash` is `secretHashes` (decision 48); `client_secret_jwt` takes `keys` rather than `key` (decision 82); `CodeRecord.maxAgeRequested` is gone (decision 71); saves must reject an existing key and `findClient` matches byte for byte (decisions 29 and 68); a client assertion's `aud` is the issuer alone (decision 66); `createProvider` refuses unknown options and a non-canonical issuer or endpoint (decisions 95 and 96); `refresh` takes `previous` rather than `subject` (decision 92); `callback` results carry `parameters`, and `ProviderDiagnostic` carries `grantId` and `subject` and reports `token_revoked` with status 200 (decisions 78 and 89).
 
 - **The 0.1 release review.** Its fixes and the contracts it settled are built, as scope.md decisions 66 to 75 record.
 
-- **The full audit.** Its fixes are built, as scope.md decisions 76 to 96 record. What remains needs `@codenhub/jwt` 0.1.0 or happens outside the repository:
-  - Publish `@codenhub/jwt` 0.1.0, then move the catalog and the peer range to `^0.1.0`. Under 0.1.0, `verifyIdTokenHint` must pass `audience: false`, since a verifier without `audience` refuses a token that has `aud`, or every `id_token_hint` is ignored (14 tests fail when linked to it); it can also drop its second verification at `iat` for `allowExpired`.
-  - In the same change, replace `computeTokenHash` with `@codenhub/jwt`'s `tokenHash` and widen both algorithm lists, the client's `ID_TOKEN_ALGORITHMS` and the provider's in `client-record.ts`, to the algorithms 0.1.0 adds ([#607](https://github.com/codenhub/codenhub/issues/607)).
-  - Run the conformance plans above.
+- **The full audit.** Its fixes are built, as scope.md decisions 76 to 96 record, and so is the move to `@codenhub/jwt` 0.1.0 it waited on: `verifyIdTokenHint` passes `audience: false` and `allowExpired` (decision 45), the userinfo verifier `audience: false` and `requireExpiration: false`, since a signed userinfo response need carry neither `aud` nor `exp`, `computeTokenHash` gave way to `@codenhub/jwt`'s `tokenHash`, both algorithm lists, the client's `ID_TOKEN_ALGORITHMS` and the provider's in `client-record.ts`, gained the algorithms 0.1.0 adds ([#607](https://github.com/codenhub/codenhub/issues/607)), and the workerd suite loads every file of the jwt build, which 0.1.0 splits per module. What remains is the conformance run above.
 
 ## Later / Possible
 

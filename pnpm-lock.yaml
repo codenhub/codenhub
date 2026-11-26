@@ -202,8 +202,8 @@ catalogs:
       specifier: ^0.3.0
       version: 0.3.0
     '@codenhub/jwt':
-      specifier: ^0.0.1
-      version: 0.0.1
+      specifier: ^0.1.0
+      version: 0.1.0
     '@codenhub/styles':
       specifier: ^0.6.0
       version: 0.6.0
@@ -756,7 +756,7 @@ importers:
     devDependencies:
       '@codenhub/jwt':
         specifier: 'catalog:'
-        version: 0.0.1
+        version: 0.1.0
       '@types/node':
         specifier: 'catalog:'
         version: 26.6.6
@@ -786,7 +786,7 @@ importers:
     devDependencies:
       '@codenhub/jwt':
         specifier: 'catalog:'
-        version: 0.0.1
+        version: 0.1.0
       '@codenhub/oidc':
         specifier: workspace:*
         version: link:..
@@ -1644,9 +1644,9 @@ packages:
       svelte:
         optional: true
 
-  '@codenhub/jwt@0.0.1':
-    resolution: {integrity: sha512-xQE8W7YMvH3tg+rrxH3F1il5vU0i9xkGjINYnXCSL/0uFyoKMvdE7rbDE1/zrO7bpx4/s3HHlJZXjcgSigt/5Q==}
-    engines: {node: '>=24'}
+  '@codenhub/jwt@0.1.0':
+    resolution: {integrity: sha512-TEcppUCNON3ujrh3s02hotUuVQ11xjVUm3o0WZ03kWvEfJJsHjtXqKN1GgQd111I5O8fGrOKp16DpPBidN9BJA==}
+    engines: {node: '>=26'}
 
   '@codenhub/styles@0.6.0':
     resolution: {integrity: sha512-9N+XLJFlhr6TdiRkKNk5qJKt2tzKokVPGOUg90vEz+UHuUoi9npbpAOA/fO388lAiO14/jcIDkQ/6ZpraObYRg==}
@@ -5209,7 +5209,7 @@ snapshots:
       react: 19.3.1
       svelte: 5.57.3
 
-  '@codenhub/jwt@0.0.1': {}
+  '@codenhub/jwt@0.1.0': {}
 
   '@codenhub/styles@0.6.0(tailwindcss@4.3.4)':
     optionalDependencies:

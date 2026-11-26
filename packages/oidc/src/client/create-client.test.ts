@@ -6,12 +6,12 @@ import {
   generateKeyPair,
   generateSecretKey,
   sign,
+  tokenHash,
 } from "@codenhub/jwt";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
 import { createProvider, generateClientSecret, hashClientSecret, type ClientAuthentication } from "../provider";
 import { MAX_URL_LENGTH } from "../shared/limits";
-import { computeTokenHash } from "../shared/token-hash";
 import type { OidcIssue, OidcResult, ProviderMetadata } from "../shared/types";
 import { createMemoryStore } from "../testing";
 import { createClient } from "./create-client";
@@ -85,7 +85,7 @@ beforeAll(async () => {
  * changes them; a claim set to `undefined` in the grant is left out.
  */
 async function signIdToken(accessToken: string, grant: Grant): Promise<string> {
-  const atHash = (await computeTokenHash(accessToken, "ES256")) ?? "";
+  const atHash = await tokenHash(accessToken, "ES256");
   const payload: Record<string, unknown> = {
     iss: ISSUER,
     sub: "user-1",
@@ -647,7 +647,7 @@ describe("ID token checks through the callback", () => {
   it("refuses an at_hash that does not match the access token", async () => {
     const op = createFakeOp();
     const rp = clientFor(op);
-    const wrongHash = (await computeTokenHash("some-other-token", "ES256")) ?? "";
+    const wrongHash = await tokenHash("some-other-token", "ES256");
     const { pending, url } = await begin(op, rp, { claims: { at_hash: wrongHash } });
 
     const result = await rp.callback(url, pending);

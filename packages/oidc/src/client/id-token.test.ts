@@ -1,7 +1,6 @@
-import { type KeyPair, exportPublicJwk, generateKeyPair, sign } from "@codenhub/jwt";
+import { type KeyPair, exportPublicJwk, generateKeyPair, sign, tokenHash } from "@codenhub/jwt";
 import { beforeAll, describe, expect, it, vi } from "vitest";
 
-import { computeTokenHash } from "../shared/token-hash";
 import type { OidcIssue, OidcResult } from "../shared/types";
 import { createIdTokenValidator, type IdTokenExpectations } from "./id-token";
 import { resolveClientOptions } from "./options";
@@ -489,7 +488,7 @@ describe("createIdTokenValidator", () => {
     });
 
     it("refuses an at_hash that does not match the access token", async () => {
-      const wrongHash = await computeTokenHash("some-other-token", "ES256");
+      const wrongHash = await tokenHash("some-other-token", "ES256");
       const result = await validator()(await tokenWith({ at_hash: wrongHash }), {
         nonce: "nonce-1",
         accessToken: "at-1",
@@ -499,13 +498,31 @@ describe("createIdTokenValidator", () => {
     });
 
     it("accepts an at_hash that matches the access token", async () => {
-      const hash = await computeTokenHash("at-1", "ES256");
+      const hash = await tokenHash("at-1", "ES256");
       const result = await validator()(await tokenWith({ at_hash: hash }), {
         nonce: "nonce-1",
         accessToken: "at-1",
       });
 
       expect(result.ok).toBe(true);
+    });
+
+    it("accepts an at_hash of an ID token signed with ES384, from its SHA-384 digest", async () => {
+      const es384 = await generateKeyPair({ alg: "ES384", kid: "op-384" });
+      const es384Jwks = { keys: [await exportPublicJwk(es384.publicKey)] };
+      const validate = createIdTokenValidator(
+        resolveClientOptions({
+          metadata: { ...metadataWith(`${ISSUER}/jwks`), id_token_signing_alg_values_supported: ["ES384"] },
+          clientId: CLIENT_ID,
+          redirectUri: "https://app.example/callback",
+          auth: { method: "none" },
+          fetch: vi.fn(async () => jsonResponse(es384Jwks)),
+          now: () => NOW_S * 1000,
+        }),
+      );
+      const token = await tokenWith({ at_hash: await tokenHash("at-1", "ES384") }, { key: es384.privateKey });
+
+      expect((await validate(token, { nonce: "nonce-1", accessToken: "at-1" })).ok).toBe(true);
     });
 
     it("refuses a subject that is not the expected one", async () => {

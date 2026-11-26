@@ -1,9 +1,8 @@
-import { type KeyPair, createKeySet, createVerifier, generateKeyPair } from "@codenhub/jwt";
+import { type KeyPair, createKeySet, createVerifier, generateKeyPair, tokenHash } from "@codenhub/jwt";
 import { describe, expect, it } from "vitest";
 
 import { digestKey, randomToken } from "../shared/encoding";
 import { computeCodeChallenge } from "../shared/pkce";
-import { computeTokenHash } from "../shared/token-hash";
 import { type MemoryStore, createMemoryStore } from "../testing/memory-store";
 import { createProvider } from "./create-provider";
 import { generateClientSecret, hashClientSecret } from "./secrets";
@@ -136,7 +135,7 @@ describe("JWT access tokens", () => {
       Buffer.from((body.id_token as string).split(".")[1] ?? "", "base64url").toString("utf8"),
     ) as Record<string, unknown>;
 
-    expect(idPayload.at_hash).toBe(await computeTokenHash(body.access_token as string, "ES256"));
+    expect(idPayload.at_hash).toBe(await tokenHash(body.access_token as string, "ES256"));
   });
 
   it("gives the JWT the client's own access token lifetime as exp and in the store", async () => {
