@@ -723,8 +723,9 @@ interface DevServer {
   fetch: (url: string, accept?: string) => Promise<string>;
   // A module and every module it imports, fetched as a page would, so the server knows the page uses them. The URLs fetched.
   load: (url: string) => Promise<string[]>;
-  // The first message after the `from`th that `test` accepts, waiting for it.
-  waitFor: (test: (message: HotMessage) => boolean, from: number) => Promise<HotMessage>;
+  /* The first message after the `from`th that `test` accepts, waiting for it.
+     A test that waits more than once names each wait, so a timeout says which. */
+  waitFor: (test: (message: HotMessage) => boolean, from: number, what?: string) => Promise<HotMessage>;
   // Waits until the server's watcher reports a file written in the folder, so a change made next is not missed.
   watching: (folder: string) => Promise<void>;
 }
@@ -785,12 +786,14 @@ async function withDevServer(
 
       return [...seen];
     };
-    const waitFor = (test: (message: HotMessage) => boolean, from: number): Promise<HotMessage> =>
+    const waitFor = (test: (message: HotMessage) => boolean, from: number, what?: string): Promise<HotMessage> =>
       vi.waitFor(() => {
         const found = messages.slice(from).find(test);
 
         if (found === undefined) {
-          throw new Error(`no such message among ${JSON.stringify(messages.slice(from))}`);
+          const among = `among ${JSON.stringify(messages.slice(from))}`;
+
+          throw new Error(what === undefined ? `no such message ${among}` : `no ${what} ${among}`);
         }
 
         return found;
@@ -1112,7 +1115,7 @@ describe("viteStyles: live update", { timeout: 40_000 }, () => {
       await writeFile(cache, "");
       await writeFiles({ "view.js": VIEW(BUTTON) });
 
-      const message = await dev.waitFor((sent) => sent.type === "error", from);
+      const message = await dev.waitFor((sent) => sent.type === "error", from, "error for the failed write");
 
       expect(message.err?.message).toMatch(/^@codenhub\/styles\/vite: cannot write to ".+"/);
 
@@ -1120,7 +1123,7 @@ describe("viteStyles: live update", { timeout: 40_000 }, () => {
       from = dev.messages.length;
       await rm(cache);
       await writeFiles({ "view.js": VIEW(`<button class="btn">Send</button>`) });
-      await dev.waitFor((sent) => updates(sent, stylesheet), from);
+      await dev.waitFor((sent) => updates(sent, stylesheet), from, "stylesheet update once it can write");
 
       expect(hasRuleFor(await dev.fetch(stylesheet, "text/css"), "btn")).toBe(true);
     });
@@ -1142,12 +1145,12 @@ describe("viteStyles: live update", { timeout: 40_000 }, () => {
       await rm(blocked, { recursive: true });
       await writeFile(blocked, "");
       await writeFiles({ "view.js": VIEW(BUTTON) });
-      await dev.waitFor((sent) => sent.type === "error", from);
+      await dev.waitFor((sent) => sent.type === "error", from, "error for the aesthetics it cannot write");
 
       from = dev.messages.length;
       await rm(blocked);
       await writeFiles({ "view.js": VIEW(`<button class="btn">Send</button>`) });
-      await dev.waitFor((sent) => updates(sent, stylesheet), from);
+      await dev.waitFor((sent) => updates(sent, stylesheet), from, "stylesheet update once it can write");
 
       expect(hasRuleFor(await dev.fetch(stylesheet, "text/css"), "btn")).toBe(true);
     });
