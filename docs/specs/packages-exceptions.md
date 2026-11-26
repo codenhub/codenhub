@@ -42,7 +42,7 @@ An exception to a rule that `hub check` enforces MUST also declare a `Checks byp
 - **Rules bypassed:** `docs/specs/packages-lifecycle.md`, "Versioning" (a feature on the package's roadmap ships in the release being prepared; deferring it because it needs its own design is rejected).
 - **Where it applies:** the Generator item under Planned in `packages/styles/docs/internal/roadmap.md`, for the next minor release of `@codenhub/styles`.
 - **Why acceptable:** That release carries the package's own checkbox marks and the Vite plugin, both additive and useful on their own. The generator's design still has open questions, listed in `packages/styles/docs/internal/generator.md`, and holding the release for them would delay both for an unknown time. Taken by the maintainer on 2026-11-25.
-- **Temporary or permanent:** Temporary. Remove this entry when the open questions in `generator.md` are settled; the release after that carries the generator.
+- **Temporary or permanent:** Temporary. Remove this entry once that release has shipped and the open questions in `generator.md` are settled, whichever comes later; the next release after both carries the generator.
 
 ## `@codenhub/skills`: CLI-only package
 
