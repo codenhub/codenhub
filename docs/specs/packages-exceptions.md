@@ -12,13 +12,13 @@ An exception to a rule that `hub check` enforces MUST also declare a `Checks byp
 
 `hub check` reports a waiver that suppresses nothing, so a stale entry or a mistyped code or package name surfaces instead of looking effective. Remove an entry once the package no longer needs it.
 
-## `@codenhub/styles`: no JavaScript API
+## `@codenhub/styles`: the root entry is a stylesheet
 
 - **Rules bypassed:** `docs/specs/packages-lifecycle.md` (metadata fields `main` and `module` required in `package.json`).
 - **Checks bypassed:** `metadata/main`, `metadata/module`.
 - **Where it applies:** `packages/styles/`.
-- **Why acceptable:** The package ships stylesheets and one build command, `chs`, declared as its `bin`; it exposes no JavaScript API to import, so `main` and `module` would point at no usable runtime entrypoint. It does declare `types`: an empty `dist/index.d.cts`, CommonJS so that a CommonJS file under `module: node16` may import it as an ES file does, the file the `dist/` exports' `types` conditions name (the `/tw` exports name the same empty `tw/index.d.cts`), so a TypeScript project that checks side-effect imports resolves them; `tests/integration/exports.test.ts` compiles such imports.
-- **Temporary or permanent:** Permanent while the package exposes no library API.
+- **Why acceptable:** The package ships stylesheets and one build command, `chs`, declared as its `bin`; its root entry is a stylesheet, and its one JavaScript entry, the Vite plugin, is the `./vite` export a configuration imports by that name, so `main` and `module` would point at no usable runtime entrypoint. It does declare `types`: an empty `dist/index.d.cts`, CommonJS so that a CommonJS file under `module: node16` may import it as an ES file does, the file the `dist/` exports' `types` conditions name (the `/tw` exports name the same empty `tw/index.d.cts`), so a TypeScript project that checks side-effect imports resolves them; `tests/integration/exports.test.ts` compiles such imports.
+- **Temporary or permanent:** Permanent while the package's root entry is a stylesheet.
 
 ## `@codenhub/styles`: Tailwind is not a peer
 

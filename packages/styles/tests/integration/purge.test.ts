@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { canMatch, classesOf, format, parse, purge, serialize } from "../../src/cli/purge";
+import { canMatch, classesOf, format, parse, purge, serialize } from "../../src/trim/purge";
 
 const packageRoot = path.resolve(import.meta.dirname, "../..");
 const read = (file: string) => readFile(path.resolve(packageRoot, file), "utf8");

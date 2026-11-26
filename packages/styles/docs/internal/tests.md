@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-21
+last_updated: 2026-11-25
 scope: `@codenhub/styles` package test strategy.
 ---
 
@@ -75,6 +75,8 @@ packages/styles/
       registry.test.ts
       size.test.ts
       source.test.ts
+      vite-ignore.test.ts
+      vite.test.ts
 ```
 
 ## `playground/`
@@ -135,6 +137,8 @@ Node-based Vitest checks validate every published target. Every compiled export 
 
 `purge.test.ts` covers the tree-shaking `chs build` runs, apart from the command: which selectors a set of used classes can match, which rules and selectors a purge drops, that the compiled stylesheets the command reads parse and write back unchanged, that purging the source to every class of the complete stylesheet gives that stylesheet, and the readable output `--no-minify` writes.
 
+`vite.test.ts` runs the [Vite plugin](./vite.md) inside a real Vite: builds through JavaScript, CSS, Sass, and Lightning CSS imports, an SSR build, the dev server and its live updates over its WebSocket, `vite build --watch`, the files the scan leaves out, every failure it reports, and the byte equality with `chs build` that [The same stylesheet](./vite.md#the-same-stylesheet-as-chs-build) records. It runs against the catalog Vite and, in `.github/workflows/vite.yml`, against the other releases the peer range covers. `vite-ignore.test.ts` holds the `.gitignore` matcher to `git ls-files --others --exclude-standard` on the same files.
+
 `source.test.ts` holds lists that `src/` repeats on purpose to each other: the languages the type scale and `/native` leave untracked.
 
 `size.test.ts` holds what a consumer downloads under ceilings, in minified bytes, each about 3% above the measurement it was set from. Gzipped lengths are recorded here but never compared, because zlib output can differ between machines. A change that grows past a ceiling raises it in the same change and says why. Measured with Tailwind 4.3.4:
@@ -194,4 +198,4 @@ pnpm test:browser:watch styles
 
 Vitest likewise reads the output built by root tooling. Its configuration must not invoke `pnpm build` through setup hooks; direct package-script runs that skip root prerequisites require an existing `dist` tree.
 
-`test:coverage` runs the same integration suite and writes a V8 coverage report over `src/cli/`, the `chs` build command, which is the package's only code. The CSS it ships is held by the browser suite instead, since V8 cannot instrument a stylesheet; `vitest.config.ts` limits the report to `src/cli/` so the figure says something about the code it measures.
+`test:coverage` runs the same integration suite and writes a V8 coverage report over the package's TypeScript in `src/`: the `chs` build command, the Vite plugin, and the trimming engine they share. The CSS it ships is held by the browser suite instead, since V8 cannot instrument a stylesheet; `vitest.config.ts` limits the report to `src/**/*.ts` so the figure says something about the code it measures.

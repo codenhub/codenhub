@@ -1,8 +1,8 @@
 ---
 title: Sem bundler
 description: Como referenciar as folhas de estilos compiladas a partir de HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor, e o build por linha de comando.
-order: 6
-source: 9caaf9e8aae60681715119f45b180977c5c56d91
+order: 7
+source: 46db8096cca9f3bb3cd162764ae5fbe6a5be7fe1
 ---
 
 # Sem bundler
@@ -114,7 +114,7 @@ Uma aplicação Laravel roda Vite por padrão, então ela tem um bundler: import
 
 O pacote traz um comando, `chs`, que lê os seus templates atrás de nomes de classe e escreve uma única folha de estilos minificada com só as classes do StyleKit que eles usam. Uma página que usa um botão recebe cerca de um sétimo da folha de estilos completa; o tamanho exato depende das classes que você usa, porque cada componente traz as regras compartilhadas de que depende.
 
-O comando também serve com um bundler. Um projeto cujo bundler não roda o Tailwind, como um build simples com Vite ou webpack, pode escrever a folha de estilos entre os seus fontes, `--output src/stylekit.css`, e importar esse arquivo onde importaria `@codenhub/styles`. Um projeto que usa o Tailwind CSS v4 tem a mesma redução pelo [entrypoint de código-fonte](./tailwind.md) e não precisa do comando.
+O comando também serve com um bundler. Um projeto cujo bundler não roda o Tailwind, como um build com webpack, pode escrever a folha de estilos entre os seus fontes, `--output src/stylekit.css`, e importar esse arquivo onde importaria `@codenhub/styles`. Um projeto Vite tem a mesma folha de estilos pelo [plugin de Vite](./vite.md) do pacote, sem comando para rodar nem arquivo para importar, e um projeto que usa o Tailwind CSS v4 tem a mesma redução pelo [entrypoint de código-fonte](./tailwind.md); nenhum dos dois precisa do comando.
 
 Ele precisa do Node.js 24 ou mais recente na máquina que gera o CSS, seja o seu notebook, um job de CI ou uma etapa do deploy, e de nada mais: o pacote é toda a instalação, sem Tailwind e sem configuração. Instale-o como dependência de desenvolvimento a partir da raiz do projeto; o npm cria um `package.json` se você não tiver um:
 

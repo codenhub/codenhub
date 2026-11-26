@@ -14,7 +14,8 @@
     "no-javascript",
     "tailwindcss",
     "theme",
-    "ui-kit"
+    "ui-kit",
+    "vite"
   ],
   "homepage": "https://codenhub.dev/packages/styles/",
   "license": "Apache-2.0",
@@ -227,6 +228,11 @@
       "import": "./dist/native.css",
       "default": "./dist/native.css"
     },
+    "./vite": {
+      "types": "./dist/vite.d.ts",
+      "import": "./dist/vite.js",
+      "default": "./dist/vite.js"
+    },
     "./package.json": "./package.json"
   },
   "publishConfig": {
@@ -238,12 +244,13 @@
     "debug": "pnpm build && pnpm --filter=@codenhub/styles-debug dev",
     "demo": "pnpm build && pnpm --filter=@codenhub/styles-demo dev",
     "generate": "node scripts/generate-palette.mjs",
-    "build": "pnpm clean && node scripts/build-styles.mjs && pnpm build:tw && pnpm build:purge && pnpm build:cli",
+    "build": "pnpm clean && node scripts/build-styles.mjs && pnpm build:tw && pnpm build:purge && pnpm build:cli && pnpm build:vite",
     "build:styles": "node scripts/build-styles.mjs --styles",
     "build:aesthetics": "node scripts/build-styles.mjs --aesthetics",
     "build:tw": "node scripts/build-tw.mjs",
     "build:purge": "node scripts/build-purge.mjs",
     "build:cli": "tsdown src/cli/cli.ts --format esm --no-clean --no-fixed-extension --no-dts",
+    "build:vite": "tsdown src/vite.ts --format esm --no-clean --no-fixed-extension --dts",
     "prepublishOnly": "pnpm --filter=@codenhub/icons build && pnpm build && pnpm typecheck && pnpm test",
     "status:npm": "npm view @codenhub/styles version dist-tags time --json && npm dist-tag ls @codenhub/styles && npm access get status @codenhub/styles",
     "status:pack": "npm pack --dry-run --ignore-scripts",
@@ -264,10 +271,20 @@
     "@vitest/coverage-v8": "catalog:",
     "lightningcss": "catalog:",
     "postcss": "catalog:",
+    "sass": "catalog:",
     "tailwindcss": "catalog:",
     "tsdown": "catalog:",
     "typescript": "catalog:",
+    "vite": "catalog:",
     "vitest": "catalog:"
+  },
+  "peerDependencies": {
+    "vite": ">=5.0.0"
+  },
+  "peerDependenciesMeta": {
+    "vite": {
+      "optional": true
+    }
   },
   "engines": {
     "node": ">=24"

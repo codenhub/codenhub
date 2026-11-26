@@ -2,7 +2,7 @@
 title: Configuração
 description: Instale o pacote, escolha entre CSS compilado ou código-fonte do Tailwind e renderize a estrutura da página de configurações.
 order: 1
-source: 022c4d05cc3b8f01d924d7ec1022a89898e59d77
+source: 5f239192093a07e56a260ec09c271d2aeaccdd67
 ---
 
 # Configuração
@@ -48,7 +48,7 @@ Escolha um:
 - **Código-fonte do Tailwind CSS v4** (`@codenhub/styles/tw`). Use quando o seu projeto já roda Tailwind v4. O seu build compila o pacote junto com os seus próprios utilitários, então você fica com uma única folha de estilos e a variante `dark:` do Tailwind acompanha o tema do pacote. Exige Tailwind 4.3.2 ou mais recente, abaixo da 5.
 - **Sem bundler.** Referencie o arquivo compilado a partir do `node_modules` ou de uma CDN com uma tag `<link>`; veja [Sem bundler](./integrating/without-a-bundler.md).
 
-Para entregar só as classes que as suas páginas usam num projeto que não usa Tailwind, com bundler ou sem, o comando `chs build` do pacote lê os seus arquivos e escreve uma folha de estilos com só essas classes, que você importa ou referencia no lugar da compilada; veja [Gere só as classes que você usa](./integrating/without-a-bundler.md#gere-só-as-classes-que-você-usa).
+Para entregar só as classes que as suas páginas usam num projeto que não usa Tailwind, o pacote tem duas ferramentas que leem os seus arquivos em busca de nomes de classe. Num projeto Vite, o [plugin de Vite](./integrating/vite.md) dele reduz a folha de estilos que você já importa, com uma linha de configuração. Em qualquer outro projeto, com bundler ou sem, o comando `chs build` dele escreve uma folha de estilos com só essas classes, que você importa ou referencia no lugar da compilada; veja [Gere só as classes que você usa](./integrating/without-a-bundler.md#gere-só-as-classes-que-você-usa).
 
 O seu framework pode precisar de uma configuração própria, como onde fica a folha de estilos global no Next.js ou no Astro. Cada um destes guias cobre uma configuração e depois traz você de volta para cá:
 
@@ -57,6 +57,7 @@ O seu framework pode precisar de uma configuração própria, como onde fica a f
 - [Vue](./integrating/vue.md)
 - [Svelte](./integrating/svelte.md)
 - [Astro](./integrating/astro.md)
+- [Vite](./integrating/vite.md)
 - [Sem bundler](./integrating/without-a-bundler.md)
 
 ## Adicione uma estética (opcional)
@@ -74,8 +75,9 @@ A ordem dos dois imports não importa, porque todo entrypoint declara as [camada
 
 - **Navegadores:** Chrome 123, Safari 17.5 ou Firefox 128 e mais recentes. As cores usam `light-dark()` e `color-scheme` (Firefox 120). O `.input-group` lê o estado inválido e desabilitado de um controle aninhado com `:has()` (Firefox 121). As classes de elevação registram uma propriedade sem herança com `@property` (Firefox 128); sem isso, uma classe de elevação também atingiria os elementos sem classe dentro dela. Alguns recursos mais recentes são usados onde o navegador os tem e ignorados onde não tem, sem quebrar nada no mínimo: `corner-shape`, sem o qual os cantos chanfrados de `.cyber` ficam retos, `scrollbar-color` e `scrollbar-width`, sem os quais o Safari 17.5 desenha a própria barra de rolagem, e as partes que a configuração de movimento reduzido interrompe, como uma animação guiada pela rolagem, que um navegador sem elas nunca anima.
 - **Ferramental:** um `@import` com nome de pacote precisa de uma ferramenta que resolva imports de CSS de pacotes pelo mapa `exports` deles. Sem ela, referencie o arquivo compilado pelo caminho ou a partir de uma CDN; veja [Sem bundler](./integrating/without-a-bundler.md). Duas ferramentas comuns precisam de um ajuste, descrito em [Integração → Bundlers que precisam de um empurrão](./integrating/index.md#bundlers-que-precisam-de-um-empurrão): o Parcel e o PostCSS com `postcss-import`.
-- **Tailwind:** 4.3.2 ou mais recente, abaixo da 5, só para os entrypoints de código-fonte `/tw`. O pacote não depende dele, então os entrypoints compilados e o comando `chs build` funcionam num projeto com qualquer Tailwind ou sem nenhum, e nada confere a versão por você.
-- **Node.js:** 24 ou mais recente na máquina que roda o comando `chs build`. As folhas de estilos não precisam dele, mas o pacote o declara como sua engine, então o Yarn 1, e o npm ou o pnpm com `engine-strict`, recusam a instalação num Node.js mais antigo.
+- **Tailwind:** 4.3.2 ou mais recente, abaixo da 5, só para os entrypoints de código-fonte `/tw`. O pacote não depende dele, então os entrypoints compilados, o comando `chs build` e o plugin de Vite funcionam num projeto com qualquer Tailwind ou sem nenhum, e nada confere a versão por você.
+- **Vite:** 5.0.0 ou mais recente, só para o [plugin de Vite](./integrating/vite.md#requisitos). O pacote o declara como dependência peer opcional, então o npm recusa a instalação num projeto no Vite 4 ou anterior, mesmo num que nunca carrega o plugin.
+- **Node.js:** 24 ou mais recente na máquina que roda o comando `chs build` ou o plugin de Vite. As folhas de estilos não precisam dele, mas o pacote o declara como sua engine, então o Yarn 1, e o npm ou o pnpm com `engine-strict`, recusam a instalação num Node.js mais antigo.
 - **Sua aplicação:** o pacote não tem JavaScript. HTML semântico, ARIA, comportamento de teclado, gerenciamento de foco, validação e anúncios ficam com você; veja [Acessibilidade](./accessibility.md).
 
 ## Quando nada é estilizado

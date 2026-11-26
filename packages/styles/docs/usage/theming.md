@@ -74,7 +74,7 @@ With the Tailwind source entrypoints (`/tw`), the package replaces Tailwind's `d
 
 It differs from the tokens in one case: an explicit theme nested inside the opposite one. A `.theme-light` element inside a `.theme-dark` one has light tokens, because the nearest `color-scheme` wins. But `dark:` matches by selector, and `.theme-dark *` matches every element inside `.theme-dark`, so a `dark:` utility inside that `.theme-light` element still applies. If a page uses both tokens and `dark:` utilities, do not nest opposite themes.
 
-The compiled entrypoints do not define a `dark:` variant; they have no Tailwind build to define it in. The [`chs build` command](../integrating/without-a-bundler.md#variants) does offer `dark:`, with the same selectors, on the intent, presentation, and modifier classes only.
+The compiled entrypoints do not define a `dark:` variant; they have no Tailwind build to define it in. The [`chs build` command](../integrating/without-a-bundler.md#variants) and the [Vite plugin](../integrating/vite.md) do offer `dark:`, with the same selectors, on the intent, presentation, and modifier classes only.
 
 ## Change the brand color
 

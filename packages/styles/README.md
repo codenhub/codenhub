@@ -27,7 +27,7 @@ Import the compiled stylesheet, which holds everything the package ships:
 </form>
 ```
 
-To use the Tailwind CSS v4 source entrypoints instead, or to load only part of the package, see [Setup](./docs/setup.md). The [demo](https://demo.codenhub.dev/styles/) shows every component in every intent, presentation, and aesthetic.
+To use the Tailwind CSS v4 source entrypoints instead, or to load only part of the package, see [Setup](./docs/setup.md). In a Vite project, the package's [Vite plugin](./docs/integrating/vite.md) trims that same import to the classes your pages use. The [demo](https://demo.codenhub.dev/styles/) shows every component in every intent, presentation, and aesthetic.
 
 ## Documentation
 
@@ -35,7 +35,7 @@ The docs build one account settings screen from start to finish, in this order:
 
 - [Introduction](./docs/index.md): What the package is for, what it costs, and the reading order.
 - [Setup](./docs/setup.md): Install the package, choose compiled CSS or Tailwind source, and render the page shell.
-- [Integrating](./docs/integrating/index.md): Load the stylesheet in Next.js, Vue, Svelte, Astro, Tailwind CSS v4, or a page with no bundler.
+- [Integrating](./docs/integrating/index.md): Load the stylesheet in Next.js, Vue, Svelte, Astro, Tailwind CSS v4, Vite, or a page with no bundler.
 - [Building a screen](./docs/concepts.md): Lay out the page and learn intent, fill, edge, and aesthetic.
 - [Usage](./docs/usage/index.md): Guides for buttons, forms, feedback, tooltips, theming, aesthetics, and solo classes, then the lookup pages for every class, token, and default.
 - [Accessibility](./docs/accessibility.md): What the CSS does for your users and what your application still owes them.
@@ -43,13 +43,14 @@ The docs build one account settings screen from start to finish, in this order:
 
 ## Requirements
 
-| Requirement   | Details                                                                                                                                                                                                                      |
-| ------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                                                                                           |
-| Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation).                                                                     |
-| Tailwind CSS  | 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. Install it yourself; the package does not.                                                                                                                   |
-| Node.js       | 24 or newer on the machine that runs the `chs build` command. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm or pnpm with `engine-strict`, refuse the install on an older Node.js. |
-| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                                                                                              |
+| Requirement   | Details                                                                                                                                                                                                                                         |
+| ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CSS imports   | Consumer tooling must resolve package CSS imports.                                                                                                                                                                                              |
+| Browsers      | Chrome 123, Safari 17.5, or Firefox 128 and newer (`light-dark()` theming; `:has()` for `.input-group` state; `@property` for non-inheriting elevation).                                                                                        |
+| Tailwind CSS  | 4.3.2 or newer, below 5, only for the `/tw` source entrypoints. Install it yourself; the package does not.                                                                                                                                      |
+| Vite          | 5.0.0 or newer, only for the Vite plugin. An optional peer, so npm refuses the install on Vite 4 or older, even without the plugin.                                                                                                             |
+| Node.js       | 24 or newer on the machine that runs the `chs build` command or the Vite plugin. The stylesheets need none, but the package declares it as its engine, so Yarn 1, and npm or pnpm with `engine-strict`, refuse the install on an older Node.js. |
+| Accessibility | Consumers provide semantic HTML, ARIA, keyboard behavior, and focus management.                                                                                                                                                                 |
 
 ## Notes
 

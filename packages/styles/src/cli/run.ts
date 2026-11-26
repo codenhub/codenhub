@@ -1,13 +1,32 @@
-import { randomBytes } from "node:crypto";
-import { existsSync, readFileSync, realpathSync } from "node:fs";
+import { realpathSync } from "node:fs";
 import * as fs from "node:fs/promises";
 import path from "node:path";
-import { fileURLToPath } from "node:url";
 import { parseArgs } from "node:util";
 
-import { findFiles, readFiles, splitWords, UnmatchedEntryError } from "@codenhub/scan";
+import { findFiles, readFiles, UnmatchedEntryError } from "@codenhub/scan";
 
-import { format, parse, purge, serialize } from "./purge";
+import {
+  createTemporary,
+  findClasses,
+  format,
+  HEAD_BYTES,
+  isPackageCopy,
+  MIN_NODE_MAJOR,
+  parse,
+  purge,
+  PURGE_SOURCE,
+  readAestheticNames,
+  readDroppable,
+  readManifest,
+  readPackageFile,
+  readShippedSizes,
+  replaceFile,
+  resolveExport,
+  serialize,
+  systemReason,
+  usedClasses,
+  WRITTEN_HEAD,
+} from "../trim";
 
 export interface CliIo {
   cwd: string;
@@ -18,22 +37,6 @@ export interface CliIo {
 }
 
 const BIN = "chs";
-const MIN_NODE_MAJOR = 24;
-/* `./aesthetics/tw` is the Tailwind source of every aesthetic, not an aesthetic
-   named `tw`, which the path therefore rules out as a name. */
-const AESTHETIC_EXPORT = /^\.\/aesthetics\/(?!tw$)([^/]+)$/;
-/* What `scripts/build-purge.mjs` writes: the complete stylesheet with the
-   variants this command offers, and the class names it may drop from one. */
-const PURGE_SOURCE = "dist/purge/index.css";
-const PURGE_CLASSES = "dist/purge/classes.json";
-/* How much of an existing output is read to tell whether this command wrote it. */
-const HEAD_BYTES = 1024;
-/* What every stylesheet this command has written starts with: the package's
-   head comment, after Tailwind's banner (`scripts/head.mjs`). The complete
-   compiled stylesheets carry it too. From 0.9.0 to 0.11.0 the comment went on
-   with the checkbox marks' licences, so an output written then matches. */
-const WRITTEN_HEAD = /^\s*(?:\/\*! tailwindcss [^*]*\*\/\s*)?\/\*! @codenhub\/styles\b/;
-
 const USAGE = `Usage: ${BIN} build --content <glob> [--content <glob> ...] --output <file> [options]
 
 Builds a StyleKit stylesheet holding only the classes your templates use.
@@ -46,11 +49,6 @@ Options:
   --no-minify            Write readable CSS instead of minified CSS.
   --help                 Show this help.
   --version              Show the version.`;
-
-interface Manifest {
-  version: string;
-  exports: Record<string, unknown>;
-}
 
 interface BuildOptions {
   contentGlobs: string[];
@@ -216,7 +214,7 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   const resolved = path.join(await realPathOf(path.dirname(output)), path.basename(output));
   const contents = readContent(options.contentGlobs, io.cwd, resolved, options.output);
 
-  const droppable = new Set(JSON.parse(await readPackageFile(PURGE_CLASSES)) as string[]);
+  const droppable = await readDroppable();
   const shipped = await readShippedSizes();
   const found = new Set<string>();
 
@@ -230,8 +228,7 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
       found.add(name);
     }
   }
-  // A class this command may not drop is one no template has to name, such as `.theme-dark`, so it always counts as used.
-  const used = { has: (name: string) => found.has(name) || !droppable.has(name) };
+  const used = usedClasses(found, droppable);
 
   const write = options.shouldMinify ? serialize : format;
   const stylesheets = await Promise.all(
@@ -268,91 +265,6 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   return output;
 }
 
-/* The files this package ships under `dist/`, by size, so a content file is
-   compared with one only when the sizes agree. */
-async function readShippedSizes(): Promise<Map<number, string[]>> {
-  const dist = path.join(packageRoot, "dist");
-  const sizes = new Map<number, string[]>();
-  const entries = await fs.readdir(dist, { recursive: true, withFileTypes: true });
-
-  for (const entry of entries.filter((dirent) => dirent.isFile())) {
-    const file = path.join(entry.parentPath, entry.name);
-    // oxlint-disable-next-line no-await-in-loop -- a few dozen files at most
-    const { size } = await fs.stat(file);
-
-    sizes.set(size, [...(sizes.get(size) ?? []), file]);
-  }
-
-  return sizes;
-}
-
-/* A copy of what this package ships, or of what this command wrote, names
-   every class it holds, so read as content it kept them all: Django's
-   `collectstatic` copies the package's `dist/` into `staticfiles/`, and two
-   builds over one folder read each other. A file that starts with the
-   package's head is one of them; so is a JSON list of class names holding at
-   least half of this version's, as a copy of `purge/classes.json` from this or
-   a nearby version does and a safelist does not; and so is a file the same as
-   one this version ships, such as an aesthetic, which carries no head. */
-async function isPackageCopy(
-  content: string,
-  droppable: ReadonlySet<string>,
-  shipped: ReadonlyMap<number, readonly string[]>,
-): Promise<boolean> {
-  if (WRITTEN_HEAD.test(content.slice(0, HEAD_BYTES))) {
-    return true;
-  }
-  if (/^\s*\[/.test(content) && isClassList(content, droppable)) {
-    return true;
-  }
-
-  for (const file of shipped.get(Buffer.byteLength(content)) ?? []) {
-    // oxlint-disable-next-line no-await-in-loop -- rarely more than one file of a size
-    if ((await fs.readFile(file, "utf8")) === content) {
-      return true;
-    }
-  }
-
-  return false;
-}
-
-function isClassList(content: string, droppable: ReadonlySet<string>): boolean {
-  let list: unknown;
-
-  try {
-    list = JSON.parse(content);
-  } catch {
-    return false;
-  }
-
-  return (
-    Array.isArray(list) &&
-    list.every((item) => typeof item === "string") &&
-    list.filter((item: string) => droppable.has(item)).length >= droppable.size / 2
-  );
-}
-
-/* A name anyone could guess, such as one from the process ID, let whoever can
-   write to the output's folder plant a link there first, and the write went
-   through it to a file the build was never given. The name is random, and the
-   file is created with `wx`, which fails on any entry already there, a link
-   included, so the file written is always one this build created. Everything
-   after goes through the handle, never the name. */
-async function createTemporary(target: string): Promise<{ path: string; handle: fs.FileHandle }> {
-  for (let attempt = 1; ; attempt += 1) {
-    const name = `${target}.${randomBytes(8).toString("hex")}.tmp`;
-
-    try {
-      // oxlint-disable-next-line no-await-in-loop -- a name is tried only once the one before it is taken
-      return { path: name, handle: await fs.open(name, "wx") };
-    } catch (error) {
-      if ((error as { code?: string }).code !== "EEXIST" || attempt === 5) {
-        throw error;
-      }
-    }
-  }
-}
-
 /* The stylesheet is renamed over the output, so it would come out with the mode
    of a new file: a `0640` file would come back `0644`, readable by everyone.
    The temporary file takes the permission bits of the file it replaces first.
@@ -379,14 +291,13 @@ async function keepModeOf(handle: fs.FileHandle, target: string): Promise<void> 
    temporary file, a name the user never gave and cannot find afterwards. The
    message keeps Node.js's reason and code, drops the paths, and says what to do. */
 function describeWriteError(error: unknown): string {
-  const { code } = error as { code?: unknown };
+  const system = systemReason(error);
 
-  if (!(error instanceof Error) || typeof code !== "string" || !error.message.startsWith(`${code}: `)) {
+  if (system === undefined) {
     return error instanceof Error ? error.message : String(error);
   }
 
-  // As in "EACCES: permission denied, open '/srv/app.css.42.tmp'".
-  const reason = error.message.slice(code.length + 2).replace(/, \w+ '.*$/s, "");
+  const { reason, code } = system;
   let advice = "fix that, or name another file";
 
   if (["EACCES", "EPERM", "EROFS"].includes(code)) {
@@ -512,82 +423,6 @@ function readContent(entries: readonly string[], cwd: string, output: string, gi
   }
 
   return readFiles(files, { cwd, failOnUnreadable: true });
-}
-
-/* Content is read as text and never run, as Tailwind reads it: every run of
-   characters a class name can hold is a word, and a word counts when it is a
-   class this package defines. A word that is not one is read again by its
-   parts around each colon, so Svelte's `class:primary={isPrimary}` and a Ruby
-   `btn: true` are found. */
-function* findClasses(content: string, known: ReadonlySet<string>): Generator<string, void, undefined> {
-  for (const word of splitWords(content, String.raw`\w:-`)) {
-    if (known.has(word)) {
-      yield word;
-    } else if (word.includes(":")) {
-      yield* word.split(":").filter((part) => known.has(part));
-    }
-  }
-}
-
-// Read from this package's own manifest, so the list follows its `exports` instead of drifting from them.
-function readAestheticNames(): string[] {
-  const { exports } = readManifest();
-
-  return Object.keys(exports)
-    .map((subpath) => AESTHETIC_EXPORT.exec(subpath)?.[1])
-    .filter((name) => name !== undefined)
-    .sort();
-}
-
-/** Returns the nearest folder at or above `from` that holds a `package.json`. */
-export function findPackageRoot(from: string): string {
-  for (let dir = from; ; dir = path.dirname(dir)) {
-    if (existsSync(path.join(dir, "package.json"))) {
-      return dir;
-    }
-    if (path.dirname(dir) === dir) {
-      throw new Error(`cannot find the package.json of @codenhub/styles above ${from}.`);
-    }
-  }
-}
-
-// This file runs as `src/cli/run.ts` in tests and bundled as `dist/cli.js` when installed, so the package root is found from it rather than by package name.
-const packageRoot = findPackageRoot(path.dirname(fileURLToPath(import.meta.url)));
-
-function readManifest(): Manifest {
-  return JSON.parse(readFileSync(path.join(packageRoot, "package.json"), "utf8")) as Manifest;
-}
-
-// The file a subpath export names under the `import` condition, relative to the package root; every StyleKit export names the same file under `style`.
-function resolveExport(subpath: string): string {
-  return (readManifest().exports[subpath] as { import: string }).import;
-}
-
-function readPackageFile(relativePath: string): Promise<string> {
-  return fs.readFile(path.resolve(packageRoot, relativePath), "utf8");
-}
-
-/* Windows refuses to rename over a file another process holds open without
-   delete sharing, which an antivirus scan or a dev server does for a moment
-   after a write. The rename is retried briefly there; elsewhere it is atomic
-   and fails only for a reason a retry does not fix. */
-async function replaceFile(from: string, to: string): Promise<void> {
-  const busy = new Set(["EACCES", "EBUSY", "EPERM"]);
-
-  for (let attempt = 1; ; attempt += 1) {
-    try {
-      // oxlint-disable-next-line no-await-in-loop -- each attempt waits on the one before
-      await fs.rename(from, to);
-      return;
-    } catch (error) {
-      if (process.platform !== "win32" || attempt === 10 || !busy.has((error as { code?: string }).code ?? "")) {
-        throw error;
-      }
-
-      // oxlint-disable-next-line no-await-in-loop -- the backoff between attempts
-      await new Promise((resolve) => setTimeout(resolve, attempt * 20));
-    }
-  }
 }
 
 function assertNodeVersion(nodeVersion: string): void {

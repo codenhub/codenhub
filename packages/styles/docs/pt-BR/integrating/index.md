@@ -3,7 +3,7 @@ title: Visão geral
 description: Como a folha de estilos é carregada no build de um framework e qual guia seguir.
 group: Integração
 order: 2
-source: 52e0563bc739ebe40d0bbc3957ccaa946633ff7e
+source: 595d7b9e1f77dfe104b39742e634652412467886
 ---
 
 # Integração
@@ -28,9 +28,10 @@ Importar de um único lugar importa por dois motivos. Alguns frameworks só _per
 | Vue                                                                                           | [Vue](./vue.md)                       |
 | Svelte / SvelteKit                                                                            | [Svelte](./svelte.md)                 |
 | Astro                                                                                         | [Astro](./astro.md)                   |
+| Vite, sem Tailwind, entregando só as classes que as suas páginas usam                         | [Vite](./vite.md)                     |
 | HTML puro, Rails, Laravel, Django ou qualquer aplicação sem etapa de build de CSS com Node.js | [Sem bundler](./without-a-bundler.md) |
 
-Um projeto sem framework — um build simples com Vite, webpack ou Parcel — importa a folha de estilos compilada a partir do arquivo CSS global que o projeto já tem, como mostra [Configuração → Importe a folha de estilos](../setup.md#importe-a-folha-de-estilos). Vite e webpack resolvem o nome do pacote como ele é; Parcel e PostCSS com `postcss-import` precisam da mudança abaixo. A folha de estilos compilada traz todas as classes; para entregar só as que as suas páginas usam sem adotar o Tailwind, escreva uma folha de estilos reduzida com o [comando `build`](./without-a-bundler.md#gere-só-as-classes-que-você-usa) do pacote e importe-a no lugar.
+Um projeto sem framework — um build simples com Vite, webpack ou Parcel — importa a folha de estilos compilada a partir do arquivo CSS global que o projeto já tem, como mostra [Configuração → Importe a folha de estilos](../setup.md#importe-a-folha-de-estilos). Vite e webpack resolvem o nome do pacote como ele é; Parcel e PostCSS com `postcss-import` precisam da mudança abaixo. A folha de estilos compilada traz todas as classes. Para entregar só as que as suas páginas usam sem adotar o Tailwind, adicione o [plugin de Vite](./vite.md) do pacote a um build do Vite, que reduz a folha de estilos que você já importa; com outro bundler, escreva uma folha de estilos reduzida com o [comando `build`](./without-a-bundler.md#gere-só-as-classes-que-você-usa) do pacote e importe-a no lugar.
 
 ### Bundlers que precisam de um empurrão
 

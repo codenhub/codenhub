@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-16
+last_updated: 2026-11-25
 scope: Continuous integration workflows and the checks that report on pull requests.
 ---
 
@@ -154,7 +154,7 @@ The merge queue is what lets pull requests check only what they changed ([Trigge
 
 ## Other workflows
 
-The workflow above verifies; it does not deploy, release or publish. A project that does adds a workflow of its own and documents it here. One of the workflows below verifies too, and is separate only for its trigger.
+The workflow above verifies; it does not deploy, release or publish. A project that does adds a workflow of its own and documents it here. Two of the workflows below verify too, and are separate only for their trigger.
 
 ### Tailwind versions
 
@@ -165,6 +165,10 @@ It is a workflow of its own for its `paths` filter. A pull request starts it onl
 The three rules of [The workflow](#the-workflow) hold. The queue runs the suite on every merge result, a change to `.github/` runs it, and GitHub evaluates the filter against the pull request's own diff, so no ref has to be present in a checkout. The workspace-wide files `--changed` widens on, such as the lockfile, are not in the filter: they would start both jobs on every dependency update, and the queue runs them before such a change lands.
 
 It is not a required check: a new Tailwind release can fail it on a pull request that changed nothing about Tailwind, and that is a finding to file rather than a reason to block the merge. That is also what lets a filter skip it, since a required check that never reports leaves a pull request waiting.
+
+### Vite versions
+
+`.github/workflows/vite.yml` is the same arrangement for `@codenhub/styles/vite`, which runs inside the consumer's Vite anywhere in the range of its optional `vite` peer, while the workspace tests it with the one Vite its catalog pins. It is a matrix of four jobs: the floor, read from the peer's `>=x.y.z` in `packages/styles/package.json`, so raising the peer moves the job with it, and the newest 5.x, 6.x, and 7.x. The catalog's Vite runs in `ci.yml` with the rest of the package's tests. Each job installs that Vite as `vite-under-test`, since Vitest needs a Vite of its own and Vitest 4 needs Vite 6 or newer, then runs `tests/integration/vite.test.ts` with `VITE_UNDER_TEST` naming it. Its filter, its triggers, and why it is not a required check are as for the Tailwind workflow above.
 
 ### Deployments
 

@@ -1,6 +1,6 @@
 ---
 status: IMPLEMENTED
-last_updated: 2026-11-22
+last_updated: 2026-11-25
 scope: `@codenhub/styles` styling model, token contracts, and composition rules.
 ---
 
@@ -427,7 +427,7 @@ Rejected: the prefix first, `./tw/native`, which needs the reader to know where 
 
 ### No Tailwind peer
 
-The package declares no `tailwindcss` peer; the supported range, `>=4.3.2 <5`, is stated in `docs/integrating/tailwind.md`, where `.github/workflows/tailwind.yml` reads the floor it tests. Until 0.11.0 the range was an optional peer, and npm still resolves an optional peer that is installed: a project on Tailwind 3, or on 4.x below 4.3.2, failed `npm install` with `ERESOLVE` on `peerOptional tailwindcss@">=4.3.2 <5"`, even when it only linked the compiled CSS, which needs no Tailwind at all. pnpm only warned. `tests/integration/exports.test.ts` ("declares no peer dependency") holds it. The cost is that nothing checks the version of a `/tw` consumer's Tailwind, so one below the floor compiles without a word. Rejected: keeping the peer for the check it gives `/tw` consumers, which is paid for by every consumer of the compiled CSS on another Tailwind, the larger group.
+The package declares no `tailwindcss` peer; the supported range, `>=4.3.2 <5`, is stated in `docs/integrating/tailwind.md`, where `.github/workflows/tailwind.yml` reads the floor it tests. Until 0.11.0 the range was an optional peer, and npm still resolves an optional peer that is installed: a project on Tailwind 3, or on 4.x below 4.3.2, failed `npm install` with `ERESOLVE` on `peerOptional tailwindcss@">=4.3.2 <5"`, even when it only linked the compiled CSS, which needs no Tailwind at all. pnpm only warned. `tests/integration/exports.test.ts` ("declares no peer but an optional Vite") holds it. The Vite plugin's optional `vite` peer pays the same cost for a project on Vite 4, for the reasons [Vite plugin](./vite.md#one-entry-one-option) records. The cost is that nothing checks the version of a `/tw` consumer's Tailwind, so one below the floor compiles without a word. Rejected: keeping the peer for the check it gives `/tw` consumers, which is paid for by every consumer of the compiled CSS on another Tailwind, the larger group.
 
 The floor itself was set in 0.6.0 for `@source not` and `@source inline()`, which arrived in Tailwind 4.1, and because 4.3.2 was the version tested; `tw/` uses neither any more. Compiled on 2026-11-21 with every class in `dist/purge/classes.json`, minified, every `/tw` export came out byte for byte the same under Tailwind 4.2.4, 4.3.1, and 4.3.2; under 4.1.18 the only difference was a `-webkit-print-color-adjust` prefix that Tailwind's own optimizer adds in 4.2.4 and does not in 4.1.18, which no supported browser needs; under 4.0.17 the output differed throughout, from the layers the package's rules land in to Tailwind utilities no page named. The documented floor stays 4.3.2 because that is the version CI tests; lowering it is a decision for the next change that moves the Tailwind workflow's floor job with it.
 
