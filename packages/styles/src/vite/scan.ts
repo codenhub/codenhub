@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
 
 import { findFiles, readFiles, UnmatchedEntryError } from "@codenhub/scan";
 
@@ -24,6 +25,9 @@ export interface ScanOptions {
 const STYLESHEET = /\.(?:css|less|sass|scss|styl|stylus|pcss|postcss|sss)$/i;
 // How much of a file git reads to call it binary.
 const BINARY_PROBE = 8000;
+// How long a file reported empty is waited on for its text: 10 polls, 10 ms apart.
+const WRITE_POLLS = 10;
+const WRITE_POLL_MS = 10;
 const NONE: ReadonlySet<string> = new Set();
 
 export type FileEvent = "create" | "update" | "delete";
@@ -96,12 +100,14 @@ export class ProjectScan {
     }
     if (this.#named.has(file) || (event === "create" && this.#isNamedNow(file))) {
       this.#named.add(file);
+      await untilWritten(file);
 
       return this.#record(file, await this.#classesIn(readNamed(file)));
     }
     if (STYLESHEET.test(file) || !isWalked({ root, skip: this.#skip }, file)) {
       return false;
     }
+    await untilWritten(file);
 
     return this.#record(file, await this.#classesIn(readWalked(file)));
   }
@@ -227,6 +233,35 @@ function readWalked(file: string): string | undefined {
     }
 
     throw unreadable(file, error);
+  }
+}
+
+/* Writing a file empties it before its text lands, and the watcher can report
+   the change in between. Chokidar 3, which Vite 5 to 8 bundle, drops a second
+   change within 50 ms, so the write that follows may never be reported, and
+   the file's classes would be lost until it changes again. A file that is
+   empty is waited on until its modified time moves, for at most 100 ms, as
+   Vite's own `read()` waits (vitejs/vite#610). A file that cannot be read is
+   left to the read, which reports it. */
+async function untilWritten(file: string): Promise<void> {
+  const statOf = (): fs.Stats | undefined => {
+    try {
+      return fs.statSync(file);
+    } catch {
+      return undefined;
+    }
+  };
+  const before = statOf();
+
+  if (before === undefined || before.size > 0) {
+    return;
+  }
+  for (let poll = 0; poll < WRITE_POLLS; poll += 1) {
+    // oxlint-disable-next-line no-await-in-loop -- each poll waits on the one before
+    await delay(WRITE_POLL_MS);
+    if (statOf()?.mtimeMs !== before.mtimeMs) {
+      return;
+    }
   }
 }
 

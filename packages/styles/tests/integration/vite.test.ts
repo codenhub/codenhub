@@ -899,6 +899,33 @@ describe("viteStyles: live update", { timeout: 40_000 }, () => {
     });
   });
 
+  /* Writing a file empties it before its text lands, and the watcher can report
+     it in between. Chokidar 3 drops a second change within 50 ms, so the write
+     that follows may never be reported. The watcher is told to leave the file
+     alone here, and the report is sent by hand while the file is empty. */
+  it("reads a file reported while it was still empty, once its text lands", async () => {
+    await writeFiles(SCRIPT_PAGE);
+
+    const view = path.join(project, "view.js");
+
+    await withDevServer(
+      async (dev) => {
+        const stylesheet = await loadPage(dev);
+        const from = dev.messages.length;
+
+        await writeFile(view, "");
+        dev.server.watcher.emit("change", view);
+        await delay(30);
+        await writeFile(view, VIEW(BUTTON));
+        await dev.waitFor((message) => updates(message, stylesheet), from);
+
+        expect(hasRuleFor(await dev.fetch(stylesheet, "text/css"), "btn")).toBe(true);
+      },
+      undefined,
+      { server: { host: "127.0.0.1", port: 0, watch: { ignored: [view] } } },
+    );
+  });
+
   it("sends no stylesheet update for a change that names the same classes", async () => {
     await writeFiles({ ...SCRIPT_PAGE, "view.js": VIEW(BUTTON) });
     await withDevServer(async (dev) => {
