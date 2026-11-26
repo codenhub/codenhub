@@ -427,7 +427,7 @@ The JWK's `kty` and `crv` must fit `options.alg`; a JWK `alg`, `use` or `key_ops
 - `key` — The JWK, typically parsed from JSON, a PEM string, or a `CryptoKey`. Any value is accepted.
 - `options` — The algorithm to bind the key to, and its `kid`.
 
-**Returns** — The frozen key, or a failure with one issue: `invalid_key` for a non-object, a missing or ill-typed member, invalid base64url, wrong coordinate lengths, or material Web Crypto rejects (such as a point not on the curve); `unsupported_key` for a `kty`/`crv` that does not fit `alg` or a modulus over 8192 bits; `alg_mismatch` for a JWK `alg` naming another algorithm; `wrong_use` for a `use` other than `sig`, or `key_ops` without `verify` or with an operation other than `sign` and `verify`; `unexpected_private_key` for any private member; `weak_key` for a modulus under 2048 bits. Issues never contain key values. Never throws for any `key`.
+**Returns** — The frozen key, or a failure with one issue: `invalid_key` for a non-object, a missing or ill-typed member, invalid base64url, wrong coordinate lengths, an EC point not on its curve, or material Web Crypto rejects; `unsupported_key` for a `kty`/`crv` that does not fit `alg` or a modulus over 8192 bits; `alg_mismatch` for a JWK `alg` naming another algorithm; `wrong_use` for a `use` other than `sig`, or `key_ops` without `verify` or with an operation other than `sign` and `verify`; `unexpected_private_key` for any private member; `weak_key` for a modulus under 2048 bits. Issues never contain key values. Never throws for any `key`.
 
 **Throws** — TypeError when `options` is not an object, has a member that is not an option, `options.alg` is not an asymmetric algorithm, or `options.kid` is not a string.
 

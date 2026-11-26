@@ -545,3 +545,19 @@ describe("PEM import of a key whose inner DER is not strict", () => {
     expect((await exportPublicJwk(pair.publicKey)).x).toBe(Buffer.from(publicKey).toString("base64url"));
   });
 });
+
+describe.each(["ES256", "ES384", "ES512"] as const)("PEM import for %s off the curve", (alg) => {
+  it("should refuse an SPKI whose point is off the curve as invalid_key", async () => {
+    const { namedCurve } = ALGORITHM_PARAMS[alg].importParams as EcKeyImportParams;
+    const pair = (await crypto.subtle.generateKey({ name: "ECDSA", namedCurve }, true, [
+      "sign",
+      "verify",
+    ])) as CryptoKeyPair;
+    const der = new Uint8Array(await crypto.subtle.exportKey("spki", pair.publicKey));
+    // An EC SPKI ends with the uncompressed point, so its last byte is the last byte of y.
+    der[der.length - 1] = (der[der.length - 1] as number) ^ 1;
+    expect(issuesOf(await importPublicKey(pemOf("PUBLIC KEY", der.buffer), { alg }))).toEqual([
+      { code: "invalid_key" },
+    ]);
+  });
+});

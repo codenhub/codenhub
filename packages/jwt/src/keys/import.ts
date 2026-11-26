@@ -126,8 +126,8 @@ const USAGES: Readonly<Record<KeyRole, KeyUsage[]>> = {
  * @param key - The JWK, typically parsed from JSON, a PEM string, or a `CryptoKey`. Any value is accepted.
  * @param options - The algorithm to bind the key to, and its `kid`.
  * @returns The frozen key, or a failure with one issue: `invalid_key` for a non-object, a missing or
- * ill-typed member, invalid base64url, wrong coordinate lengths, or material Web Crypto rejects (such
- * as a point not on the curve); `unsupported_key` for a `kty`/`crv` that does not fit `alg` or a
+ * ill-typed member, invalid base64url, wrong coordinate lengths, an EC point not on its curve, or material
+ * Web Crypto rejects; `unsupported_key` for a `kty`/`crv` that does not fit `alg` or a
  * modulus over 8192 bits; `alg_mismatch` for a JWK `alg` naming another algorithm; `wrong_use` for a
  * `use` other than `sig`, or `key_ops` without `verify` or with an operation other than `sign` and `verify`; `unexpected_private_key` for any private
  * member; `weak_key` for a modulus under 2048 bits. Issues never contain key values. Never throws for
@@ -322,7 +322,7 @@ async function jwkHalves(
       kid: named.kid,
     };
   } catch {
-    // Web Crypto rejects material it cannot use, such as a point off the curve; its message may quote it.
+    // Web Crypto rejects material it cannot use; its message may quote it.
     return { code: "invalid_key" };
   }
 }
@@ -600,7 +600,7 @@ async function importJwk<TKey extends PublicKey | PrivateKey | SecretKey>(
       USAGES[plan.role],
     );
   } catch {
-    // Web Crypto rejects material it cannot use, such as a point off the curve; its message may quote it.
+    // Web Crypto rejects material it cannot use; its message may quote it.
     return fail({ code: "invalid_key" });
   }
   return ok(registerKey(buildKey(named.kid), { cryptoKey, signatureLength: checked.signatureLength }));

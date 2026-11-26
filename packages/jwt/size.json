@@ -299,10 +299,10 @@
         "createRemoteKeySet": {
           "files": {
             "dist/keysets/remote.js": {
-              "bytes": 6821,
+              "bytes": 6823,
               "declarations": {
                 "createRemoteSet": 1758,
-                "readRemoteOptions": 638,
+                "readRemoteOptions": 639,
                 "requestJson": 387,
                 "readUrl": 367,
                 "fetchJson": 306,
@@ -316,7 +316,7 @@
                 "checkedClock": 173,
                 "readTimeout": 172,
                 "KNOWN_OPTIONS": 167,
-                "createRemoteKeySet": 156,
+                "createRemoteKeySet": 157,
                 "readFunction": 132,
                 "freshnessMs": 126,
                 "namesCacheMode": 91,
@@ -334,15 +334,16 @@
               }
             },
             "dist/keys/jwk.js": {
-              "bytes": 3769,
+              "bytes": 3885,
               "declarations": {
                 "checkHeaderMembers": 919,
                 "rsaMaterial": 665,
                 "readMembers": 250,
                 "inconsistentPrivateMember": 241,
                 "curveMaterial": 240,
-                "materialFor": 196,
+                "materialFor": 187,
                 "secretMaterial": 177,
+                "ecMaterial": 125,
                 "memberToBigInt": 125,
                 "isAcceptableExponent": 105,
                 "stripLeadingZeros": 101,
@@ -417,6 +418,15 @@
                 "ALPHABET": 69,
                 "SPARE_BITS_MASK": 13,
                 "(top level)": 12
+              }
+            },
+            "dist/keys/on-curve.js": {
+              "bytes": 805,
+              "declarations": {
+                "NIST_CURVES": 630,
+                "isOnNistCurve": 104,
+                "toBigInt": 65,
+                "(top level)": 6
               }
             },
             "dist/keys/registry.js": {
@@ -528,8 +538,8 @@
               "bytes": 36
             }
           },
-          "gzip": 7872,
-          "minified": 21950
+          "gzip": 8493,
+          "minified": 22873
         },
         "createVerifier": {
           "files": {
@@ -1297,26 +1307,27 @@
               }
             },
             "dist/keys/jwk.js": {
-              "bytes": 3758,
+              "bytes": 3876,
               "declarations": {
                 "checkHeaderMembers": 916,
                 "rsaMaterial": 665,
-                "readMembers": 248,
+                "readMembers": 249,
                 "inconsistentPrivateMember": 241,
                 "curveMaterial": 240,
-                "materialFor": 196,
+                "materialFor": 187,
                 "secretMaterial": 177,
+                "ecMaterial": 125,
                 "memberToBigInt": 125,
                 "isAcceptableExponent": 105,
                 "stripLeadingZeros": 101,
-                "MEMBER_NAMES": 98,
+                "MEMBER_NAMES": 97,
                 "checkMaterial": 94,
-                "checkJwk": 85,
+                "checkJwk": 86,
                 "issue": 78,
                 "REQUIRED_OPERATION": 64,
                 "fitsIn": 62,
                 "isNonEmptyMember": 56,
-                "copyArray": 54,
+                "copyArray": 55,
                 "decodeMember": 52,
                 "SIGNATURE_OPERATIONS": 45,
                 "RSA_PRIVATE_MEMBERS": 31,
@@ -1378,6 +1389,15 @@
                 "ALPHABET": 69,
                 "SPARE_BITS_MASK": 13,
                 "(top level)": 12
+              }
+            },
+            "dist/keys/on-curve.js": {
+              "bytes": 805,
+              "declarations": {
+                "NIST_CURVES": 630,
+                "isOnNistCurve": 104,
+                "toBigInt": 65,
+                "(top level)": 6
               }
             },
             "dist/keys/exported-jwk.js": {
@@ -1486,22 +1506,23 @@
               "bytes": 30
             }
           },
-          "gzip": 6378,
-          "minified": 18657
+          "gzip": 6985,
+          "minified": 19580
         },
         "importKeySet": {
           "files": {
             "dist/keys/jwk.js": {
-              "bytes": 3743,
+              "bytes": 3862,
               "declarations": {
                 "checkHeaderMembers": 915,
-                "rsaMaterial": 662,
+                "rsaMaterial": 665,
                 "readMembers": 246,
+                "inconsistentPrivateMember": 241,
                 "curveMaterial": 240,
-                "inconsistentPrivateMember": 240,
-                "materialFor": 194,
+                "materialFor": 185,
                 "secretMaterial": 177,
                 "memberToBigInt": 125,
+                "ecMaterial": 123,
                 "isAcceptableExponent": 105,
                 "stripLeadingZeros": 101,
                 "MEMBER_NAMES": 97,
@@ -1509,7 +1530,7 @@
                 "checkJwk": 83,
                 "issue": 78,
                 "REQUIRED_OPERATION": 64,
-                "fitsIn": 61,
+                "fitsIn": 62,
                 "isNonEmptyMember": 56,
                 "copyArray": 54,
                 "decodeMember": 52,
@@ -1522,8 +1543,8 @@
             "dist/keysets/local.js": {
               "bytes": 1374,
               "declarations": {
-                "readAlgorithms": 335,
-                "importKeys": 260,
+                "readAlgorithms": 334,
+                "importKeys": 261,
                 "readEntries": 232,
                 "bindableAlgorithms": 160,
                 "importKeySet": 154,
@@ -1563,6 +1584,15 @@
                 "(top level)": 12
               }
             },
+            "dist/keys/on-curve.js": {
+              "bytes": 802,
+              "declarations": {
+                "NIST_CURVES": 629,
+                "isOnNistCurve": 102,
+                "toBigInt": 65,
+                "(top level)": 6
+              }
+            },
             "dist/keys/registry.js": {
               "bytes": 718,
               "declarations": {
@@ -1576,10 +1606,10 @@
               }
             },
             "dist/keys/import.js": {
-              "bytes": 708,
+              "bytes": 709,
               "declarations": {
                 "importJwk": 364,
-                "resolveKid": 154,
+                "resolveKid": 155,
                 "importPublicJwk": 119,
                 "USAGES": 65,
                 "(top level)": 6
@@ -1639,10 +1669,10 @@
               }
             },
             "dist/keys/thumbprint.js": {
-              "bytes": 264,
+              "bytes": 267,
               "declarations": {
-                "materialThumbprint": 171,
-                "THUMBPRINT_MEMBERS": 87,
+                "materialThumbprint": 173,
+                "THUMBPRINT_MEMBERS": 88,
                 "(top level)": 6
               }
             },
@@ -1653,18 +1683,18 @@
               }
             },
             "dist/encoding/text.js": {
-              "bytes": 38,
+              "bytes": 36,
               "declarations": {
-                "ENCODER": 19,
-                "encodeUtf8": 19
+                "ENCODER": 18,
+                "encodeUtf8": 18
               }
             },
             "(unattributed)": {
               "bytes": 27
             }
           },
-          "gzip": 4178,
-          "minified": 11490
+          "gzip": 4786,
+          "minified": 12413
         },
         "importPrivateKey": {
           "files": {
@@ -1697,30 +1727,31 @@
               }
             },
             "dist/keys/jwk.js": {
-              "bytes": 3760,
+              "bytes": 3878,
               "declarations": {
-                "checkHeaderMembers": 917,
+                "checkHeaderMembers": 916,
                 "rsaMaterial": 665,
-                "readMembers": 248,
+                "readMembers": 250,
                 "inconsistentPrivateMember": 241,
                 "curveMaterial": 240,
-                "materialFor": 196,
+                "materialFor": 187,
                 "secretMaterial": 177,
+                "ecMaterial": 125,
                 "memberToBigInt": 125,
                 "isAcceptableExponent": 105,
                 "stripLeadingZeros": 101,
                 "MEMBER_NAMES": 98,
                 "checkMaterial": 94,
-                "checkJwk": 85,
+                "checkJwk": 86,
                 "issue": 78,
                 "REQUIRED_OPERATION": 64,
                 "fitsIn": 62,
                 "isNonEmptyMember": 56,
-                "copyArray": 54,
+                "copyArray": 55,
                 "decodeMember": 52,
                 "SIGNATURE_OPERATIONS": 45,
                 "RSA_PRIVATE_MEMBERS": 31,
-                "ASYMMETRIC_PRIVATE_MEMBERS": 20,
+                "ASYMMETRIC_PRIVATE_MEMBERS": 19,
                 "(top level)": 6
               }
             },
@@ -1778,6 +1809,15 @@
                 "ALPHABET": 69,
                 "SPARE_BITS_MASK": 13,
                 "(top level)": 12
+              }
+            },
+            "dist/keys/on-curve.js": {
+              "bytes": 805,
+              "declarations": {
+                "NIST_CURVES": 630,
+                "isOnNistCurve": 104,
+                "toBigInt": 65,
+                "(top level)": 6
               }
             },
             "dist/keys/exported-jwk.js": {
@@ -1886,19 +1926,19 @@
               "bytes": 33
             }
           },
-          "gzip": 6392,
-          "minified": 18704
+          "gzip": 6999,
+          "minified": 19627
         },
         "importPublicKey": {
           "files": {
             "dist/keys/pem.js": {
-              "bytes": 4942,
+              "bytes": 4940,
               "declarations": {
                 "readSec1": 691,
                 "isStrictKey": 558,
                 "readPemDer": 506,
                 "readPemBlock": 498,
-                "readKeyType": 491,
+                "readKeyType": 490,
                 "READERS": 431,
                 "subjectPublicKeyInfo": 350,
                 "pemToJwk": 334,
@@ -1906,7 +1946,7 @@
                 "hasOnlyPkcs8Trailer": 111,
                 "isOneStrict": 108,
                 "PRIVATE_LABELS": 103,
-                "keyTypeIssue": 84,
+                "keyTypeIssue": 83,
                 "PEM_PATTERN": 72,
                 "BASE64_PATTERN": 70,
                 "rsaAlgorithm": 69,
@@ -1920,21 +1960,22 @@
               }
             },
             "dist/keys/jwk.js": {
-              "bytes": 3749,
+              "bytes": 3870,
               "declarations": {
-                "checkHeaderMembers": 915,
+                "checkHeaderMembers": 916,
                 "rsaMaterial": 665,
                 "readMembers": 246,
                 "inconsistentPrivateMember": 241,
                 "curveMaterial": 240,
-                "materialFor": 195,
+                "materialFor": 187,
                 "secretMaterial": 177,
                 "memberToBigInt": 125,
+                "ecMaterial": 124,
                 "isAcceptableExponent": 105,
                 "stripLeadingZeros": 101,
                 "MEMBER_NAMES": 97,
-                "checkMaterial": 92,
-                "checkJwk": 83,
+                "checkMaterial": 94,
+                "checkJwk": 85,
                 "issue": 78,
                 "REQUIRED_OPERATION": 64,
                 "fitsIn": 62,
@@ -1948,18 +1989,18 @@
               }
             },
             "dist/keys/import.js": {
-              "bytes": 1694,
+              "bytes": 1697,
               "declarations": {
                 "cryptoKeyToJwk": 366,
                 "importJwk": 366,
                 "cryptoKeyPurposeIssue": 276,
-                "importPublicKey": 177,
-                "resolveKid": 154,
+                "importPublicKey": 178,
+                "resolveKid": 155,
                 "importPublicJwk": 119,
                 "sourceJwk": 99,
                 "USAGES": 65,
                 "sourceKid": 48,
-                "PUBLIC_KEY_OPTIONS": 18,
+                "PUBLIC_KEY_OPTIONS": 19,
                 "(top level)": 6
               }
             },
@@ -1977,20 +2018,6 @@
                 "(top level)": 6
               }
             },
-            "dist/keys/algorithms.js": {
-              "bytes": 1006,
-              "declarations": {
-                "ALGORITHM_PARAMS": 304,
-                "ecdsa": 141,
-                "ED25519": 109,
-                "rsaPkcs1": 104,
-                "rsaPss": 101,
-                "hmac": 99,
-                "isAsymmetricAlgorithm": 56,
-                "ASYMMETRIC_ALGORITHMS": 47,
-                "SYMMETRIC_ALGORITHMS": 45
-              }
-            },
             "dist/encoding/base64url.js": {
               "bytes": 1005,
               "declarations": {
@@ -2001,6 +2028,29 @@
                 "ALPHABET": 69,
                 "SPARE_BITS_MASK": 13,
                 "(top level)": 12
+              }
+            },
+            "dist/keys/algorithms.js": {
+              "bytes": 1005,
+              "declarations": {
+                "ALGORITHM_PARAMS": 304,
+                "ecdsa": 141,
+                "ED25519": 109,
+                "rsaPkcs1": 104,
+                "rsaPss": 101,
+                "hmac": 99,
+                "isAsymmetricAlgorithm": 55,
+                "ASYMMETRIC_ALGORITHMS": 47,
+                "SYMMETRIC_ALGORITHMS": 45
+              }
+            },
+            "dist/keys/on-curve.js": {
+              "bytes": 802,
+              "declarations": {
+                "NIST_CURVES": 629,
+                "isOnNistCurve": 102,
+                "toBigInt": 65,
+                "(top level)": 6
               }
             },
             "dist/keys/exported-jwk.js": {
@@ -2043,10 +2093,10 @@
               }
             },
             "dist/keys/options.js": {
-              "bytes": 423,
+              "bytes": 422,
               "declarations": {
                 "readKid": 132,
-                "requireAsymmetricAlg": 122,
+                "requireAsymmetricAlg": 121,
                 "requireOptions": 115,
                 "ownMember": 54
               }
@@ -2066,9 +2116,9 @@
               }
             },
             "dist/keys/thumbprint.js": {
-              "bytes": 266,
+              "bytes": 267,
               "declarations": {
-                "materialThumbprint": 172,
+                "materialThumbprint": 173,
                 "THUMBPRINT_MEMBERS": 88,
                 "(top level)": 6
               }
@@ -2099,29 +2149,30 @@
               "bytes": 32
             }
           },
-          "gzip": 6000,
-          "minified": 17092
+          "gzip": 6610,
+          "minified": 18015
         },
         "importSecretKey": {
           "files": {
             "dist/keys/jwk.js": {
-              "bytes": 3759,
+              "bytes": 3878,
               "declarations": {
-                "checkHeaderMembers": 916,
+                "checkHeaderMembers": 917,
                 "rsaMaterial": 665,
                 "readMembers": 248,
                 "inconsistentPrivateMember": 241,
                 "curveMaterial": 240,
-                "materialFor": 195,
-                "secretMaterial": 176,
+                "materialFor": 187,
+                "secretMaterial": 177,
                 "memberToBigInt": 125,
+                "ecMaterial": 124,
                 "isAcceptableExponent": 105,
                 "stripLeadingZeros": 101,
                 "MEMBER_NAMES": 97,
                 "checkMaterial": 94,
                 "checkJwk": 87,
                 "issue": 78,
-                "REQUIRED_OPERATION": 64,
+                "REQUIRED_OPERATION": 65,
                 "fitsIn": 62,
                 "isNonEmptyMember": 56,
                 "copyArray": 55,
@@ -2135,12 +2186,12 @@
             "dist/keys/import.js": {
               "bytes": 1738,
               "declarations": {
-                "importSecretKey": 857,
+                "importSecretKey": 858,
                 "importJwk": 364,
                 "checkSecretCryptoKey": 259,
                 "resolveKid": 154,
                 "USAGES": 64,
-                "SECRET_KEY_OPTIONS": 34,
+                "SECRET_KEY_OPTIONS": 33,
                 "(top level)": 6
               }
             },
@@ -2190,13 +2241,22 @@
                 "(top level)": 12
               }
             },
+            "dist/keys/on-curve.js": {
+              "bytes": 802,
+              "declarations": {
+                "NIST_CURVES": 629,
+                "isOnNistCurve": 102,
+                "toBigInt": 65,
+                "(top level)": 6
+              }
+            },
             "dist/keys/options.js": {
-              "bytes": 573,
+              "bytes": 574,
               "declarations": {
                 "readExtractable": 153,
                 "readKid": 131,
                 "requireSymmetricAlg": 121,
-                "requireOptions": 114,
+                "requireOptions": 115,
                 "ownMember": 54
               }
             },
@@ -2245,10 +2305,10 @@
               }
             },
             "dist/keys/registry.js": {
-              "bytes": 160,
+              "bytes": 161,
               "declarations": {
                 "registerKey": 80,
-                "kidMember": 43,
+                "kidMember": 44,
                 "registry": 31,
                 "(top level)": 6
               }
@@ -2264,8 +2324,8 @@
               "bytes": 30
             }
           },
-          "gzip": 3917,
-          "minified": 10872
+          "gzip": 4519,
+          "minified": 11795
         },
         "isAsymmetricAlgorithm": {
           "files": {
@@ -2744,16 +2804,16 @@
       },
       "files": {
         "dist/keysets/remote.js": {
-          "bytes": 6849,
+          "bytes": 6843,
           "declarations": {
             "createRemoteSet": 1765,
-            "readRemoteOptions": 643,
+            "readRemoteOptions": 639,
             "requestJson": 389,
             "readUrl": 367,
             "fetchJson": 308,
             "send": 302,
             "readCappedBody": 287,
-            "readInteger": 283,
+            "readInteger": 282,
             "readMaxAge": 268,
             "readSeed": 264,
             "readChunks": 224,
@@ -2761,7 +2821,7 @@
             "checkedClock": 173,
             "readTimeout": 172,
             "KNOWN_OPTIONS": 167,
-            "createRemoteKeySet": 157,
+            "createRemoteKeySet": 156,
             "readFunction": 132,
             "freshnessMs": 126,
             "namesCacheMode": 91,
@@ -2779,12 +2839,12 @@
           }
         },
         "dist/sign/sign.js": {
-          "bytes": 5889,
+          "bytes": 5892,
           "declarations": {
-            "snapshot": 875,
-            "serializePayload": 833,
+            "snapshot": 876,
+            "serializePayload": 834,
             "addedClaims": 799,
-            "readSignHeader": 760,
+            "readSignHeader": 761,
             "sign": 628,
             "embeddedJwk": 429,
             "assertJsonPrimitive": 343,
@@ -2833,10 +2893,10 @@
           }
         },
         "dist/keys/import.js": {
-          "bytes": 4813,
+          "bytes": 4815,
           "declarations": {
-            "importSecretKey": 860,
-            "importPair": 681,
+            "importSecretKey": 861,
+            "importPair": 682,
             "cryptoKeyPairHalves": 588,
             "jwkHalves": 513,
             "cryptoKeyToJwk": 367,
@@ -2858,15 +2918,16 @@
           }
         },
         "dist/keys/jwk.js": {
-          "bytes": 3778,
+          "bytes": 3895,
           "declarations": {
             "checkHeaderMembers": 919,
             "rsaMaterial": 668,
-            "readMembers": 249,
+            "readMembers": 250,
             "curveMaterial": 241,
             "inconsistentPrivateMember": 241,
-            "materialFor": 198,
+            "materialFor": 188,
             "secretMaterial": 177,
+            "ecMaterial": 126,
             "memberToBigInt": 125,
             "isAcceptableExponent": 105,
             "stripLeadingZeros": 102,
@@ -2971,14 +3032,14 @@
           }
         },
         "dist/keysets/local.js": {
-          "bytes": 2090,
+          "bytes": 2088,
           "declarations": {
-            "createKeySet": 694,
+            "createKeySet": 693,
             "readAlgorithms": 335,
             "importKeys": 261,
             "readEntries": 235,
             "bindableAlgorithms": 162,
-            "importKeySet": 155,
+            "importKeySet": 154,
             "keySetOf": 69,
             "TOO_MANY_KEYS": 59,
             "MALFORMED_KEYS": 39,
@@ -2989,9 +3050,9 @@
           }
         },
         "dist/keys/algorithms.js": {
-          "bytes": 1377,
+          "bytes": 1378,
           "declarations": {
-            "ALGORITHM_PARAMS": 318,
+            "ALGORITHM_PARAMS": 319,
             "compatibleAlgorithms": 181,
             "ecdsa": 142,
             "ED25519": 110,
@@ -3021,10 +3082,10 @@
           }
         },
         "dist/keys/generate.js": {
-          "bytes": 1364,
+          "bytes": 1366,
           "declarations": {
-            "generateKeyPair": 600,
-            "generateSecretKey": 335,
+            "generateKeyPair": 601,
+            "generateSecretKey": 336,
             "readModulusLength": 318,
             "KEY_PAIR_OPTIONS": 51,
             "SECRET_KEY_OPTIONS": 34,
@@ -3058,12 +3119,12 @@
           }
         },
         "dist/keys/export.js": {
-          "bytes": 1008,
+          "bytes": 1005,
           "declarations": {
-            "exportSecretJwk": 187,
+            "exportSecretJwk": 186,
             "toJwk": 181,
-            "publicEntry": 162,
-            "extractablePrivateEntry": 139,
+            "publicEntry": 161,
+            "extractablePrivateEntry": 138,
             "PRIVATE_MEMBERS": 99,
             "exportPrivateJwk": 87,
             "exportPublicJwk": 86,
@@ -3072,16 +3133,25 @@
           }
         },
         "dist/keys/registry.js": {
-          "bytes": 866,
+          "bytes": 864,
           "declarations": {
-            "readIssuer": 207,
+            "readIssuer": 206,
             "getKeyEntry": 188,
             "bindIssuer": 163,
-            "getKeyEntryOfKind": 91,
+            "getKeyEntryOfKind": 90,
             "registerKey": 80,
             "isRegisteredKey": 57,
             "kidMember": 43,
             "registry": 31,
+            "(top level)": 6
+          }
+        },
+        "dist/keys/on-curve.js": {
+          "bytes": 808,
+          "declarations": {
+            "NIST_CURVES": 630,
+            "isOnNistCurve": 106,
+            "toBigInt": 66,
             "(top level)": 6
           }
         },
@@ -3123,9 +3193,9 @@
           }
         },
         "dist/keys/options.js": {
-          "bytes": 696,
+          "bytes": 697,
           "declarations": {
-            "readExtractable": 153,
+            "readExtractable": 154,
             "readKid": 131,
             "requireSymmetricAlg": 123,
             "requireAsymmetricAlg": 121,
@@ -3147,11 +3217,11 @@
           }
         },
         "dist/core/plain.js": {
-          "bytes": 662,
+          "bytes": 663,
           "declarations": {
             "isPlainArray": 299,
             "isObjectPrototype": 242,
-            "isPlainObject": 121
+            "isPlainObject": 122
           }
         },
         "dist/keys/exported-jwk.js": {
@@ -3179,13 +3249,13 @@
           }
         },
         "dist/core/result.js": {
-          "bytes": 528,
+          "bytes": 531,
           "declarations": {
-            "deepFreeze": 277,
+            "deepFreeze": 278,
             "isPlainContainer": 141,
-            "fail": 38,
+            "fail": 39,
             "frozenOk": 36,
-            "ok": 24,
+            "ok": 25,
             "(top level)": 12
           }
         },
@@ -3221,9 +3291,9 @@
           }
         },
         "dist/keys/public-key.js": {
-          "bytes": 328,
+          "bytes": 327,
           "declarations": {
-            "getPublicKey": 291,
+            "getPublicKey": 290,
             "publicKeys": 31,
             "(top level)": 6
           }
@@ -3249,9 +3319,9 @@
           }
         }
       },
-      "gzip": 18911,
-      "minified": 60929,
-      "sha256": "e2a344b320597a1886101dc476fff467cc290e61871d422c650166fa6692b9f8"
+      "gzip": 19561,
+      "minified": 61853,
+      "sha256": "b273bc78b0e0f7b410ddeaa327321131f4c447d76122b75b6e70860e3fc2c31a"
     }
   }
 }
