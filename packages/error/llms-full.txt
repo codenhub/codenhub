@@ -1582,7 +1582,7 @@ That is the whole package. From here:
 ## Changed
 
 - **Breaking.** The package requires Node.js 26 or newer, where it declared 24. Browser, worker, and edge runtimes are unaffected. ([#553](https://github.com/codenhub/codenhub/issues/553))
-- **Breaking, TypeScript only.** A registry's `get` and `values` return `ErrorMapping`, which is `ErrorFeedback | ErrorCodeAlias`, so `registry.codes.get(id)?.message` is typed `string | undefined`. A worded entry typed with a `code` field, such as `{ code: string; message: string }`, no longer type-checks, though it still registers at runtime with its `code` ignored, as before. Where code reads an entry's words, check `mapping.message !== undefined` first.
+- **Breaking, TypeScript only.** A registry's `get` and `values` return `ErrorMapping`, which is `ErrorFeedback | ErrorCodeAlias`, so `registry.codes.get(id)?.message` is typed `string | undefined`. A worded entry typed with a `code` field, such as `{ code: string; message: string }`, no longer type-checks, though it still registers at runtime with its `code` ignored, as before. Where code reads an entry's words, check `mapping.message !== undefined` first. `ErrorPrefixDefinition` and `ErrorPatternDefinition` are now unions too, so an interface can no longer extend them; write an intersection instead, such as `type MyPrefix = ErrorPrefixDefinition & { note: string }`.
 - An alias with a `messageKey`, `source`, or `isRetryable` beside its `code` throws `TypeError` when it is added, since the words and flags come from the code it names.
 - An error matched through a pattern alias carries its `code` across `toJSON()` and `appErrorFromJSON`, which used to reject a `code` on a `"heuristic"` error.
 
