@@ -193,6 +193,24 @@ describe("viteStyles: build", () => {
     expect(hasRuleFor(css, "alert")).toBe(false);
   });
 
+  // A limit, held so a change to it is seen: Sass resolves `pkg:` itself and never asks Vite. Vite 5 uses Sass's legacy API, which has no `pkg:`.
+  it.skipIf(viteMajor < 6)("leaves whole the stylesheet a Sass pkg: URL imports", async () => {
+    const sass = await import("sass");
+
+    await linkPackage("sass", path.join(packageRoot, "node_modules", "sass"));
+    await writeFiles({
+      "index.html": PAGE(`<button class="btn primary">Save</button>`),
+      "main.js": `import "./app.scss";\n`,
+      "app.scss": `@use "pkg:@codenhub/styles";\n`,
+    });
+
+    const css = await build(undefined, {
+      css: { preprocessorOptions: { scss: { importers: [new sass.NodePackageImporter(project)] } } },
+    });
+
+    expect(hasRuleFor(css, "alert")).toBe(true);
+  });
+
   it("trims the stylesheet a ?url import emits", async () => {
     await writeFiles({
       "index.html": PAGE(`<button class="btn primary">Save</button>`),
@@ -466,6 +484,34 @@ describe("viteStyles: content", () => {
 
     const css = await build({ content: [shared("**/*.html")] });
 
+    expect(hasRuleFor(css, "card")).toBe(true);
+    expect(hasRuleFor(css, "alert")).toBe(false);
+  });
+
+  it("reads an entry from the root as Vite names it, when Vite keeps the link that names it", async () => {
+    // The project is in project/app, and Vite is given a link to it in the other folder. Each has a shared folder beside it.
+    const root = path.join(outside, "app");
+    const modules = path.join(project, "app", "node_modules", "@codenhub");
+
+    await writeFiles({ "app/index.html": BUTTON_PAGE["index.html"], "app/main.js": BUTTON_PAGE["main.js"] });
+    await writeFiles({ "shared/card.txt": "alert\n" });
+    await mkdir(modules, { recursive: true });
+    await symlink(packageRoot, path.join(modules, "styles"), "junction");
+    await symlink(path.join(project, "app"), root, "junction");
+    await mkdir(path.join(outside, "shared"));
+    await writeFile(path.join(outside, "shared", "card.txt"), "card\n");
+    // Vite 8 and newer resolve the root to its real path unless told to keep links.
+    await vite.build({
+      root,
+      configFile: false,
+      logLevel: "silent",
+      resolve: { preserveSymlinks: true },
+      plugins: [viteStyles({ content: ["../shared/*.txt"] })],
+    });
+
+    const css = await readCss(path.join(project, "app", "dist"));
+
+    // `../shared` is read beside the link, as Vite reads `build.outDir: "../out"`, not beside the folder it links to.
     expect(hasRuleFor(css, "card")).toBe(true);
     expect(hasRuleFor(css, "alert")).toBe(false);
   });
@@ -1199,6 +1245,59 @@ describe("viteStyles: live update", { timeout: 40_000 }, () => {
     });
   });
 
+  it("updates the stylesheet server-side rendering loads after a burst of changes, as a checkout makes", async () => {
+    const others = Array.from({ length: 40 }, (_, index) => `src/other-${index}.txt`);
+
+    await writeFiles({
+      ...SCRIPT_PAGE,
+      ...Object.fromEntries(others.map((name) => [name, "Other\n"])),
+      "src/card.txt": "Card\n",
+      "entry.js": `export { default } from "@codenhub/styles?inline";\n`,
+    });
+    await withDevServer(async (dev) => {
+      const before = (await dev.server.ssrLoadModule("/entry.js")) as { default: string };
+
+      expect(hasRuleFor(before.default, "btn")).toBe(false);
+
+      // Reported all at once, the change that adds a class first, so the others are in flight while it is.
+      await writeFile(path.join(project, "src", "card.txt"), BUTTON);
+      for (const name of ["src/card.txt", ...others]) {
+        dev.server.watcher.emit("change", path.join(project, name));
+      }
+      await vi.waitFor(async () => {
+        const after = (await dev.server.ssrLoadModule("/entry.js")) as { default: string };
+
+        expect(hasRuleFor(after.default, "btn")).toBe(true);
+      }, WAIT);
+    });
+  });
+
+  it("shows the terminal an error for a trimmed file it cannot write, after a file is created", async () => {
+    const errors: string[] = [];
+    const logger = vite.createLogger("silent");
+
+    await writeFiles(SCRIPT_PAGE);
+    await withDevServer(
+      async (dev) => {
+        await loadPage(dev);
+
+        const cache = path.join(project, "node_modules", ".vite", "codenhub-styles");
+        const from = dev.messages.length;
+
+        // A file where the folder was, so the folder cannot be created again.
+        await rm(cache, { recursive: true });
+        await writeFile(cache, "");
+        await writeFiles({ "src/card.txt": BUTTON });
+        await dev.waitFor((sent) => sent.type === "error", from, "error on the page");
+        await vi.waitFor(() => {
+          expect(errors.some((message) => message.includes("@codenhub/styles/vite: cannot write to"))).toBe(true);
+        }, WAIT);
+      },
+      undefined,
+      { customLogger: { ...logger, error: (message) => errors.push(message) } },
+    );
+  });
+
   describe("with content outside the root", () => {
     // A component no module of the page imports, as in a shared library the project names in content.
     const CARD = (markup: string) => `export const Card = () => ${markup};\n`;
@@ -1226,8 +1325,16 @@ describe("viteStyles: live update", { timeout: 40_000 }, () => {
 
           const from = dev.messages.length;
 
-          await writeFile(path.join(outside, "cards", "a.tsx"), CARD(BUTTON));
-          await dev.waitFor((message) => updates(message, stylesheet), from);
+          // Written again until an update comes: on a loaded machine the watcher can miss a write outside the root.
+          await vi.waitFor(
+            async () => {
+              if (!dev.messages.slice(from).some((message) => updates(message, stylesheet))) {
+                await writeFile(path.join(outside, "cards", "a.tsx"), CARD(BUTTON));
+                throw new Error(`no stylesheet update among ${JSON.stringify(dev.messages.slice(from))}`);
+              }
+            },
+            { ...WAIT, interval: 300 },
+          );
 
           expect(hasRuleFor(await dev.fetch(stylesheet, "text/css"), "btn")).toBe(true);
         },
@@ -1271,6 +1378,7 @@ interface WatchedBuild {
 async function withWatchedBuild(
   use: (build: WatchedBuild) => Promise<void>,
   options?: ViteStylesOptions,
+  config: InlineConfig = {},
 ): Promise<void> {
   const watcher = (await vite.build({
     root: project,
@@ -1278,6 +1386,7 @@ async function withWatchedBuild(
     logLevel: "silent",
     plugins: [viteStyles(options)],
     build: { watch: {} },
+    ...config,
   })) as unknown as BuildWatcher;
   let starts = 0;
   let ends = 0;
@@ -1368,6 +1477,42 @@ describe("viteStyles: build --watch", { timeout: 40_000 }, () => {
 
       expect(hasRuleFor(css, "btn")).toBe(false);
     });
+  });
+
+  it("leaves out the output it wrote, for a root named through a link and no output folder yet", async () => {
+    // A link stands for any root spelled other than its real path: a subst drive, an 8.3 name, a path in another case.
+    const other = realpathSync.native(await mkdtemp(path.join(tmpdir(), "styles-vite-link-")));
+    const root = path.join(other, "app");
+    const readScripts = async (): Promise<string> => {
+      const folder = path.join(project, "dist", "assets");
+      const files = (await readdir(folder)).filter((name) => name.endsWith(".js"));
+
+      return (await Promise.all(files.map((name) => readFile(path.join(folder, name), "utf8")))).join("");
+    };
+
+    await symlink(project, root, "junction");
+    await writeFiles({
+      "index.html": PAGE(`<p>Hello</p>`),
+      // The stylesheet's text lands in the script the build writes, which then names every class it kept.
+      "main.js": `import css from "@codenhub/styles?inline";\ndocument.head.append(Object.assign(document.createElement("style"), { textContent: css }));\n`,
+      "card.txt": BUTTON,
+    });
+    try {
+      await withWatchedBuild(
+        async ({ rebuild }) => {
+          expect(hasRuleFor(await readScripts(), "btn")).toBe(true);
+
+          await rebuild(() => writeFiles({ "card.txt": "Card\n" }));
+
+          expect(hasRuleFor(await readScripts(), "btn")).toBe(false);
+        },
+        undefined,
+        // Vite 8 and newer resolve the root to its real path unless told to keep links.
+        { root, resolve: { preserveSymlinks: true } },
+      );
+    } finally {
+      await rm(other, { recursive: true, force: true });
+    }
   });
 
   it("reads a file created while it runs at the next rebuild", async () => {

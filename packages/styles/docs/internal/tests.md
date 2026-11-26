@@ -69,6 +69,7 @@ packages/styles/
       typography.spec.ts
     integration/
       adapter.test.ts
+      cli-write.test.ts
       cli.test.ts
       exports.test.ts
       purge.test.ts
@@ -134,6 +135,8 @@ Screenshots would add operating-system, font, antialiasing, and media-preference
 Node-based Vitest checks validate every published target. Every compiled export contains representative public output, and every Tailwind entrypoint is processed independently against representative public selectors. Registry tests validate its schema and internal consistency, hold component defaults and class claims against the stylesheets, and enforce material and intent invariants.
 
 `adapter.test.ts` holds the two paths to each other: each compiled entry that has a `/tw` counterpart, every one but `dist/palette.css`, is compiled again from it with the Tailwind installed, naming every utility it ships, and the two must emit the same rules in the same order. On the Tailwind release `src/base/` was copied from, that is byte for byte apart from Tailwind's banner and the `--tw-*` registrations, which are compared as sets. On another release, as the Tailwind workflow runs it, Tailwind's theme values and Preflight are that release's, so the package's components and utilities are compared alone, and a separate test fails when the lockfile moves the catalog's Tailwind off the release `src/base/` was copied from.
+
+`cli-write.test.ts` checks how `chs build` writes its temporary file, through a stubbed `fs.open`, since a test cannot plant a link at a name the build picks at random: the file is created exclusively under a name no one can guess, another name is taken when one is taken, and a failed write removes it and leaves the previous stylesheet whole, the hardening [Replacing the output](./cli.md#replacing-the-output) records.
 
 `purge.test.ts` covers the tree-shaking `chs build` runs, apart from the command: which selectors a set of used classes can match, which rules and selectors a purge drops, that the compiled stylesheets the command reads parse and write back unchanged, that purging the source to every class of the complete stylesheet gives that stylesheet, and the readable output `--no-minify` writes.
 

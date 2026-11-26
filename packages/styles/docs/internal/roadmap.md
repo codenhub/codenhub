@@ -24,9 +24,9 @@ Finished work is not tracked here. The current token contract, component coverag
 
 ### Generator
 
-A build step that writes the rules a project's files use: layout, spacing, sizing, display, and type utilities with Tailwind's names and values for a project that does not run Tailwind, then the package's own classes in place of trimming `dist/purge/`. Delivered through the Vite plugin and `chs build`, with no new option. [Generator](./generator.md) records the decisions and the questions still open; each is settled there before the code that depends on it.
+A build step that writes the rules a project's files use: layout, spacing, sizing, display, and type utilities with Tailwind's names and values for a project that does not run Tailwind, then the package's own classes in place of trimming `dist/purge/`. Delivered through the Vite plugin and `chs build`, with no new option. [Generator](./generator.md) records its decisions, all taken by the maintainer by 2026-11-26.
 
-It waits on those open questions, so the next minor release, which carries the package's own checkbox marks and the Vite plugin, ships without it. This is an exception to "Versioning" in `docs/specs/packages-lifecycle.md`, recorded with its reason in `docs/specs/packages-exceptions.md`; it ends when the open questions are settled, and the release after that carries the generator.
+It ships in 0.12.0, with the package's own checkbox marks and the Vite plugin. An exception taken on 2026-11-25 deferred it to the release after, because its design still had open questions; it was reversed on 2026-11-26, since "Versioning" in `docs/specs/packages-lifecycle.md` rejects deferring a feature because it needs its own design, and the questions were decisions within the package, not a runtime, dependency, or outside decision it waits on.
 
 ### Aesthetics
 

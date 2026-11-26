@@ -855,7 +855,7 @@ The complete stylesheet and the aesthetics are trimmed. The other stylesheets lo
 
 So to ship less, import the complete stylesheet rather than `/components`. For the one-button page above, the trimmed stylesheet is about a fifth of the 186 KB `/components` loads whole. The trimmed stylesheet is built from the complete one, not from `/native`, so it has no classless mappings; a page that relies on them imports `/native`, which loads whole.
 
-The import is trimmed wherever Vite resolves it: a JavaScript `import`, a CSS `@import`, a CSS file that another CSS file imports, a Sass `@use` or `@import`, Lightning CSS as Vite's CSS transformer, and Vite's `?inline`, `?url`, and `?raw` queries.
+The import is trimmed wherever Vite resolves it: a JavaScript `import`, a CSS `@import`, a CSS file that another CSS file imports, a Sass `@use` or `@import`, Lightning CSS as Vite's CSS transformer, and Vite's `?inline`, `?url`, and `?raw` queries. A Sass `pkg:` URL, as in `@use "pkg:@codenhub/styles"`, is the exception: Sass resolves it without asking Vite, so the whole stylesheet ships. Write `@use "@codenhub/styles"` instead.
 
 The trimmed stylesheet holds what [`chs build`](docs/integrating/without-a-bundler.md#options) writes: the theme and its tokens, the reset, the base rules every component relies on, the four classes kept whether or not a file names them (`.dark`, `.theme-dark`, `.theme-light`, and `.disabled`), and each StyleKit class your files use. It is always minified. An aesthetic you import is trimmed the same way, to its rules for the classes your files use; the import already says which aesthetics you want, so there is nothing to configure.
 
@@ -934,7 +934,7 @@ Every message the plugin prints starts with `@codenhub/styles/vite:`, and a fail
 - **`cannot write to "<path>": <reason> (<code>); fix that, or set cacheDir to a folder you can write to`.** The plugin could not write the trimmed stylesheet into Vite's cache folder. `<reason>` and `<code>` are Node.js's own; `EACCES` or `EPERM` means you cannot write there, and `ENOSPC` that the disk is full.
 - **`a file changed before the plugin read the project; restart Vite`.** Restart Vite.
 
-While the dev server runs, an error from a change, such as a stylesheet it cannot write, is shown in the page as Vite shows its own errors. The page keeps the stylesheet written last, and the next change you save tries the write again.
+While the dev server runs, an error from a change, such as a stylesheet it cannot write, is shown in the page as Vite shows its own errors, and in the terminal. The page keeps the stylesheet written last, and the next change you save tries the write again.
 
 ## Verifying it worked
 
