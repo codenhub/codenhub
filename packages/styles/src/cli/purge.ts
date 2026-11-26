@@ -99,7 +99,7 @@ export function parse(css: string, start = 0, end = css.length): Node[] {
   while (index < end) {
     /* A comment between rules, such as Tailwind's licence banner, is kept as it
        is rather than read as part of the next prelude, together with the
-       whitespace before it: the package's own notice follows the banner on a
+       whitespace before it: the package's own head follows the banner on a
        new line, and read into the prelude it hid the at-rule after it. */
     let comment = index;
 

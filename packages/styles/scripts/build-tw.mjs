@@ -34,7 +34,6 @@ import { fileURLToPath } from "node:url";
 import postcss from "postcss";
 
 import { createCompiler } from "./lib/compile.mjs";
-import { withNotice } from "./notice.mjs";
 
 const packageRoot = path.resolve(fileURLToPath(import.meta.url), "../..");
 const source = path.join(packageRoot, "src");
@@ -296,7 +295,5 @@ function write(relative, css) {
   const file = path.join(target, relative);
 
   mkdirSync(path.dirname(file), { recursive: true });
-  /* A `/tw` source that carries the checkbox marks is a copy of them too, and
-     a consumer's Tailwind keeps its `/*!` comment in the stylesheet it builds. */
-  writeFileSync(file, withNotice(css));
+  writeFileSync(file, css);
 }

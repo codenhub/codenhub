@@ -8,9 +8,9 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { withHead } from "./head.mjs";
 import { createCompiler } from "./lib/compile.mjs";
 import { AESTHETICS_ENTRIES, STYLES_ENTRIES } from "./lib/entries.mjs";
-import { withNotice } from "./notice.mjs";
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 
@@ -38,8 +38,8 @@ writeFileSync(path.join(packageRoot, "dist", "index.d.cts"), "export {};\n");
 
 const compiler = createCompiler(path.join(packageRoot, "src"));
 
-for (const { input, output, omit } of jobs) {
+for (const { input, output, omit, head } of jobs) {
   const css = compiler.compile(path.join(packageRoot, input), { omit });
 
-  writeFileSync(path.join(packageRoot, output), withNotice(css));
+  writeFileSync(path.join(packageRoot, output), head ? withHead(css) : css);
 }

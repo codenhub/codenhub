@@ -70,7 +70,7 @@ describe("purge", () => {
     expect(purged(css, "btn")).toBe(css.slice(0, css.indexOf(".card{color")));
   });
 
-  // The package's licence notice follows Tailwind's banner on a line of its own.
+  // The package's head comment follows Tailwind's banner on a line of its own.
   it("reads a comment after a newline as a comment, not as the next prelude", () => {
     const css = "/*! banner */\n/*! notice */@layer theme{.card{color:red}}@layer components{.btn{color:blue}}";
 

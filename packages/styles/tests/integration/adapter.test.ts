@@ -12,10 +12,11 @@ import { describe, expect, test } from "vitest";
    tuned to. So each compiled entry is compiled again from its `/tw`
    counterpart, naming every utility it ships, and the two compared.
 
-   Three differences are by design. Tailwind heads every build with its banner,
+   Four differences are by design. Tailwind heads every build with its banner,
    and the compiled build only an entry that carries some of Tailwind's own
-   CSS. `/tw` ships all nine `--tw-*` registrations the package's bodies
-   need, where the compiled build writes those its output uses: both are
+   CSS. A complete compiled stylesheet starts with the package's head comment,
+   which `chs build` reads (`scripts/head.mjs`), and `/tw` carries none.
+   `/tw` ships all nine `--tw-*` registrations the package's bodies need, where the compiled build writes those its output uses: both are
    compared as sets, the compiled one inside the other. And Tailwind writes a
    `@theme` on `:root, :host`, where the compiled build writes its tokens on
    `:root` alone, so a shadow root inherits the page's overrides (see
@@ -46,10 +47,8 @@ const POLYFILLS_NONE = 0; // `Polyfills.None` in `@tailwindcss/node`
 // The build's own modules, untyped JavaScript.
 const entriesSpecifier = "../../scripts/lib/entries.mjs";
 const compileSpecifier = "../../scripts/lib/compile.mjs";
-const noticeSpecifier = "../../scripts/notice.mjs";
 const { AESTHETICS_ENTRIES, STYLES_ENTRIES } = (await import(entriesSpecifier)) as Record<string, Entry[]>;
 const { TAILWIND_VERSION } = (await import(compileSpecifier)) as { TAILWIND_VERSION: string };
-const { withNotice } = (await import(noticeSpecifier)) as { withNotice(css: string): string };
 
 const packageRoot = fileURLToPath(new URL("../..", import.meta.url));
 const tailwindVersion = JSON.parse(
@@ -86,22 +85,20 @@ const consumerBuild = async (imports: string[], candidates: string[]) => {
     onDependency() {},
   });
 
-  /* A `/tw` source with the marks carries the notice too, and Lightning CSS
-     keeps it only where it lands at the head of the output, so it is taken out
-     and placed as the compiled build places it. */
-  const code = optimize(compiler.build(candidates), { minify: true }).code.replace(PACKAGE_NOTICE, "");
-
-  return withNotice(code);
+  return optimize(compiler.build(candidates), { minify: true }).code;
 };
 
 const REGISTRATION = /@property --tw-[\w-]+\{[^}]*\}/g;
 const THEME_HOST = ":root,:host{";
-const PACKAGE_NOTICE = /\/\*! @codenhub\/styles[^]*?\*\/\n?/g;
+const PACKAGE_HEAD = /^\/\*! @codenhub\/styles \| Apache-2\.0 \*\/\n/m;
 
-/* The stylesheet without Tailwind's banner and the `--tw-*` registrations,
-   and those registrations on their own. */
+/* The stylesheet without Tailwind's banner, the package's head, and the
+   `--tw-*` registrations, and those registrations on their own. */
 const separate = (css: string) => {
-  let rules = css.replace(/^\/\*! tailwindcss v[^*]*\*\/\n/, "").replace(REGISTRATION, "");
+  let rules = css
+    .replace(/^\/\*! tailwindcss v[^*]*\*\/\n/, "")
+    .replace(PACKAGE_HEAD, "")
+    .replace(REGISTRATION, "");
 
   /* Read as `:root`, Tailwind's theme rule sits beside the package's own
      `:root` rule, which the compiled build's minifier merged into it, so the
