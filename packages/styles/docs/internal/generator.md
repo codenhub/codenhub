@@ -44,7 +44,8 @@ Once the utilities ship, the generator also writes the package's own classes, in
 
 Tailwind 4 accepts any spacing number, so `mt-13` compiles there; the generator writes a closed list the package chooses, kept in one file:
 
-- **Spacing** (padding, margin, gap, and the sizing utilities that take a spacing value): the steps 0 to 12, then 14, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80, and 96, plus `px` and the halves 0.5, 1.5, 2.5, and 3.5 as Tailwind writes them.
+- **Keywords** from [Which utilities](#which-utilities), each with Tailwind's names: display (`block`, `inline-block`, `inline`, `flex`, `inline-flex`, `grid`, `hidden`), flex and grid layout (`flex-row`, `flex-col`, `flex-wrap`, `flex-1`, `grow`, `shrink-0`, `grid-cols-1` to `grid-cols-12`, `col-span-1` to `col-span-12`), alignment (`items-*`, `justify-*`, `self-*`, `place-*`, `content-*`), sizing (`w-full`, `w-auto`, `w-screen`, `h-full`, `h-auto`, `h-screen`, `min-w-0`, `min-h-screen`), position (`static`, `relative`, `absolute`, `fixed`, `sticky`), overflow (`overflow-*`, `overflow-x-*`, `overflow-y-*`), and text alignment (`text-left`, `text-center`, `text-right`, `text-justify`).
+- **Spacing** (padding, margin, gap, the position offsets `inset-*`, `top-*`, `right-*`, `bottom-*`, and `left-*`, and the sizing utilities that take a spacing value): the steps 0 to 12, then 14, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80, and 96, plus `px` and the halves 0.5, 1.5, 2.5, and 3.5 as Tailwind writes them.
 - **Type and width** by Tailwind's theme keys: `text-*`, `font-*`, `leading-*`, `tracking-*`, `max-w-*` for each container size, and `underline` and `no-underline`, which the type family takes so that `hover:underline` works.
 - **Left out:** a utility that sets a `--tw-*` property other than the nine `tw/theme.css` registers ([Cascade layers](./model.md#cascade-layers)), such as `space-x-*`, since the generator would have to ship its registration too.
 

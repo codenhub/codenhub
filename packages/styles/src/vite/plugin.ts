@@ -31,7 +31,8 @@ const PACKAGE = "@codenhub/styles";
 /* Vite 6 and newer call `hotUpdate` once per environment for one change, so
    the first call's result is kept until every environment has had it. A call
    that never comes, as when another plugin's hook throws before this one's,
-   leaves its result kept this long. */
+   leaves its result kept this long once it settles: a change queued behind a
+   long burst is never dropped while it is still running. */
 const CHANGE_KEPT_MS = 60_000;
 // `(` starts every extglob, as `@codenhub/scan` reads them.
 const GLOB_CHARACTERS = /[*?[\]{}(]/;
@@ -69,8 +70,8 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
   // `vite preview` serves a finished build, so the plugin reads and writes nothing for it.
   let isPreview = false;
   let trimmer: Trimmer | undefined;
-  // Each change still in flight: its result, the environments yet to call for it, and when it started.
-  const recent = new Map<string, { pending: Promise<string[]>; left: number; at: number }>();
+  // Each change still in flight: its result, the environments yet to call for it, and when it settled.
+  const recent = new Map<string, { pending: Promise<string[]>; left: number; settledAt: number }>();
   // How many times a change reaches `hotUpdate` or `handleHotUpdate`: once per environment, and once on Vite 5.
   let environmentCount = 1;
   /* Whether a change rewrote a trimmed file since the build before, and so
@@ -88,19 +89,27 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
   const changeOnce = (key: string, file: string, event: FileEvent): Promise<string[]> => {
     const now = Date.now();
 
-    // Oldest first, as a Map keeps them.
-    for (const [kept, { at }] of recent) {
-      if (now - at <= CHANGE_KEPT_MS) {
-        break;
+    // Changes settle out of the order they started in, so every entry is checked.
+    for (const [kept, { settledAt }] of recent) {
+      if (now - settledAt > CHANGE_KEPT_MS) {
+        recent.delete(kept);
       }
-      recent.delete(kept);
     }
 
-    const change = recent.get(key) ?? {
-      pending: changeInServer(file, event),
-      left: environmentCount,
-      at: now,
-    };
+    let change = recent.get(key);
+
+    if (change === undefined) {
+      const fresh = { pending: Promise.resolve<string[]>([]), left: environmentCount, settledAt: Infinity };
+
+      fresh.pending = (async () => {
+        try {
+          return await changeInServer(file, event);
+        } finally {
+          fresh.settledAt = Date.now();
+        }
+      })();
+      change = fresh;
+    }
 
     change.left -= 1;
     if (change.left > 0) {
