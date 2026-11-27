@@ -4,21 +4,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 
 import { describe, expect, test } from "vitest";
 
-/* `@tailwindcss/node` 4.3.4 publishes declarations that import files it does
-   not ship (`./ast`, `./compile`, and five more), so a typed import fails the
-   typecheck with TS2307, and its `Polyfills` is an ambient const enum, which
-   `isolatedModules` rejects. A specifier TypeScript does not resolve, typed with
-   the two calls this file makes, keeps both out of the typecheck. */
-type TailwindNode = {
-  compile(
-    css: string,
-    options: { base: string; from: string; polyfills: number; onDependency(path: string): void },
-  ): Promise<{ build(candidates: string[]): string }>;
-  optimize(css: string, options: { minify: boolean }): { code: string };
-};
-const tailwindNodeSpecifier = "@tailwindcss/node";
-const { compile, optimize } = (await import(tailwindNodeSpecifier)) as TailwindNode;
-const POLYFILLS_ALL = 3; // `Polyfills.All` in `@tailwindcss/node`
+import { compile, optimize, POLYFILLS_ALL } from "./tailwind";
 
 /* What a consumer downloads is this package's first concern, so its size is
    held by ceilings rather than left to be noticed. Each ceiling is about 3% above
