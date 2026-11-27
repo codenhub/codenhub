@@ -24,6 +24,7 @@ const REDIRECT_URI = "https://rp.codenhub-oidc.example/callback";
 const SECOND_SIGN_IN_DELAY_MS = 35_000;
 const MAX_SIGN_INS = 3;
 const MODULE_DEADLINE_MS = 120_000;
+const REQUEST_TIMEOUT_MS = 30_000;
 
 const PLANS = {
   basic: {
@@ -65,12 +66,19 @@ async function api<T>(method: "GET" | "POST", path: string, body?: unknown): Pro
       ...(body === undefined ? {} : { "Content-Type": "application/json" }),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+    // Covers the body too, so a stalled suite fails the module instead of holding every later one.
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   const text = await response.text();
   if (!response.ok) {
     throw new Error(`${method} ${path} answered ${response.status}: ${redact(text).slice(0, 1000)}`);
   }
-  return (text === "" ? null : JSON.parse(text)) as T;
+  try {
+    return (text === "" ? null : JSON.parse(text)) as T;
+  } catch {
+    // A parse error quotes the text it read, which could echo the token or the secret.
+    throw new Error(`${method} ${path} answered ${response.status} with a body that is not JSON`);
+  }
 }
 
 interface PlanModule {
@@ -114,7 +122,13 @@ async function runModule(planId: string, module: PlanModule): Promise<Record<str
   }
   const { exposed } = await api<{ exposed: { issuer: string } }>("GET", `/api/runner/${id}`);
   const signIns: Outcome[] = [];
-  const party = await connect({ issuer: exposed.issuer, clientId: CLIENT_ID, secret, redirectUri: REDIRECT_URI });
+  const party = await connect({
+    issuer: exposed.issuer,
+    clientId: CLIENT_ID,
+    secret,
+    redirectUri: REDIRECT_URI,
+    fetch: (input, init) => fetch(input, { ...init, signal: init?.signal ?? AbortSignal.timeout(REQUEST_TIMEOUT_MS) }),
+  });
   if ("signIn" in party) {
     if (!(await ended())) {
       for (let attempt = 0; attempt < MAX_SIGN_INS; attempt++) {
