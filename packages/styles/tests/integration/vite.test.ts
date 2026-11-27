@@ -171,6 +171,19 @@ describe("viteStyles: build", () => {
     expect(hasRuleFor(css, "alert")).toBe(false);
   });
 
+  it("writes the Tailwind utilities the project's files name into the package's stylesheet", async () => {
+    await writeFiles({
+      "index.html": PAGE(`<button class="btn mt-4 md:flex">Save</button>`),
+      "main.js": `import "@codenhub/styles";\n`,
+    });
+
+    const css = await build();
+
+    expect(hasRuleFor(css, "mt-4")).toBe(true);
+    expect(css).toContain(String.raw`.md\:flex{`);
+    expect(hasRuleFor(css, "mt-6")).toBe(false);
+  });
+
   it.each([
     ["a stylesheet", { "main.js": `import "./app.css";\n`, "app.css": `@import "@codenhub/styles";\n` }],
     [
@@ -1550,7 +1563,9 @@ describe("viteStyles: paths", () => {
 describe("viteStyles: the command's bytes", () => {
   it("writes what chs build writes for the same files", async () => {
     await writeFiles({
-      "index.html": PAGE(`<button class="btn primary">Save</button><div class="alert md:card">Saved</div>`),
+      "index.html": PAGE(
+        `<button class="btn primary mt-4">Save</button><div class="alert md:card md:flex max-w-md">Saved</div>`,
+      ),
       "entry.js": `export { default } from "@codenhub/styles?raw";\n`,
     });
 

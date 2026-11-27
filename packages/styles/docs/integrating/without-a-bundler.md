@@ -201,7 +201,7 @@ Write the output into a folder listed in `STATICFILES_DIRS`, here `static/`, so 
 - `--no-minify` writes readable, indented CSS instead. Useful for reading what the build produced; serve the minified file.
 - `--help` prints the usage, with the aesthetics this version ships. `--version` prints the package version. Both build nothing and exit with status 0.
 
-The output always holds the theme, its design tokens as CSS custom properties, the reset, the base rules every component relies on, and four classes whether or not a file names them: `.dark`, `.theme-dark`, and `.theme-light`, which switch the theme, and `.disabled`. On top of that comes each StyleKit class the files the build reads use. Any other class a script adds in the browser, such as `.active` or `.indeterminate` on a progress bar, is kept only when a file the build reads names it, so give your scripts a `--content` too. The output is built from the complete stylesheet, not from `/native`, so it has no classless mappings. A build whose templates name every class writes the complete stylesheet, byte for byte.
+The output always holds the theme, its design tokens as CSS custom properties, the reset, the base rules every component relies on, and four classes whether or not a file names them: `.dark`, `.theme-dark`, and `.theme-light`, which switch the theme, and `.disabled`. On top of that comes each StyleKit class the files the build reads use, and each [Tailwind utility](#tailwind-utilities) they name. Any other class a script adds in the browser, such as `.active` or `.indeterminate` on a progress bar, is kept only when a file the build reads names it, so give your scripts a `--content` too. The output is built from the complete stylesheet, not from `/native`, so it has no classless mappings. A build whose templates name every class writes the complete stylesheet, byte for byte.
 
 ### How classes are found
 
@@ -216,7 +216,7 @@ A class name your code assembles while rendering never appears whole in any file
 - **Write class names whole.** Map each value to a complete class name in a file the build reads, such as `{ "urgent" => "destructive", "normal" => "neutral" }.fetch(@order.priority)` in a helper.
 - **List them in a safelist file.** A plain text file with one class name per line, added with its own `--content`, such as `--content config/stylekit-classes.txt`. Keep it next to the code that builds the class names, so whoever changes one sees the other.
 
-Some files a glob matches are not read for classes, because each names every class the package has and would keep the whole stylesheet: a file that starts with the package's `/*! @codenhub/styles` comment, which every stylesheet the command writes does, so two builds over one folder never read each other; a list of class names copied from the package's `dist/purge/classes.json`; and a file that is the same, byte for byte, as one the installed version ships in `dist/`, such as the copies `collectstatic` or Propshaft makes of it. A copy from another version of the package that does not start with that comment, such as an aesthetic or `theme.css` left in `STATIC_ROOT` by an earlier deploy, is still read, so keep your globs to your templates and scripts rather than the folder your static files are collected into.
+Some files a glob matches are not read for classes, because each names every class the package has and would keep the whole stylesheet: a file that starts with the package's `/*! @codenhub/styles` comment, which every stylesheet the command writes does, so two builds over one folder never read each other; a list of class names copied from the package's `dist/purge/classes.json`; a copy of its table of Tailwind utilities, `dist/utilities.json`, from any version; and a file that is the same, byte for byte, as one the installed version ships in `dist/`, such as the copies `collectstatic` or Propshaft makes of it. A copy from another version of the package that does not start with that comment, such as an aesthetic or `theme.css` left in `STATIC_ROOT` by an earlier deploy, is still read, so keep your globs to your templates and scripts rather than the folder your static files are collected into.
 
 A folder a glob has to look in and that you are not allowed to list fails the build, naming the folder, rather than leaving its files out.
 
@@ -228,13 +228,35 @@ An intent, presentation, or modifier class can take one of ten prefixes, written
 <button class="btn sm md:lg ghost hover:soft">Save</button>
 ```
 
-That covers intents such as `primary` and `destructive`, the fill and edge classes such as `soft` and `edged`, and modifiers such as `sm`, `lg`, `raised`, `pill`, `tight`, and `ruled`. `disabled` takes none: it is a state the element is in, so write it as the attribute or the class. Component classes such as `btn` and `card`, and the text and layout helpers, take no prefix.
+That covers intents such as `primary` and `destructive`, the fill and edge classes such as `soft` and `edged`, and modifiers such as `sm`, `lg`, `raised`, `pill`, `tight`, and `ruled`. `disabled` takes none: it is a state the element is in, so write it as the attribute or the class. Component classes such as `btn` and `card`, and the text and layout helpers, take no prefix. The [Tailwind utilities](#tailwind-utilities) take all ten, as in `md:flex`.
 
 Each prefix is a fixed copy of those classes, built into the package, so the list is the common ones rather than all of Tailwind's. The command does not stack prefixes, as in `md:hover:primary`, and offers no other ones, such as `print:` or `group-hover:`. Such a class is not styled, and the element renders without it.
 
+### Tailwind utilities
+
+The build also writes the layout, spacing, sizing, and type utilities of Tailwind CSS your files name, with Tailwind's names and values, so the same markup looks the same in a project that runs Tailwind. `mt-4` is `margin-top: calc(var(--spacing) * 4)`, 1rem, and follows the `--spacing` token as the components do:
+
+```html
+<div class="flex flex-col gap-4 md:flex-row">
+  <div class="card p-6 max-w-md mx-auto">…</div>
+</div>
+```
+
+They are a fixed list, not all of Tailwind:
+
+- **Display and layout:** `block`, `inline-block`, `inline`, `flex`, `inline-flex`, `grid`, `hidden`, `flex-row`, `flex-col`, `flex-wrap`, `flex-1`, `grow`, `shrink-0`, `grid-cols-1` to `grid-cols-12`, and `col-span-1` to `col-span-12`.
+- **Alignment:** `items-*`, `justify-*`, `justify-items-*`, `justify-self-*`, `self-*`, `content-*`, and `place-*`, with Tailwind's keywords, the `-safe` forms included.
+- **Spacing and size:** padding (`p-*`, `px-*`, `pt-*`, and the other sides), margin (`m-*`, `mx-*`, `mt-*`, and the other sides), `gap-*`, `gap-x-*`, `gap-y-*`, the offsets `inset-*`, `top-*`, `right-*`, `bottom-*`, and `left-*`, and `w-*`, `h-*`, `min-w-*`, `min-h-*`, `max-w-*`, and `max-h-*`. Each takes the steps 0 to 12, then 14, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80, and 96, and `px`. Margin also takes `auto`, as in `mx-auto`, and the sizes take `full`, `auto`, and `screen`, as in `w-full`, with `min-h-screen`.
+- **Position and overflow:** `static`, `relative`, `absolute`, `fixed`, `sticky`, and `overflow-*`, `overflow-x-*`, and `overflow-y-*`.
+- **Type:** `text-left`, `text-center`, `text-right`, `text-justify`, the sizes `text-xs` to `text-9xl`, `font-sans`, `font-serif`, `font-mono`, the weights `font-thin` to `font-black`, `leading-*` and `tracking-*` by Tailwind's names, such as `leading-tight`, `max-w-3xs` to `max-w-7xl`, `underline`, and `no-underline`.
+
+A utility that reads a theme value the package does not declare, such as `--container-md` for `max-w-md`, brings that value, and only the values your utilities read are written. The utilities sit in the `utilities` layer where Tailwind sorts them among the package's own rules, so `class="btn mt-4"` resolves as it does in a project that compiles the [source entrypoint](./tailwind.md).
+
+Anything else is not styled, and the element renders without it: color and border utilities, such as `text-red-500` and `border-2`, since the [intent and presentation classes](../concepts.md#intent-which-color) own color; a step off the list, such as `mt-13`; an arbitrary value, such as `mt-[13px]`; a decimal or a fraction, such as `px-1.5` or `w-1/2`; and stacked prefixes, such as `md:hover:flex`.
+
 ### What it does not do
 
-- **No Tailwind utilities.** `flex`, `mt-4`, `text-red-500`, and the rest of Tailwind are not StyleKit classes, so the build leaves them out. For layout, StyleKit's own [layout helpers](../usage/content-and-layout.md) are in the build like any other class. A project that wants Tailwind's utilities, its other variants, or prefixes stacked runs Tailwind itself and imports the [source entrypoint](./tailwind.md), which gives all three.
+- **Not all of Tailwind.** Only the [utilities above](#tailwind-utilities) are written. For layout, StyleKit's own [layout helpers](../usage/content-and-layout.md) are in the build like any other class. A project that wants the rest of Tailwind's utilities, its other variants, or prefixes stacked runs Tailwind itself and imports the [source entrypoint](./tailwind.md), which gives all three.
 - **No watch mode.** It builds once and exits. Run it again after you change a template, from a script, or from a file watcher your framework or editor already has. A class the stylesheet does not have yet leaves its element unstyled until the next build.
 - **No configuration file and no custom CSS.** You cannot add your own `@theme` values, `@utility` definitions, or plugins. To change the look, override the custom properties in a stylesheet of your own loaded after this one, as [Customizing](../usage/customizing.md) describes.
 - **No other commands.** `build` is the only one; `--help` and `--version` are the only flags that run without it.

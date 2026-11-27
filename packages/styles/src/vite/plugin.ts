@@ -8,8 +8,10 @@ import {
   PURGE_SOURCE,
   MIN_NODE_MAJOR,
   readAestheticNames,
+  knownClasses,
   readDroppable,
   readShippedSizes,
+  readUtilities,
   resolveExport,
 } from "../trim";
 import { pluginError } from "./errors";
@@ -213,6 +215,7 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
       }
 
       const droppable = await readDroppable();
+      const utilities = await readUtilities();
       const outDirs = [
         config.build,
         ...Object.values(config.environments ?? {}).map((environment) => environment.build),
@@ -226,6 +229,7 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
       trimmer = await Trimmer.start({
         imports,
         droppable,
+        utilities,
         scan: new ProjectScan({
           root: root.real,
           viteRoot: root.vite,
@@ -233,7 +237,8 @@ export function viteStyles(options: ViteStylesOptions = {}): Plugin {
             realPathOrSelf,
           ),
           content,
-          known: droppable,
+          droppable,
+          known: knownClasses(droppable, utilities),
           shipped: await readShippedSizes(),
         }),
       });

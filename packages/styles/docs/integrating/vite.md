@@ -6,7 +6,7 @@ order: 6
 
 # Vite
 
-The compiled stylesheet holds every class the package has, so a settings page that uses a few buttons, a card, and a form ships the tables, tooltips, and alerts too, in case it changes its mind. In a Vite project that does not run Tailwind CSS, the package's Vite plugin fixes that without touching your imports. When Vite starts, it reads your project's files for class names and swaps the stylesheet you import for one with only the StyleKit classes those files use. There is no command to run and no output file to name: you add one line to `vite.config.ts`, and the rest of the project stays as it was.
+The compiled stylesheet holds every class the package has, so a settings page that uses a few buttons, a card, and a form ships the tables, tooltips, and alerts too, in case it changes its mind. In a Vite project that does not run Tailwind CSS, the package's Vite plugin fixes that without touching your imports. When Vite starts, it reads your project's files for class names and swaps the stylesheet you import for one with only the StyleKit classes those files use, and the [Tailwind utilities](./without-a-bundler.md#tailwind-utilities) they name, such as `flex` and `mt-4`. There is no command to run and no output file to name: you add one line to `vite.config.ts`, and the rest of the project stays as it was.
 
 A project that already runs Tailwind CSS v4 does not need the plugin. Its own build trims the [source entrypoint](./tailwind.md) the same way. A project without Vite, with another bundler or none, writes the trimmed stylesheet with the package's [`chs build` command](./without-a-bundler.md#build-only-the-classes-you-use) instead.
 
@@ -59,7 +59,7 @@ So to ship less, import the complete stylesheet rather than `/components`. For t
 
 The import is trimmed wherever Vite resolves it: a JavaScript `import`, a CSS `@import`, a CSS file that another CSS file imports, a Sass `@use` or `@import`, Lightning CSS as Vite's CSS transformer, and Vite's `?inline`, `?url`, and `?raw` queries. A Sass `pkg:` URL, as in `@use "pkg:@codenhub/styles"`, is the exception: Sass resolves it without asking Vite, so the whole stylesheet ships. Write `@use "@codenhub/styles"` instead.
 
-The trimmed stylesheet holds what [`chs build`](./without-a-bundler.md#options) writes: the theme and its tokens, the reset, the base rules every component relies on, the four classes kept whether or not a file names them (`.dark`, `.theme-dark`, `.theme-light`, and `.disabled`), and each StyleKit class your files use. It is always minified. An aesthetic you import is trimmed the same way, to its rules for the classes your files use; the import already says which aesthetics you want, so there is nothing to configure.
+The trimmed stylesheet holds what [`chs build`](./without-a-bundler.md#options) writes: the theme and its tokens, the reset, the base rules every component relies on, the four classes kept whether or not a file names them (`.dark`, `.theme-dark`, `.theme-light`, and `.disabled`), each StyleKit class your files use, and each [Tailwind utility](./without-a-bundler.md#tailwind-utilities) they name, written into the complete stylesheet and never into an aesthetic. It is always minified. An aesthetic you import is trimmed the same way, to its rules for the classes your files use; the import already says which aesthetics you want, so there is nothing to configure.
 
 ## Which files are read
 

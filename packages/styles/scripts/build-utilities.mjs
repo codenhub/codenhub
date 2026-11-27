@@ -3,18 +3,23 @@
  * utilities from in a project that does not run Tailwind
  * (`docs/internal/generator.md`):
  *
+ * - `tailwind`: the release every value was read from.
  * - `variants`: the variants in Tailwind's order, each with the CSS it wraps a
  *   utility in, where `$s` stands for the selector and `$b` for the body.
+ * - `stride`: how many classes are ranked.
  * - `utilities`: each utility of `lib/utilities.mjs`, as `[rank, body]`.
- * - `classes`: the rank of each class of the package's own that `chs build`
- *   may drop, so a utility is merged among them in Tailwind's order.
+ * - `rules`: for each node of the utilities layer of `dist/purge/index.css`,
+ *   the sort key of the class that writes it, or `null` where no utility's
+ *   place relative to it matters, so the generator merges each utility before
+ *   the first keyed node that sorts after it.
  * - `theme`: the theme values the utilities read that `dist/purge/index.css`
  *   does not declare, such as `--container-md`.
  *
  * A rank is the class's position in the order Tailwind writes the utilities
- * layer in when it compiles `/tw`, with no variant. A class under a variant
- * sorts after every class without one, by the variant's position, then by the
- * rank of its class, as Tailwind sorts it.
+ * layer in when it compiles `/tw`, with no variant. A key is the rank, plus,
+ * under a variant, the variant's position in Tailwind's order, counted from
+ * one, times `stride`, so a class under a variant sorts after every class
+ * without one, as Tailwind sorts it.
  *
  * Everything is read from Tailwind compiling `/tw`, at this package's build,
  * so the generator needs no Tailwind where it runs, and no value is typed by
@@ -28,7 +33,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { __unstable__loadDesignSystem, compile, optimize, Polyfills } from "@tailwindcss/node";
 import postcss from "postcss";
 
-import { classesOf, classSelector, parse, splitTop } from "../src/trim/purge.ts";
+import { classesOf, classSelector, parse, serialize, splitTop } from "../src/trim/purge.ts";
 import { TAILWIND_VERSION } from "./lib/compile.mjs";
 import { UTILITIES, VARIANTS } from "./lib/utilities.mjs";
 
@@ -206,18 +211,92 @@ for (const selector of selectorsOf(findUtilities(minified(compiler.build([]))).c
   owner.delete(selector);
 }
 
-const utilitiesLayer = findUtilities(purgeCss);
-const rules = utilitiesLayer.children.map((node) => {
-  if (node.kind === "group" && node.prelude.trim().startsWith("@layer")) {
-    return null;
+/* Every key a utility can take, plain or under a variant, in order, to tell
+   whether any falls between two of the package's rules. */
+const utilityKeys = [...UTILITIES, ...VARIANTS.flatMap((variant) => UTILITIES.map((name) => `${variant}:${name}`))]
+  .map(keyOf)
+  .toSorted((a, b) => a - b);
+const fallsBetween = (low, high) => {
+  const next = utilityKeys.findIndex((key) => key > low);
+
+  return next !== -1 && utilityKeys[next] < high;
+};
+
+/* Where a rule stands among the utilities changes nothing when no utility
+   sets a property it sets, such as the package's own `--_bg` or `transform`.
+   Two properties meet when one is a shorthand of the other or its logical
+   twin, as `padding-inline` meets `p-4`'s `padding` and `inset-inline-start`
+   meets `left-4`'s `left`, so properties are compared by family, which counts
+   some that never meet: that costs a larger table, never a wrong order. A
+   custom property is never a shorthand, so it meets only itself. */
+const SIDES = new Set(["top", "right", "bottom", "left"]);
+const SIZES = /^(?:(?:min|max)-)?(?:width|height|inline-size|block-size)$/;
+const familyOf = (property) => {
+  const name = property.replace(/^-(?:webkit|moz|ms)-/, "");
+
+  if (name.startsWith("--")) {
+    return name;
+  }
+  if (SIDES.has(name) || name.startsWith("inset")) {
+    return "inset";
+  }
+  if (SIZES.test(name)) {
+    return "size";
+  }
+  if (/^(?:row-|column-)?gap$/.test(name)) {
+    return "gap";
+  }
+  if (/^(?:align|justify|place)-/.test(name)) {
+    return "align";
+  }
+  if (name === "line-height" || name === "letter-spacing") {
+    return "font";
   }
 
-  const keys = selectorsOf([node]).map((selector) => owner.get(selector) ?? Infinity);
-  const key = Math.min(...keys);
+  return name.split("-")[0];
+};
+const declarationsOf = (body) =>
+  splitTop(body, ";")
+    .map((declaration) => declaration.slice(0, declaration.indexOf(":")).trim())
+    .filter((property) => property !== "");
+const utilityFamilies = new Set([...bodies.values()].flatMap(declarationsOf).map(familyOf));
+const setsWhatUtilitiesSet = (body) =>
+  declarationsOf(body).some((property) => property === "all" || utilityFamilies.has(familyOf(property)));
 
-  return key === Infinity ? null : key;
+/* The keys of the rules a node holds that a utility's place can matter to. */
+const keysOf = (node) => {
+  if (node.kind === "group") {
+    // A nested layer, such as `utilities.families`, is no utility's: none is written into it.
+    return /^\s*@layer\b/.test(node.prelude) ? [] : node.children.flatMap(keysOf);
+  }
+  if (node.kind !== "block" || !node.isRule || !setsWhatUtilitiesSet(node.body)) {
+    return [];
+  }
+
+  return selectorsOf([node]).flatMap((selector) => (owner.has(selector) ? [owner.get(selector)] : []));
+};
+
+/* The key of each node of the utilities layer, in order: the generator writes
+   a utility before the first node whose key is larger. `null` for a node a
+   utility's place does not matter to, such as a rule no class wrote, the plain
+   rules of `tw/`, or one that sets only the package's own properties. A node
+   a utility sorts inside, a rule Lightning CSS merged from two classes or a
+   `@media` block holding several, would have to be split, which no node needs
+   today, so the build fails on one rather than writing a key that is wrong. */
+const rules = findUtilities(purgeCss).children.map((node) => {
+  const keys = keysOf(node);
+
+  if (keys.length === 0) {
+    return null;
+  }
+  if (fallsBetween(Math.min(...keys), Math.max(...keys))) {
+    throw new Error(
+      `build-utilities: a utility sorts inside this node of dist/purge/index.css's utilities layer, which the generator cannot split:\n${serialize([node]).slice(0, 400)}`,
+    );
+  }
+
+  return Math.min(...keys);
 });
-
 const keyed = rules.filter((key) => key !== null);
 
 if (keyed.some((key, index) => index > 0 && key < keyed[index - 1])) {

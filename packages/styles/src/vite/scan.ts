@@ -17,7 +17,9 @@ export interface ScanOptions {
   skip: readonly string[];
   // The `content` option: files read whatever the walk leaves out.
   content: readonly string[];
-  // The class names the purge may drop, the only words worth keeping.
+  // The class names the purge may drop, which tell a copy of the package's class list.
+  droppable: ReadonlySet<string>;
+  // Those and the utilities the generator writes, the only words worth keeping.
   known: ReadonlySet<string>;
   shipped: ReadonlyMap<number, readonly string[]>;
 }
@@ -171,7 +173,7 @@ export class ProjectScan {
   }
 
   async #classesIn(text: string | undefined): Promise<ReadonlySet<string>> {
-    if (text === undefined || (await isPackageCopy(text, this.#options.known, this.#options.shipped))) {
+    if (text === undefined || (await isPackageCopy(text, this.#options.droppable, this.#options.shipped))) {
       return NONE;
     }
 
