@@ -2,7 +2,7 @@
 title: Sem bundler
 description: Como referenciar as folhas de estilos compiladas a partir de HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor, e o build por linha de comando.
 order: 7
-source: 46db8096cca9f3bb3cd162764ae5fbe6a5be7fe1
+source: aa5be69af6edce7dd7ff1bb17d93f7bcab4bc2a1
 ---
 
 # Sem bundler
@@ -202,7 +202,7 @@ Escreva a saída numa pasta listada em `STATICFILES_DIRS`, aqui `static/`, para 
 - `--no-minify` escreve CSS legível e indentado no lugar. Útil para ler o que o build gerou; em produção, sirva o arquivo minificado.
 - `--help` imprime o uso, com as estéticas que esta versão traz. `--version` imprime a versão do pacote. Nenhum dos dois gera nada, e os dois terminam com status 0.
 
-A saída sempre traz o tema, os design tokens dele como propriedades personalizadas de CSS, o reset, as regras base de que todo componente depende e quatro classes, nomeadas ou não por um arquivo: `.dark`, `.theme-dark` e `.theme-light`, que trocam o tema, e `.disabled`. Por cima vem cada classe do StyleKit que os arquivos lidos pelo build usam. Qualquer outra classe que um script acrescenta no navegador, como `.active` ou `.indeterminate` numa barra de progresso, só é mantida quando um arquivo lido pelo build a nomeia, então passe também os seus scripts com um `--content`. A saída é gerada a partir da folha de estilos completa, não da `/native`, então não inclui os mapeamentos sem classes. Um build cujos templates nomeiam todas as classes escreve a folha de estilos completa, byte por byte.
+A saída sempre traz o tema, os design tokens dele como propriedades personalizadas de CSS, o reset, as regras base de que todo componente depende e quatro classes, nomeadas ou não por um arquivo: `.dark`, `.theme-dark` e `.theme-light`, que trocam o tema, e `.disabled`. Por cima vem cada classe do StyleKit que os arquivos lidos pelo build usam, e cada [utilitário do Tailwind](#utilitários-do-tailwind) que eles nomeiam. Qualquer outra classe que um script acrescenta no navegador, como `.active` ou `.indeterminate` numa barra de progresso, só é mantida quando um arquivo lido pelo build a nomeia, então passe também os seus scripts com um `--content`. A saída é gerada a partir da folha de estilos completa, não da `/native`, então não inclui os mapeamentos sem classes. Um build cujos templates nomeiam todas as classes escreve a folha de estilos completa, byte por byte.
 
 ### Como as classes são encontradas
 
@@ -217,7 +217,7 @@ Um nome de classe que o seu código monta na renderização nunca aparece inteir
 - **Escreva os nomes de classe inteiros.** Associe cada valor a um nome de classe completo num arquivo que o build leia, como `{ "urgent" => "destructive", "normal" => "neutral" }.fetch(@order.priority)` num helper.
 - **Liste-os num arquivo de safelist.** Um arquivo de texto puro com um nome de classe por linha, adicionado com o seu próprio `--content`, como `--content config/stylekit-classes.txt`. Guarde-o perto do código que monta os nomes de classe, para que quem mudar um veja o outro.
 
-Alguns arquivos que correspondem a um glob não são lidos atrás de classes, porque cada um nomeia todas as classes do pacote e manteria a folha de estilos inteira: um arquivo que começa com o comentário `/*! @codenhub/styles` do pacote, com que começa toda folha de estilos que o comando escreve, então dois builds sobre uma mesma pasta nunca leem um ao outro; uma lista de nomes de classe copiada do `dist/purge/classes.json` do pacote; e um arquivo idêntico, byte por byte, a um que a versão instalada traz em `dist/`, como as cópias que o `collectstatic` ou o Propshaft fazem. Uma cópia de outra versão do pacote que não começa com esse comentário, como uma estética ou o `theme.css` que um deploy anterior deixou no `STATIC_ROOT`, é lida, então limite os seus globs aos seus templates e scripts em vez da pasta onde os seus arquivos estáticos são reunidos.
+Alguns arquivos que correspondem a um glob não são lidos atrás de classes, porque cada um nomeia todas as classes do pacote e manteria a folha de estilos inteira: um arquivo que começa com o comentário `/*! @codenhub/styles` do pacote, com que começa toda folha de estilos que o comando escreve, então dois builds sobre uma mesma pasta nunca leem um ao outro; uma lista de nomes de classe copiada do `dist/purge/classes.json` do pacote; uma cópia da tabela de utilitários do Tailwind dele, `dist/utilities.json`, de qualquer versão; e um arquivo idêntico, byte por byte, a um que a versão instalada traz em `dist/`, como as cópias que o `collectstatic` ou o Propshaft fazem. Uma cópia de outra versão do pacote que não começa com esse comentário, como uma estética ou o `theme.css` que um deploy anterior deixou no `STATIC_ROOT`, é lida, então limite os seus globs aos seus templates e scripts em vez da pasta onde os seus arquivos estáticos são reunidos.
 
 Uma pasta em que um glob precisa procurar e que você não tem permissão para listar faz o build falhar, nomeando a pasta, em vez de deixar os arquivos dela de fora.
 
@@ -229,13 +229,35 @@ Uma classe de intenção, apresentação ou modificador pode receber um de dez p
 <button class="btn sm md:lg ghost hover:soft">Save</button>
 ```
 
-Isso cobre intenções como `primary` e `destructive`, as classes de preenchimento e borda como `soft` e `edged`, e modificadores como `sm`, `lg`, `raised`, `pill`, `tight` e `ruled`. `disabled` não recebe nenhum: é um estado em que o elemento está, então escreva-o como atributo ou como classe. Classes de componente como `btn` e `card`, e os helpers de texto e de layout, não recebem prefixo.
+Isso cobre intenções como `primary` e `destructive`, as classes de preenchimento e borda como `soft` e `edged`, e modificadores como `sm`, `lg`, `raised`, `pill`, `tight` e `ruled`. `disabled` não recebe nenhum: é um estado em que o elemento está, então escreva-o como atributo ou como classe. Classes de componente como `btn` e `card`, e os helpers de texto e de layout, não recebem prefixo. Os [utilitários do Tailwind](#utilitários-do-tailwind) recebem os dez, como em `md:flex`.
 
 Cada prefixo é uma cópia fixa dessas classes, embutida no pacote, então a lista traz os comuns, e não todos os do Tailwind. O comando não empilha prefixos, como em `md:hover:primary`, e não oferece outros, como `print:` ou `group-hover:`. Uma classe assim não recebe estilo, e o elemento aparece sem ela.
 
+### Utilitários do Tailwind
+
+O build também escreve os utilitários de layout, espaçamento, tamanho e tipografia do Tailwind CSS que os seus arquivos nomeiam, com os nomes e os valores do Tailwind, então a mesma marcação fica igual num projeto que roda o Tailwind. `mt-4` é `margin-top: calc(var(--spacing) * 4)`, 1rem, e segue o token `--spacing` como os componentes:
+
+```html
+<div class="flex flex-col gap-4 md:flex-row">
+  <div class="card p-6 max-w-md mx-auto">…</div>
+</div>
+```
+
+Eles são uma lista fixa, não o Tailwind inteiro:
+
+- **Display e layout:** `block`, `inline-block`, `inline`, `flex`, `inline-flex`, `grid`, `hidden`, `flex-row`, `flex-col`, `flex-wrap`, `flex-1`, `grow`, `shrink-0`, de `grid-cols-1` a `grid-cols-12` e de `col-span-1` a `col-span-12`.
+- **Alinhamento:** `items-*`, `justify-*`, `justify-items-*`, `justify-self-*`, `self-*`, `content-*` e `place-*`, com as palavras-chave do Tailwind, formas `-safe` incluídas.
+- **Espaçamento e tamanho:** padding (`p-*`, `px-*`, `pt-*` e os outros lados), margin (`m-*`, `mx-*`, `mt-*` e os outros lados), `gap-*`, `gap-x-*`, `gap-y-*`, os deslocamentos `inset-*`, `top-*`, `right-*`, `bottom-*` e `left-*`, e `w-*`, `h-*`, `min-w-*`, `min-h-*`, `max-w-*` e `max-h-*`. Cada um recebe os passos de 0 a 12, depois 14, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80 e 96, e `px`. Margin também recebe `auto`, como em `mx-auto`, `w-*` e `h-*` também recebem `full`, `auto` e `screen`, como em `w-full`, e `min-h-*` recebe `screen`.
+- **Posição e overflow:** `static`, `relative`, `absolute`, `fixed`, `sticky`, e `overflow-*`, `overflow-x-*` e `overflow-y-*`.
+- **Tipografia:** `text-left`, `text-center`, `text-right`, `text-justify`, os tamanhos de `text-xs` a `text-9xl`, `font-sans`, `font-serif`, `font-mono`, os pesos de `font-thin` a `font-black`, `leading-*` e `tracking-*` pelos nomes do Tailwind, como `leading-tight`, de `max-w-3xs` a `max-w-7xl`, `underline` e `no-underline`.
+
+Um utilitário que lê um valor do tema que o pacote não declara, como `--container-md` para `max-w-md`, traz esse valor, e só os valores que os seus utilitários leem são escritos. Os utilitários ficam na camada `utilities` onde o Tailwind os ordena entre as regras do próprio pacote, então `class="btn mt-4"` se resolve como num projeto que compila o [entrypoint de código-fonte](./tailwind.md).
+
+O resto não recebe estilo, e o elemento aparece sem ele: os utilitários de cor e de borda, como `text-red-500` e `border-2`, já que a cor é das [classes de intenção e de apresentação](../concepts.md#intenção-qual-cor); um passo fora da lista, como `mt-13`; um valor arbitrário, como `mt-[13px]`; um decimal ou uma fração, como `px-1.5` ou `w-1/2`; e prefixos empilhados, como `md:hover:flex`.
+
 ### O que ele não faz
 
-- **Não tem utilitários do Tailwind.** `flex`, `mt-4`, `text-red-500` e o resto do Tailwind não são classes do StyleKit, então o build os deixa de fora. Para layout, os [helpers de layout](../usage/content-and-layout.md) do próprio StyleKit entram no build como qualquer outra classe. Um projeto que quer os utilitários do Tailwind, as outras variantes dele ou prefixos empilhados roda o próprio Tailwind e importa o [entrypoint de código-fonte](./tailwind.md), que dá os três.
+- **Não tem o Tailwind inteiro.** Só os [utilitários acima](#utilitários-do-tailwind) são escritos. Para layout, os [helpers de layout](../usage/content-and-layout.md) do próprio StyleKit entram no build como qualquer outra classe. Um projeto que quer o resto dos utilitários do Tailwind, as outras variantes dele ou prefixos empilhados roda o próprio Tailwind e importa o [entrypoint de código-fonte](./tailwind.md), que dá os três.
 - **Não tem modo watch.** Ele gera uma vez e termina. Rode de novo depois de mudar um template, a partir de um script ou de um observador de arquivos que o seu framework ou editor já tenha. Uma classe que a folha de estilos ainda não tem deixa o elemento sem estilo até o próximo build.
 - **Não tem arquivo de configuração nem CSS próprio.** Você não consegue acrescentar os seus próprios valores de `@theme`, definições de `@utility` nem plugins. Para mudar o visual, sobrescreva as propriedades personalizadas numa folha de estilos sua carregada depois desta, como [Personalização](../usage/customizing.md) descreve.
 - **Não tem outros comandos.** `build` é o único; `--help` e `--version` são as únicas flags que funcionam sem ele.

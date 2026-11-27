@@ -31,8 +31,10 @@ export function* findClasses(content: string, known: ReadonlySet<string>): Gener
    builds over one folder read each other. A file that starts with the
    package's head is one of them; so is a JSON list of class names holding at
    least half of this version's, as a copy of `purge/classes.json` from this or
-   a nearby version does and a safelist does not; and so is a file the same as
-   one this version ships, such as an aesthetic, which carries no head. */
+   a nearby version does and a safelist does not; so is the generator's table,
+   `utilities.json`, from any version, which names every utility; and so is a
+   file the same as one this version ships, such as an aesthetic, which
+   carries no head. */
 export async function isPackageCopy(
   content: string,
   droppable: ReadonlySet<string>,
@@ -44,6 +46,9 @@ export async function isPackageCopy(
   if (/^\s*\[/.test(content) && isClassList(content, droppable)) {
     return true;
   }
+  if (/^\s*\{\s*"tailwind"\s*:/.test(content) && isUtilityTable(content)) {
+    return true;
+  }
 
   for (const file of shipped.get(Buffer.byteLength(content)) ?? []) {
     // oxlint-disable-next-line no-await-in-loop -- rarely more than one file of a size
@@ -53,6 +58,23 @@ export async function isPackageCopy(
   }
 
   return false;
+}
+
+// The keys `scripts/build-utilities.mjs` writes.
+function isUtilityTable(content: string): boolean {
+  let table: unknown;
+
+  try {
+    table = JSON.parse(content);
+  } catch {
+    return false;
+  }
+
+  return (
+    typeof table === "object" &&
+    table !== null &&
+    ["variants", "stride", "utilities", "rules"].every((key) => key in table)
+  );
 }
 
 function isClassList(content: string, droppable: ReadonlySet<string>): boolean {

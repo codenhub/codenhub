@@ -137,7 +137,11 @@ describe("dist/utilities.json", () => {
     expect(keyed).toEqual(keyed.toSorted((a, b) => a - b));
     // A nested layer, such as `utilities.families`, is no class's: no utility is written into it.
     expect(
-      children.flatMap((node, index) => (node.kind === "group" && node.prelude.startsWith("@layer") ? [index] : [])),
-    ).toEqual(table.rules.flatMap((key, index) => (key === null && children[index]!.kind === "group" ? [index] : [])));
+      children.flatMap((node, index) =>
+        node.kind === "group" && node.prelude.startsWith("@layer") && table.rules[index] !== null ? [index] : [],
+      ),
+    ).toEqual([]);
+    // A rule that sets nothing a utility sets carries none, but some rule sets what one does.
+    expect(keyed.length).toBeGreaterThan(0);
   });
 });

@@ -2,12 +2,12 @@
 title: Vite
 description: Entregar só as classes que as suas páginas usam a partir de um projeto Vite que não usa Tailwind, com o plugin de Vite do pacote.
 order: 6
-source: 0f469456ec2da35eeaacd597532087ca4e99a23e
+source: d4fcfa73b8c2079da549ef95cdb50bb9849c0594
 ---
 
 # Vite
 
-A folha de estilos compilada traz todas as classes do pacote, então uma página de configurações que usa alguns botões, um card e um formulário também leva as tabelas, os tooltips e os alertas, caso ela mude de ideia. Num projeto Vite que não usa Tailwind CSS, o plugin de Vite do pacote resolve isso sem mexer nos seus imports. Quando o Vite inicia, ele lê os arquivos do seu projeto em busca de nomes de classe e troca a folha de estilos que você importa por uma com só as classes do StyleKit que esses arquivos usam. Não há comando para rodar nem arquivo de saída para nomear: você adiciona uma linha ao `vite.config.ts` e o resto do projeto fica como estava.
+A folha de estilos compilada traz todas as classes do pacote, então uma página de configurações que usa alguns botões, um card e um formulário também leva as tabelas, os tooltips e os alertas, caso ela mude de ideia. Num projeto Vite que não usa Tailwind CSS, o plugin de Vite do pacote resolve isso sem mexer nos seus imports. Quando o Vite inicia, ele lê os arquivos do seu projeto em busca de nomes de classe e troca a folha de estilos que você importa por uma com só as classes do StyleKit que esses arquivos usam, e os [utilitários do Tailwind](./without-a-bundler.md#utilitários-do-tailwind) que eles nomeiam, como `flex` e `mt-4`. Não há comando para rodar nem arquivo de saída para nomear: você adiciona uma linha ao `vite.config.ts` e o resto do projeto fica como estava.
 
 Um projeto que já usa Tailwind CSS v4 não precisa do plugin. O próprio build dele reduz o [entrypoint de código-fonte](./tailwind.md) do mesmo jeito. Um projeto sem Vite, com outro bundler ou sem nenhum, escreve a folha de estilos reduzida com o [comando `chs build`](./without-a-bundler.md#gere-só-as-classes-que-você-usa) do pacote.
 
@@ -60,7 +60,7 @@ Então, para entregar menos, importe a folha de estilos completa em vez da `/com
 
 O import é reduzido onde quer que o Vite o resolva: um `import` de JavaScript, um `@import` de CSS, um arquivo CSS que outro arquivo CSS importa, um `@use` ou um `@import` de Sass, o Lightning CSS como transformador de CSS do Vite, e as consultas `?inline`, `?url` e `?raw` do Vite. Uma URL `pkg:` do Sass, como em `@use "pkg:@codenhub/styles"`, é a exceção: o Sass a resolve sem perguntar ao Vite, então a folha de estilos vai inteira. Escreva `@use "@codenhub/styles"` no lugar.
 
-A folha de estilos reduzida traz o que o [`chs build`](./without-a-bundler.md#opções) escreve: o tema e os tokens dele, o reset, as regras base de que todo componente depende, as quatro classes mantidas quer um arquivo as nomeie ou não (`.dark`, `.theme-dark`, `.theme-light` e `.disabled`), e cada classe do StyleKit que os seus arquivos usam. Ela sempre vem minificada. Uma estética que você importa é reduzida do mesmo jeito, às regras dela para as classes que os seus arquivos usam; o import já diz quais estéticas você quer, então não há nada para configurar.
+A folha de estilos reduzida traz o que o [`chs build`](./without-a-bundler.md#opções) escreve: o tema e os tokens dele, o reset, as regras base de que todo componente depende, as quatro classes mantidas quer um arquivo as nomeie ou não (`.dark`, `.theme-dark`, `.theme-light` e `.disabled`), cada classe do StyleKit que os seus arquivos usam, e cada [utilitário do Tailwind](./without-a-bundler.md#utilitários-do-tailwind) que eles nomeiam, escrito na folha de estilos completa e nunca numa estética. Ela sempre vem minificada. Uma estética que você importa é reduzida do mesmo jeito, às regras dela para as classes que os seus arquivos usam; o import já diz quais estéticas você quer, então não há nada para configurar.
 
 ## Quais arquivos são lidos
 

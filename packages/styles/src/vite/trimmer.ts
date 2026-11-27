@@ -1,4 +1,14 @@
-import { type Node, parse, purge, readPackageFile, serialize, usedClasses } from "../trim";
+import {
+  generate,
+  type Node,
+  parse,
+  purge,
+  PURGE_SOURCE,
+  readPackageFile,
+  serialize,
+  usedClasses,
+  type Utilities,
+} from "../trim";
 import { writeIfChanged } from "./output";
 import type { FileEvent, ProjectScan } from "./scan";
 
@@ -15,6 +25,8 @@ interface TrimmerOptions {
   scan: ProjectScan;
   // The class names the purge may drop.
   droppable: ReadonlySet<string>;
+  // The utilities written into the package's stylesheet.
+  utilities: Utilities;
 }
 
 /* The trimmed files of one configuration, written again as the files the
@@ -24,7 +36,8 @@ interface TrimmerOptions {
 export class Trimmer {
   readonly #scan: ProjectScan;
   readonly #droppable: ReadonlySet<string>;
-  readonly #sources: readonly { file: string; tree: readonly Node[] }[];
+  readonly #utilities: Utilities;
+  readonly #sources: readonly { file: string; tree: readonly Node[]; isPackage: boolean }[];
   #queue: Promise<unknown> = Promise.resolve();
   // A write that failed is tried again on the next change, whether or not that change names a new class.
   #isStale = true;
@@ -34,7 +47,12 @@ export class Trimmer {
   private constructor(options: TrimmerOptions, trees: readonly (readonly Node[])[]) {
     this.#scan = options.scan;
     this.#droppable = options.droppable;
-    this.#sources = options.imports.map(({ file }, index) => ({ file, tree: trees[index] }));
+    this.#utilities = options.utilities;
+    this.#sources = options.imports.map(({ file, source }, index) => ({
+      file,
+      tree: trees[index],
+      isPackage: source === PURGE_SOURCE,
+    }));
   }
 
   // Reads the project and writes every trimmed file.
@@ -87,11 +105,14 @@ export class Trimmer {
   }
 
   async #write(): Promise<string[]> {
-    const used = usedClasses(this.#scan.classes(), this.#droppable);
+    const found = this.#scan.classes();
+    const used = usedClasses(found, this.#droppable);
     // Every write settles before the next change starts one, even when another fails.
     const results = await Promise.allSettled(
-      this.#sources.map(async ({ file, tree }) => {
-        if (await writeIfChanged(file, serialize(purge(tree, used)))) {
+      this.#sources.map(async ({ file, tree, isPackage }) => {
+        const source = isPackage ? generate(tree, found, this.#utilities) : tree;
+
+        if (await writeIfChanged(file, serialize(purge(source, used)))) {
           this.#written.add(file);
         }
       }),

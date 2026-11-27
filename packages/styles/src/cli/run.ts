@@ -9,8 +9,10 @@ import {
   createTemporary,
   findClasses,
   format,
+  generate,
   HEAD_BYTES,
   isPackageCopy,
+  knownClasses,
   MIN_NODE_MAJOR,
   parse,
   purge,
@@ -20,6 +22,7 @@ import {
   readManifest,
   readPackageFile,
   readShippedSizes,
+  readUtilities,
   replaceFile,
   resolveExport,
   serialize,
@@ -215,6 +218,8 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   const contents = readContent(options.contentGlobs, io.cwd, resolved, options.output);
 
   const droppable = await readDroppable();
+  const utilities = await readUtilities();
+  const known = knownClasses(droppable, utilities);
   const shipped = await readShippedSizes();
   const found = new Set<string>();
 
@@ -224,7 +229,7 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
     if (await isPackageCopy(content, droppable, shipped)) {
       continue;
     }
-    for (const name of findClasses(content, droppable)) {
+    for (const name of findClasses(content, known)) {
       found.add(name);
     }
   }
@@ -234,7 +239,14 @@ async function build(options: BuildOptions, io: CliIo): Promise<string> {
   const stylesheets = await Promise.all(
     [PURGE_SOURCE, ...options.aesthetics.map((name) => resolveExport(`./aesthetics/${name}`))].map(readPackageFile),
   );
-  const css = stylesheets.map((stylesheet) => write(purge(parse(stylesheet), used))).join("");
+  // The utilities are written into the package's stylesheet, the first, never into an aesthetic.
+  const css = stylesheets
+    .map((stylesheet, index) => {
+      const tree = parse(stylesheet);
+
+      return write(purge(index === 0 ? generate(tree, found, utilities) : tree, used));
+    })
+    .join("");
 
   /* Written beside the output and renamed over it, so a write that fails
      partway, on a full disk say, leaves the previous stylesheet whole rather

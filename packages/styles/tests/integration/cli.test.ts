@@ -139,6 +139,35 @@ describe("build", () => {
     expect(css).not.toContain(String.raw`.focus\:primary`);
   });
 
+  it("writes the Tailwind utilities the templates use, with the theme values they read", async () => {
+    await writeFile(
+      path.join(project, "app", "views", "list.html.erb"),
+      '<div class="mt-4 md:flex hover:underline max-w-md mt-13">Save</div>\n',
+    );
+
+    await build("build", "-c", "app/views/**/*.erb", "-o", "app.css");
+
+    const css = await readOutput();
+
+    expect(css).toContain(".mt-4{margin-top:calc(var(--spacing) * 4)}");
+    expect(css).toContain(String.raw`@media (min-width:48rem){.md\:flex{display:flex}}`);
+    expect(css).toContain(String.raw`@media (hover:hover){.hover\:underline:hover{text-decoration-line:underline}}`);
+    expect(css).toContain(".max-w-md{max-width:var(--container-md)}");
+    expect(css).toContain("--container-md:28rem");
+    // Off the list: Tailwind compiles any step, the generator only those it names.
+    expect(css).not.toContain(".mt-13");
+    expect(css).not.toContain("--container-lg");
+  });
+
+  it("writes no utility and no theme value the templates do not use", async () => {
+    await build("build", "-c", "app/views/**/*.erb", "-o", "app.css");
+
+    const css = await readOutput();
+
+    expect(css).not.toMatch(ruleFor("mt-4"));
+    expect(css).not.toContain("--container-md");
+  });
+
   it("finds a class written as a framework's class directive", async () => {
     await writeFile(path.join(project, "app", "views", "list.html.erb"), "<div class:soft={isQuiet}></div>\n");
 
@@ -279,6 +308,15 @@ describe("build", () => {
     await writeFile(
       path.join(project, "staticfiles", "classes.old.json"),
       JSON.stringify(classes.slice(1), undefined, 2),
+    );
+    // And an older version's utility table, which names every utility.
+    const table = JSON.parse(await readFile(path.join(packageRoot, "dist", "utilities.json"), "utf8")) as {
+      tailwind: string;
+    };
+
+    await writeFile(
+      path.join(project, "staticfiles", "utilities.old.json"),
+      JSON.stringify({ ...table, tailwind: "4.0.0" }, undefined, 2),
     );
 
     expect(
