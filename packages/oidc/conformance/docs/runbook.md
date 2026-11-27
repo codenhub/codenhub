@@ -1,12 +1,12 @@
 ---
 status: DRAFT
 last_updated: 2026-11-26
-scope: How to deploy packages/oidc/conformance, run the OpenID conformance suite's Basic OP and Config OP plans against it, read the results, and record them.
+scope: How to deploy packages/oidc/conformance, run the OpenID conformance suite's Basic OP and Config OP plans against it and its Basic RP and Config RP plans against the client, read the results, and record them.
 ---
 
 # Conformance host runbook
 
-`packages/oidc/conformance` is a Cloudflare Worker that serves `@codenhub/oidc` for the [OpenID Foundation's conformance suite](https://www.certification.openid.net). The plans need an OpenID Provider reachable from the suite's runner, and `packages/oidc/docs/internal/roadmap.md` ("The OpenID conformance suite") and `packages/oidc/docs/internal/scope.md` decisions 30, 39 and 52 say why the run is the 0.1 criterion. Nothing here is deployed by the repository: the maintainer runs the steps below, because a deploy is outward-facing.
+`packages/oidc/conformance` is a Cloudflare Worker that serves `@codenhub/oidc` for the [OpenID Foundation's conformance suite](https://www.certification.openid.net). The plans need an OpenID Provider reachable from the suite's runner, and `packages/oidc/docs/internal/roadmap.md` ("The OpenID conformance suite") and `packages/oidc/docs/internal/scope.md` decisions 30, 39 and 52 say why the run is the 0.1 criterion. Nothing here is deployed by the repository: the maintainer runs the steps below, because a deploy is outward-facing. The client's RP plans need no deploy; [The client's RP plans](#the-clients-rp-plans) runs them from any machine.
 
 ## What the host is
 
@@ -153,6 +153,43 @@ What the first run, on 2026-11-26, showed. A result other than these is a findin
 
 OpenID Connect Core makes `nonce` optional in the authorization code flow, and the module checks that a request with neither `nonce` nor PKCE still works. The provider refuses it on purpose, for a client that has turned PKCE off. Without PKCE, the `nonce` is the only thing that ties the code response to the request that started it, so a request with neither has no defense against authorization code injection (OAuth 2.1 §7.5.1.1, RFC 9700 §2.1.1). The provider lets an operator waive PKCE for a client that checks the `nonce`, which the Basic OP plan needs, and no setting waives both, because a third setting would let an operator register a client with no defense at all in order to pass one module. Every other request in the plan, including the ones that send PKCE, passes. State this in the submission together with the module's log, and ask the Foundation (certification@oidf.org) how it treats a stricter provider before relying on the argument.
 
+## The client's RP plans
+
+In the RP plans the suite plays the provider and `@codenhub/oidc`'s client signs in against it. The suite never calls the relying party: its authorization endpoint answers at once with a redirect to the registered URI, so the user's browser is one request that stops at that redirect. [`src/rp-run.ts`](../src/rp-run.ts) is the whole relying party and browser, and runs on any machine with Node.js 26; nothing is deployed. [`src/rp.ts`](../src/rp.ts) holds the sign-in, which `tests/rp.test.ts` runs against this host's provider.
+
+For each module the script starts it through the suite's API, reads the issuer the module exposes, discovers it, and signs in with `client_secret_basic`: authorization, code exchange and ID token validation, then userinfo. It keeps one client for the whole module, so the key set the client cached carries from one sign-in to the next, as a deployed app's does. While the module still waits, it signs in again, up to three times, 35 seconds apart: `@codenhub/jwt`'s remote key set holds back a refetch for an unknown `kid` for 30 seconds after the last fetch, and `oidcc-client-test-signing-key-rotation` rotates the provider's key between two sign-ins. Each module prints one JSON line with the suite's result and, for each sign-in, the step it reached and the issues the client reported, which carry no values.
+
+1. Build the client, which the script imports from `packages/oidc/dist`: `pnpm build oidc`.
+2. Create a token on the suite's Tokens page and save it to a file outside the repository. Generate the client secret the plans register with the generator in [Deploy](#deploy), and save it to another file. The script reads both from the files `SUITE_TOKEN_FILE` and `RP_SECRET_FILE` name, and prints neither.
+3. From `packages/oidc/conformance`, create each plan, then run every module of it, one at a time:
+
+```sh
+node src/rp-run.ts plan basic    # prints {"plan":"<planId>","modules":[...]}
+node src/rp-run.ts run <planId>
+node src/rp-run.ts plan config
+node src/rp-run.ts run <planId>
+```
+
+The plans are `oidcc-client-basic-certification-test-plan` with `client_registration=static_client` and `request_type=plain_http_request`, and `oidcc-client-config-certification-test-plan` with those and `client_auth_type=client_secret_basic` and `response_mode=default`. Both register the client `codenhub-rp` with the redirect URI `https://rp.codenhub-oidc.example/callback`, which nothing serves, under the alias `codenhub-oidc-rp` (`RP_ALIAS` overrides it). `run <planId> <module>,<module>` runs only the modules named.
+
+### What to expect from the RP plans
+
+What the first run, on 2026-11-27, showed. In a module that sends a token the client must refuse, the suite passes it when the client calls nothing after the token endpoint; the client's issue in the script's output is what shows it refused for the right reason.
+
+| Module                                                           | Result  | The client's outcome                                                                                                                                                                           |
+| ---------------------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `oidcc-client-test-invalid-iss`                                  | PASSED  | `invalid_id_token:wrong_issuer`                                                                                                                                                                |
+| `oidcc-client-test-invalid-aud`                                  | PASSED  | `invalid_id_token:wrong_audience`                                                                                                                                                              |
+| `oidcc-client-test-missing-sub`, `oidcc-client-test-missing-iat` | PASSED  | `invalid_id_token:missing_claim`                                                                                                                                                               |
+| `oidcc-client-test-invalid-sig-rs256`                            | PASSED  | `invalid_id_token:bad_signature`                                                                                                                                                               |
+| `oidcc-client-test-nonce-invalid`                                | PASSED  | `nonce_mismatch`                                                                                                                                                                               |
+| `oidcc-client-test-userinfo-invalid-sub`                         | PASSED  | `subject_mismatch` at userinfo                                                                                                                                                                 |
+| `oidcc-client-test-kid-absent-multiple-jwks`                     | PASSED  | `invalid_id_token:ambiguous_key`. The ID token names no `kid` and the key set has several keys, which OpenID Connect Core §10.1 forbids; the suite accepts a client that refuses it.           |
+| `oidcc-client-test-discovery-issuer-mismatch`                    | PASSED  | `issuer_mismatch` at discovery                                                                                                                                                                 |
+| `oidcc-client-test-idtoken-sig-none`, in both plans              | SKIPPED | `invalid_id_token:malformed`: the client refuses an unsigned (`alg: none`) ID token, and the suite skips because a client need not accept one.                                                 |
+| `oidcc-client-test-signing-key-rotation`                         | PASSED  | Two sign-ins, the second after the provider rotated its key: the client fetched the new key set for the unknown `kid`. Sign-ins closer together than 30 seconds get `unknown_kid` (see above). |
+| Every other module: 5 of Basic RP and 3 of Config RP             | PASSED  | A complete sign-in, or the step at which the module ended.                                                                                                                                     |
+
 ## Recording the results
 
 For each plan, after the last module ends:
@@ -160,4 +197,4 @@ For each plan, after the last module ends:
 1. Note the plan's URL, the date, the `@codenhub/oidc` version and commit the host was built from, and each module's result. The suite's "Publish" and log-export buttons make the evidence a link and a file.
 2. Edit `packages/oidc/docs/internal/roadmap.md`, "The OpenID conformance suite": state which plans ran and which modules did not pass, each with its cause and whether it is a provider fix or an argued exception. Keep the PKCE paragraph, and replace the Notes bullet about `oidcc-userinfo-post-body` with what the run showed.
 3. A module that fails for a reason the host cannot fix is a provider defect: file it as `CONTRIBUTING.md` describes, and do not work around it in the host. A decision it changes goes in `scope.md`, as a new decision that names the one it reverses.
-4. When both plans pass or fail only the modules argued above, the 0.1 criterion of decision 39 is met, and the roadmap item can leave the list of work to do.
+4. When the provider's plans pass or fail only the modules argued above, and the RP plans pass or skip only `alg: none`, the 0.1 criterion of decision 39 is met, and the roadmap item can leave the list of work to do.
