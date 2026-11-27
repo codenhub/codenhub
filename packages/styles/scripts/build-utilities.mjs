@@ -179,8 +179,6 @@ design.candidatesToCss(droppable).forEach((css, index) => {
   }
 });
 
-/* A rule Tailwind writes with no class named is no class's, even where a
-   class writes the same selector too, as `input-group` does. */
 /* `@import "tailwindcss"` in `tw/` resolves from this package, which the
    Tailwind workflow moves to the consumer's release; the theme values are read
    from the release checked above instead, the one `src/base/` is copied from. */
@@ -202,6 +200,8 @@ const compiler = await compile(source, {
 const findUtilities = (css) =>
   parse(css).find((node) => node.kind === "group" && node.prelude.trim() === "@layer utilities");
 
+/* A rule Tailwind writes with no class named is no class's, even where a
+   class writes the same selector too, as `input-group` does. */
 for (const selector of selectorsOf(findUtilities(minified(compiler.build([]))).children)) {
   owner.delete(selector);
 }
