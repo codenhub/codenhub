@@ -2,7 +2,7 @@
 title: Sem bundler
 description: Como referenciar as folhas de estilos compiladas a partir de HTML puro, Rails, Laravel, Django ou qualquer aplicação renderizada no servidor, e o build por linha de comando.
 order: 7
-source: 57cbdadb85cdad412ec3569f5bd46b9b5c8789f8
+source: aa5be69af6edce7dd7ff1bb17d93f7bcab4bc2a1
 ---
 
 # Sem bundler
@@ -247,7 +247,7 @@ Eles são uma lista fixa, não o Tailwind inteiro:
 
 - **Display e layout:** `block`, `inline-block`, `inline`, `flex`, `inline-flex`, `grid`, `hidden`, `flex-row`, `flex-col`, `flex-wrap`, `flex-1`, `grow`, `shrink-0`, de `grid-cols-1` a `grid-cols-12` e de `col-span-1` a `col-span-12`.
 - **Alinhamento:** `items-*`, `justify-*`, `justify-items-*`, `justify-self-*`, `self-*`, `content-*` e `place-*`, com as palavras-chave do Tailwind, formas `-safe` incluídas.
-- **Espaçamento e tamanho:** padding (`p-*`, `px-*`, `pt-*` e os outros lados), margin (`m-*`, `mx-*`, `mt-*` e os outros lados), `gap-*`, `gap-x-*`, `gap-y-*`, os deslocamentos `inset-*`, `top-*`, `right-*`, `bottom-*` e `left-*`, e `w-*`, `h-*`, `min-w-*`, `min-h-*`, `max-w-*` e `max-h-*`. Cada um recebe os passos de 0 a 12, depois 14, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80 e 96, e `px`. Margin também recebe `auto`, como em `mx-auto`, e os tamanhos recebem `full`, `auto` e `screen`, como em `w-full`, com `min-h-screen`.
+- **Espaçamento e tamanho:** padding (`p-*`, `px-*`, `pt-*` e os outros lados), margin (`m-*`, `mx-*`, `mt-*` e os outros lados), `gap-*`, `gap-x-*`, `gap-y-*`, os deslocamentos `inset-*`, `top-*`, `right-*`, `bottom-*` e `left-*`, e `w-*`, `h-*`, `min-w-*`, `min-h-*`, `max-w-*` e `max-h-*`. Cada um recebe os passos de 0 a 12, depois 14, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60, 64, 72, 80 e 96, e `px`. Margin também recebe `auto`, como em `mx-auto`, `w-*` e `h-*` também recebem `full`, `auto` e `screen`, como em `w-full`, e `min-h-*` recebe `screen`.
 - **Posição e overflow:** `static`, `relative`, `absolute`, `fixed`, `sticky`, e `overflow-*`, `overflow-x-*` e `overflow-y-*`.
 - **Tipografia:** `text-left`, `text-center`, `text-right`, `text-justify`, os tamanhos de `text-xs` a `text-9xl`, `font-sans`, `font-serif`, `font-mono`, os pesos de `font-thin` a `font-black`, `leading-*` e `tracking-*` pelos nomes do Tailwind, como `leading-tight`, de `max-w-3xs` a `max-w-7xl`, `underline` e `no-underline`.
 
