@@ -236,6 +236,34 @@ describe("the login page", () => {
   });
 });
 
+describe("an expired sign-in", () => {
+  it("is refused at the login form, and starts no session", async () => {
+    let time = Date.parse("2026-11-13T10:00:00Z");
+    const timed = await createHost({
+      issuer: ISSUER,
+      suiteOrigin: SUITE_ORIGIN,
+      alias: ALIAS,
+      secrets: SECRETS,
+      now: () => time,
+    });
+    const sendTimed = (request: Request): Promise<Response> => timed.fetch(request);
+    const location = new URL((await get(sendTimed, authorizationUrl())).headers.get("location") ?? "");
+    time += 60 * 60 * 1000;
+
+    const posted = await sendTimed(
+      new Request(`${ISSUER}/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({ interaction: location.searchParams.get("interaction") ?? "" }),
+        redirect: "manual",
+      }),
+    );
+
+    expect(posted.status).toBe(400);
+    expect(posted.headers.get("set-cookie")).toBeNull();
+  });
+});
+
 describe("client registration", () => {
   it("renders an error page, not a redirect, for an unregistered redirect URI", async () => {
     const response = await get(send, authorizationUrl({ redirect_uri: `${CALLBACK}/other` }));

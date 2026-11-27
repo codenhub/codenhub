@@ -42,6 +42,8 @@ interface Session {
 
 const COOKIE = "conformance_session";
 
+type AuthorizationOutcome = Parameters<Provider["completeAuthorization"]>[1];
+
 /**
  * Starts the host, and fails loudly when a promise it makes does not hold: the control client must refuse an
  * authorization request without PKCE, which {@link selfCheck} proves before the first request is answered.
@@ -93,7 +95,7 @@ export async function createHost(config: HostConfig): Promise<Host> {
       return finish(provider, interaction, { error: "login_required" });
     }
     if (!needsLogin) {
-      return signedIn(interaction, existing);
+      return finish(provider, interaction, signedIn(interaction, existing));
     }
     // The suite's prompt=login and max_age modules ask for a screenshot of the second login, so a login is a page
     // the scripted browser sees and submits, at its own URL so that its browser task cannot match an error page.
@@ -121,20 +123,24 @@ export async function createHost(config: HostConfig): Promise<Host> {
     pending.delete(interaction.id);
     // Signing in is recording that this browser is the test user, now: there is no password to check.
     const session = { sid: crypto.randomUUID(), authTime: Math.floor(now() / 1000) };
+    const completed = await provider.completeAuthorization(interaction.id, signedIn(interaction, session));
+    if (!completed.ok) {
+      // The interaction expired or was spent: no authorization was granted, so no session starts either.
+      return errorPage("The authorization request could not be completed.", completed.error.issues);
+    }
     const token = crypto.randomUUID();
     sessions.set(token, session);
-    const answered = await signedIn(interaction, session);
-    return withCookie(answered, `${COOKIE}=${token}; Path=/; Secure; HttpOnly; SameSite=None`);
+    return withCookie(completed.value, `${COOKIE}=${token}; Path=/; Secure; HttpOnly; SameSite=None`);
   };
 
-  const signedIn = (interaction: AuthorizationInteraction, session: Session): Promise<Response> =>
-    finish(provider, interaction, {
-      subject: TEST_SUBJECT,
-      authTime: session.authTime,
-      scopes: interaction.scopes,
-      amr: ["pwd"],
-      sessionId: session.sid,
-    });
+  /** What the provider is told when the test user is signed in with `session`. */
+  const signedIn = (interaction: AuthorizationInteraction, session: Session): AuthorizationOutcome => ({
+    subject: TEST_SUBJECT,
+    authTime: session.authTime,
+    scopes: interaction.scopes,
+    amr: ["pwd"],
+    sessionId: session.sid,
+  });
 
   const logout = async (request: Request): Promise<Response> => {
     const ended = await provider.endSession(request);
@@ -207,7 +213,7 @@ async function selfCheck(provider: Provider, config: HostConfig): Promise<void> 
 async function finish(
   provider: Provider,
   interaction: AuthorizationInteraction,
-  outcome: Parameters<Provider["completeAuthorization"]>[1],
+  outcome: AuthorizationOutcome,
 ): Promise<Response> {
   const completed = await provider.completeAuthorization(interaction.id, outcome);
   return completed.ok
