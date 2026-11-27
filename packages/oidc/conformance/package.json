@@ -2,7 +2,7 @@
   "name": "@codenhub/oidc-conformance",
   "version": "0.0.1",
   "private": true,
-  "description": "Cloudflare Worker that hosts @codenhub/oidc for the OpenID Foundation conformance suite.",
+  "description": "Cloudflare Worker that hosts @codenhub/oidc for the OpenID Foundation conformance suite, and a script that runs its client against the suite.",
   "type": "module",
   "scripts": {
     "preview": "wrangler dev",
