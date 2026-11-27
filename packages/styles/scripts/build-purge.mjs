@@ -20,16 +20,10 @@ import { compile, optimize, Polyfills } from "@tailwindcss/node";
 
 import { classesOf, parse, serialize } from "../src/trim/purge.ts";
 import { withHead } from "./head.mjs";
+import { VARIANTS } from "./lib/utilities.mjs";
 
 const packageRoot = fileURLToPath(new URL("..", import.meta.url));
 const registry = JSON.parse(readFileSync(path.join(packageRoot, "registry.json"), "utf8"));
-
-/* The variants a class can take without Tailwind. Each costs its copy of every
-   class in `variantClasses`, about 3 KB minified for the axis classes alone, so
-   the list is the common ones rather than all of Tailwind's: 52 of its variants
-   measured 197 KB, and stacking breakpoints on states another 845 KB. A project
-   that needs another variant, or two stacked, compiles `/tw` with Tailwind. */
-const VARIANTS = ["sm", "md", "lg", "xl", "2xl", "hover", "focus", "focus-visible", "active", "dark"];
 
 /* `disabled` stays markup: it is a state the element is in, which the
    documentation tells consumers to write as the attribute or the class. */

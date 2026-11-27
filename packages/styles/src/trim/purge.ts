@@ -79,7 +79,8 @@ function findTop(css: string, from: number, end: number, stop: string): number {
   return end;
 }
 
-function splitTop(text: string, separator: string): string[] {
+/** Splits `text` at each `separator` outside brackets, strings, and comments, as a selector list at its commas. */
+export function splitTop(text: string, separator: string): string[] {
   const parts: string[] = [];
   let from = 0;
 
@@ -187,6 +188,16 @@ function trimDeclaration(declaration: string): string {
   const trimmed = declaration.trim();
 
   return trimmed.endsWith(":") && declaration.trimStart().length > trimmed.length ? `${trimmed} ` : trimmed;
+}
+
+/** The selector of the class `name`, escaped as Lightning CSS writes it: `2xl:flex` is `.\32 xl\:flex`. */
+export function classSelector(name: string): string {
+  // CSSOM, "serialize an identifier": a digit cannot start one, nor follow a leading dash.
+  const lead = /^-?\d/.exec(name)?.[0] ?? "";
+  const digit = lead.at(-1);
+  const head = digit === undefined ? "" : `${lead.slice(0, -1)}\\${(0x30 + Number(digit)).toString(16)} `;
+
+  return `.${head}${name.slice(lead.length).replace(/[^\w\-\u0080-\u{10ffff}]/gu, (char) => `\\${char}`)}`;
 }
 
 function unescapeIdent(raw: string): string {

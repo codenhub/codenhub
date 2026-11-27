@@ -71,6 +71,8 @@ const COMPILED_CEILINGS: Record<string, number> = {
      file's did. */
   "dist/purge/index.css": 344_800,
   "dist/purge/classes.json": 7_100,
+  /* Read by the generator, never served (docs/internal/generator.md). */
+  "dist/utilities.json": 72_000,
 };
 
 describe("compiled stylesheets", () => {

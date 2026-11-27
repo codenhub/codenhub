@@ -1,6 +1,6 @@
 ---
 status: APPROVED
-last_updated: 2026-11-25
+last_updated: 2026-11-27
 scope: `@codenhub/styles` package test strategy.
 ---
 
@@ -76,6 +76,7 @@ packages/styles/
       registry.test.ts
       size.test.ts
       source.test.ts
+      utilities.test.ts
       vite-ignore.test.ts
       vite.test.ts
 ```
@@ -142,6 +143,8 @@ Node-based Vitest checks validate every published target. Every compiled export 
 
 `vite.test.ts` runs the [Vite plugin](./vite.md) inside a real Vite: builds through JavaScript, CSS, Sass, and Lightning CSS imports, an SSR build, the dev server and its live updates over its WebSocket, `vite build --watch`, the files the scan leaves out, every failure it reports, and the byte equality with `chs build` that [The same stylesheet](./vite.md#the-same-stylesheet-as-chs-build) records. It runs against the catalog Vite and, in `.github/workflows/vite.yml`, against the other releases the peer range covers. `vite-ignore.test.ts` holds the `.gitignore` matcher to `git ls-files --others --exclude-standard` on the same files.
 
+`utilities.test.ts` holds `dist/utilities.json`, the table the [generator](./generator.md) writes Tailwind utilities from, to the Tailwind installed, through the `@tailwindcss/node` that `@tailwindcss/cli` brings, as `adapter.test.ts` does: each utility, plain and under each of the ten variants, declares what Tailwind declares for it; the theme values the table ships are Tailwind's; the utilities sort in the order Tailwind writes them; and each rule of the utilities layer of `dist/purge/index.css` carries a key, in order.
+
 `source.test.ts` holds lists that `src/` repeats on purpose to each other: the languages the type scale and `/native` leave untracked.
 
 `size.test.ts` holds what a consumer downloads under ceilings, in minified bytes, each about 3% above the measurement it was set from. Gzipped lengths are recorded here but never compared, because zlib output can differ between machines. A change that grows past a ceiling raises it in the same change and says why. Measured with Tailwind 4.3.4:
@@ -162,13 +165,14 @@ Node-based Vitest checks validate every published target. Every compiled export 
 | `dist/aesthetics/sketch.css`               | 14,905   | 2,081  | 15,350  |
 | `dist/purge/index.css`                     | 334,724  | 27,162 | 344,800 |
 | `dist/purge/classes.json`                  | 6,871    | 1,630  | 7,100   |
+| `dist/utilities.json`                      | 69,895   | 12,398 | 72,000  |
 | `/button/tw`, a page with `btn primary`    | 22,947   |        | 23,500  |
 | `/button/tw`, a page with no package class | 10,025   |        | 10,350  |
 | `/tw`, a page with `btn primary`           | 35,298   |        | 36,400  |
 
 About 694 bytes of each of the three `/tw` rows are the nine `--tw-*` registrations `/tw` ships itself, with the fallbacks Tailwind's polyfills write for them, because Tailwind registers each only on a page that uses a utility setting it, and registers nothing a utility body sets by hand. `dist/aesthetics/index.css` carries no Tailwind banner, as it carries none of Tailwind's CSS.
 
-The `dist/purge/` rows are under a ceiling too: `chs build` reads those files and no page serves them, but every consumer installs them, as [Build command](./cli.md) accepts.
+The `dist/purge/` and `dist/utilities.json` rows are under a ceiling too: `chs build` reads those files and no page serves them, but every consumer installs them, as [Build command](./cli.md) and [Generator](./generator.md) accept.
 
 The `/tw` rows are the package's cost over Tailwind alone on the same page, compiled with Tailwind's polyfills on as a consumer's CLI or Vite build compiles it, so a Tailwind release that changes Preflight moves no ceiling. The compiled files are also checked for Tailwind's fallbacks for browsers without `color-mix()` or `@property`, which the compiled build does not write, and a page that names no package class is checked for having no component rule.
 

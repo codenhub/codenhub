@@ -14,7 +14,7 @@ import { createRequire } from "node:module";
    resolves: `@tailwindcss/node` 4.3.4 publishes declarations that import
    files it does not ship (`./ast`, `./compile`, and five more), so a typed
    import fails the typecheck with TS2307, and its `Polyfills` is an ambient
-   const enum, which `isolatedModules` rejects. The type below covers the
+   const enum, which `isolatedModules` rejects. The types below cover the
    calls the tests make. */
 type TailwindNode = {
   compile(
@@ -22,11 +22,22 @@ type TailwindNode = {
     options: { base: string; from: string; polyfills: number; onDependency(path: string): void },
   ): Promise<{ build(candidates: string[]): string }>;
   optimize(css: string, options: { minify: boolean }): { code: string };
+  __unstable__loadDesignSystem(css: string, options: { base: string }): Promise<DesignSystem>;
+};
+
+/* The calls the tests make on the design system Tailwind sorts and prints candidates with. */
+export type DesignSystem = {
+  candidatesToCss(candidates: string[]): (string | null)[];
+  getClassOrder(classes: string[]): [string, bigint | null][];
 };
 
 const requireFromCli = createRequire(import.meta.resolve("@tailwindcss/cli/package.json"));
 
-export const { compile, optimize } = requireFromCli("@tailwindcss/node") as TailwindNode;
+export const {
+  compile,
+  optimize,
+  __unstable__loadDesignSystem: loadDesignSystem,
+} = requireFromCli("@tailwindcss/node") as TailwindNode;
 
 // `Polyfills` in `@tailwindcss/node`.
 export const POLYFILLS_NONE = 0;
