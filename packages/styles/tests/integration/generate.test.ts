@@ -81,7 +81,11 @@ function selectorsIn(layer: Container): string[] {
   layer.walkRules((rule: Rule) => {
     const context: string[] = [];
 
-    for (let parent = rule.parent; parent !== undefined && parent !== layer; parent = parent.parent) {
+    for (
+      let parent: postcss.Node["parent"] = rule.parent;
+      parent !== undefined && parent !== layer;
+      parent = parent.parent
+    ) {
       if (parent.type === "atrule") {
         if ((parent as postcss.AtRule).name === "layer") {
           return;
