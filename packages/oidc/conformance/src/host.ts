@@ -70,6 +70,9 @@ export async function createHost(config: HostConfig): Promise<Host> {
   await selfCheck(provider, config);
 
   const sessions = new Map<string, Session>();
+  // Authorizations waiting for the login form, by interaction id. One the browser abandons stays until a restart.
+  const pending = new Map<string, AuthorizationInteraction>();
+  const loginPath = "/login";
   const authorizationEndpoint = new URL(provider.metadata.authorization_endpoint);
   const endSessionEndpoint = new URL(provider.metadata.end_session_endpoint ?? `${config.issuer}/logout`);
 
@@ -89,19 +92,49 @@ export async function createHost(config: HostConfig): Promise<Host> {
     if (needsLogin && interaction.prompt.includes("none")) {
       return finish(provider, interaction, { error: "login_required" });
     }
-    // The host has no login page: signing in is recording that this browser is the test user, now.
-    const session = needsLogin ? { sid: crypto.randomUUID(), authTime: seconds } : existing;
-    const token = needsLogin ? crypto.randomUUID() : (cookieValue(request) ?? "");
+    if (!needsLogin) {
+      return signedIn(interaction, existing);
+    }
+    // The suite's prompt=login and max_age modules ask for a screenshot of the second login, so a login is a page
+    // the scripted browser sees and submits, at its own URL so that its browser task cannot match an error page.
+    pending.set(interaction.id, interaction);
+    return new Response(null, {
+      status: 302,
+      headers: { Location: `${config.issuer}${loginPath}?${new URLSearchParams({ interaction: interaction.id })}` },
+    });
+  };
+
+  const login = async (request: Request): Promise<Response> => {
+    if (request.method === "GET") {
+      const id = new URL(request.url).searchParams.get("interaction") ?? "";
+      if (!pending.has(id)) {
+        return page(400, "Error", "There is no sign-in in progress for this link.");
+      }
+      return loginPage(loginPath, id);
+    }
+    const form = await request.formData().catch(() => undefined);
+    const id = form?.get("interaction");
+    const interaction = typeof id === "string" ? pending.get(id) : undefined;
+    if (interaction === undefined) {
+      return page(400, "Error", "There is no sign-in in progress for this form.");
+    }
+    pending.delete(interaction.id);
+    // Signing in is recording that this browser is the test user, now: there is no password to check.
+    const session = { sid: crypto.randomUUID(), authTime: Math.floor(now() / 1000) };
+    const token = crypto.randomUUID();
     sessions.set(token, session);
-    const answered = await finish(provider, interaction, {
+    const answered = await signedIn(interaction, session);
+    return withCookie(answered, `${COOKIE}=${token}; Path=/; Secure; HttpOnly; SameSite=None`);
+  };
+
+  const signedIn = (interaction: AuthorizationInteraction, session: Session): Promise<Response> =>
+    finish(provider, interaction, {
       subject: TEST_SUBJECT,
       authTime: session.authTime,
       scopes: interaction.scopes,
       amr: ["pwd"],
       sessionId: session.sid,
     });
-    return needsLogin ? withCookie(answered, `${COOKIE}=${token}; Path=/; Secure; HttpOnly; SameSite=None`) : answered;
-  };
 
   const logout = async (request: Request): Promise<Response> => {
     const ended = await provider.endSession(request);
@@ -134,6 +167,9 @@ export async function createHost(config: HostConfig): Promise<Host> {
       }
       if (url.pathname === endSessionEndpoint.pathname) {
         return logout(request);
+      }
+      if (url.pathname === loginPath) {
+        return login(request);
       }
       if (url.pathname === "/self-check") {
         // createHost threw if this did not hold, so reaching it again means it still does.
@@ -200,11 +236,23 @@ function errorPage(message: string, issues: readonly OidcIssue[]): Response {
   return page(400, "Error", `${message} ${codes}`);
 }
 
-function page(status: number, title: string, text: string): Response {
-  const escape = (value: string): string =>
-    value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+/** The login form: one button, with the ids the runbook's browser configuration waits for and clicks. */
+function loginPage(action: string, interactionId: string): Response {
+  return page(
+    200,
+    "Sign in",
+    "Sign in as the conformance test user.",
+    `<form method="post" action="${escape(action)}"><input type="hidden" name="interaction" value="${escape(interactionId)}"><button id="sign-in" type="submit">Sign in</button></form>`,
+  );
+}
+
+function page(status: number, title: string, text: string, html = ""): Response {
   return new Response(
-    `<!doctype html><html><head><meta charset="utf-8"><title>${escape(title)}</title></head><body><h1>${escape(title)}</h1><p>${escape(text)}</p></body></html>`,
+    `<!doctype html><html><head><meta charset="utf-8"><title>${escape(title)}</title></head><body><h1 id="title">${escape(title)}</h1><p>${escape(text)}</p>${html}</body></html>`,
     { status, headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" } },
   );
+}
+
+function escape(value: string): string {
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
 }

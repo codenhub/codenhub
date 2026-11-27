@@ -16,13 +16,18 @@ Many items below change a contract: a record the store persists, a client record
 
 The SSO application is the package's first real consumer, and a review of its scope against this package found what it needs and the package lacks. The order follows the SSO application's own roadmap.
 
-- **Run the OpenID conformance plans.** Every change the review found is built, and scope.md decisions 47 to 56 record them; the record shapes are settled before the SSO application writes its `OidcStore` adapters. What its data API needs is built too: `authenticate`, `accessTokenClaims` and resource indicators on both sides, in decisions 57 to 59, its privacy asks for pairwise subjects, in decision 60, and its audit for the refused request in `onDiagnostic`, in decision 61. It builds on `@codenhub/jwt` 0.1.0. What is left before 0.1 is the conformance run below and the release ("Release" below).
+- **The OpenID conformance plans ran**, and the provider passes them but for the one module argued below ("The OpenID conformance suite"). Every change the review found is built, and scope.md decisions 47 to 56 record them; the record shapes are settled before the SSO application writes its `OidcStore` adapters. What its data API needs is built too: `authenticate`, `accessTokenClaims` and resource indicators on both sides, in decisions 57 to 59, its privacy asks for pairwise subjects, in decision 60, and its audit for the refused request in `onDiagnostic`, in decision 61. It builds on `@codenhub/jwt` 0.1.0. What is left before 0.1 is the client's RP run and the release (both below).
 
 ## Planned
 
 ### The OpenID conformance suite
 
-The target is that the provider passes the Basic OP and Config OP plans; no plan has run yet. The client runs the RP tests where practical. The plans need a provider reachable from the suite's runner, so a small deployable host comes with this item: [`packages/oidc/conformance`](../../conformance/docs/runbook.md), a Worker that keeps the provider and an in-memory store in one Durable Object. Its runbook says how to deploy it, configure the plans and record the results here; it has not been deployed or run yet. Discovery's `id_token_signing_alg_values_supported` must list `RS256` for the Config OP plan, so the conformance host signs with an RS256 key. That key is this plan's, not a recorded decision; scope.md decisions 30 and 39 record only that the run waits for a deployable host and stays the 0.1 criterion.
+The target was that the provider passes the Basic OP and Config OP plans, and it does. Both plans ran on 2026-11-26 on the certification suite, against [`packages/oidc/conformance`](../../conformance/docs/runbook.md) deployed from `main` at `faa666c2` with the host's login page added, @codenhub/oidc 0.0.1 in `package.json` and unreleased:
+
+- **Config OP** (plan `EDo9oul75c76q`): passed.
+- **Basic OP** (plan `NXWZdJ2wDezl7`): 27 of 35 modules passed. `oidcc-ensure-request-without-nonce-succeeds-for-code-flow` failed, as argued below. Four modules end in REVIEW with the screenshot the suite captured, the second login of `oidcc-prompt-login` and `oidcc-max-age-1` and the error page for an unregistered redirect URI in two more. Three warn: userinfo refuses a token in the body (Notes), the ID token has no `acr` because the host passes none, and `oidcc-claims-essential` asks through the `claims` parameter, which discovery says is unsupported. The request object module skips on `request_not_supported`. The runbook's "What to expect" has each.
+
+No module failed for a reason that is a provider defect, so the run found nothing to change in the package. **The client's RP tests run before 0.1.** Section 7 of scope.md asks for them where practical, and they are: they need a second small host that uses the client against the suite's provider, which has not been built. They come before the release because a client defect found after it stays in a version that cannot be replaced. Discovery's `id_token_signing_alg_values_supported` must list `RS256` for the Config OP plan, so the conformance host signs with an RS256 key. That key is this plan's, not a recorded decision; scope.md decisions 30 and 39 record only that the run waits for a deployable host and stays the 0.1 criterion.
 
 **PKCE.** Most modules of the Basic OP plan send no `code_challenge`, so the suite's clients are registered with `requirePkce: false` (scope.md decision 52), and one control client keeps it on; the host fails if the control client accepts a request without PKCE. `oidcc-ensure-request-without-nonce-succeeds-for-code-flow` sends neither PKCE nor a `nonce` and is a known failure, argued in the certification submission.
 
@@ -52,7 +57,7 @@ Pairwise subject identifiers shipped as the `subjectTypes` option (scope.md deci
 
 ## Notes
 
-- **Userinfo reads the token only from the `Authorization` header**, and the Basic OP plan has `oidcc-userinfo-post-body`. RFC 6750 §2.2 makes the body method optional, and the module is believed to tolerate a refusal; confirm it in the first conformance run.
+- **Userinfo reads the token only from the `Authorization` header.** The Basic OP plan's `oidcc-userinfo-post-body` warns on the `401` rather than failing (2026-11-26 run), so nothing changes: RFC 6750 §2.2 makes the body method optional, and a token in a form body is where logs and caches see it.
 - **The SSO application's docs are behind this package.** Its scope says 0.0.1 has no logout support, and the first step of its roadmap is logout here. 0.0.1 has RP-initiated logout (decision 37), and back-channel logout is built (decision 53).
 
 ## References

@@ -86,6 +86,35 @@ export function decodeHeader(jwt: string): Record<string, unknown> {
   >;
 }
 
+/**
+ * Sends an authorization request and, when the host redirects to its login page, signs in there as the suite's
+ * browser does: it loads the page and submits its form. Returns the answer that ends the authorization.
+ */
+export async function authorize(send: Send, request: Request | string, cookie?: string): Promise<Response> {
+  const answered = typeof request === "string" ? await get(send, request, cookie) : await send(request);
+  const location = answered.status === 302 ? new URL(answered.headers.get("location") ?? "", ISSUER) : undefined;
+  if (location === undefined || location.origin !== ISSUER || location.pathname !== "/login") {
+    return answered;
+  }
+  const form = await get(send, location.href, cookie);
+  const html = await form.text();
+  const interaction = /name="interaction" value="([^"]+)"/.exec(html)?.[1];
+  if (form.status !== 200 || !html.includes('id="sign-in"') || interaction === undefined) {
+    throw new Error(`The login page did not offer a sign-in form: ${form.status}`);
+  }
+  return send(
+    new Request(`${ISSUER}/login`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        ...(cookie === undefined ? {} : { Cookie: cookie }),
+      },
+      body: new URLSearchParams({ interaction }),
+      redirect: "manual",
+    }),
+  );
+}
+
 /** What a full sign-in through a host produced. */
 export interface CodeFlow {
   readonly tokens: { access_token: string; id_token: string; refresh_token?: string; token_type: string };
@@ -95,7 +124,7 @@ export interface CodeFlow {
 
 /** Signs in with a suite client that sends no PKCE, exchanges the code, and reads userinfo. */
 export async function codeFlow(send: Send): Promise<CodeFlow> {
-  const authorized = await get(send, authorizationUrl());
+  const authorized = await authorize(send, authorizationUrl());
   const params = redirectParams(authorized);
   const code = params.get("code");
   if (code === null || params.get("state") !== "state-1" || params.get("iss") !== ISSUER) {

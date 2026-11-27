@@ -5,6 +5,7 @@ import { createHost, type Host } from "../src/host";
 import {
   ALIAS,
   authorizationUrl,
+  authorize,
   CALLBACK,
   codeFlow,
   decodeHeader,
@@ -81,7 +82,8 @@ describe("the authorization code flow without PKCE", () => {
 
   it("accepts the authorization request as a form POST, and with prompt=consent", async () => {
     const url = new URL(authorizationUrl({ prompt: "consent" }));
-    const response = await send(
+    const response = await authorize(
+      send,
       new Request(`${url.origin}${url.pathname}`, {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -154,7 +156,10 @@ describe("sessions", () => {
   it("signs in again for prompt=login, with a new session cookie", async () => {
     const { cookie } = await codeFlow(send);
 
-    const again = await get(send, authorizationUrl({ prompt: "login" }), cookie);
+    const asked = await get(send, authorizationUrl({ prompt: "login" }), cookie);
+    const again = await authorize(send, authorizationUrl({ prompt: "login" }), cookie);
+
+    expect(new URL(asked.headers.get("location") ?? "").pathname).toBe("/login");
 
     expect(redirectParams(again).get("code")).not.toBeNull();
     expect(sessionCookie(again)).toBeDefined();
@@ -175,8 +180,9 @@ describe("sessions", () => {
     time += 5000;
 
     const young = await get(sendTimed, authorizationUrl({ max_age: "10000" }), cookie);
-    const old = await get(sendTimed, authorizationUrl({ max_age: "1" }), cookie);
+    const old = await authorize(sendTimed, authorizationUrl({ max_age: "1" }), cookie);
 
+    expect(redirectParams(young).get("code")).not.toBeNull();
     expect(sessionCookie(young)).toBeUndefined();
     expect(sessionCookie(old)).toBeDefined();
     expect(redirectParams(old).get("code")).not.toBeNull();
@@ -195,6 +201,41 @@ describe("sessions", () => {
   });
 });
 
+describe("the login page", () => {
+  it("is where a browser without a session is sent, and shows a form with the sign-in button", async () => {
+    const asked = await get(send, authorizationUrl());
+    const location = new URL(asked.headers.get("location") ?? "");
+
+    expect(asked.status).toBe(302);
+    expect(`${location.origin}${location.pathname}`).toBe(`${ISSUER}/login`);
+    expect(sessionCookie(asked)).toBeUndefined();
+
+    const form = await get(send, location.href);
+
+    expect(form.status).toBe(200);
+    expect(await form.text()).toContain('<button id="sign-in" type="submit">Sign in</button>');
+  });
+
+  it("refuses a sign-in it did not start, and the same sign-in twice", async () => {
+    const post = (interaction: string): Promise<Response> =>
+      send(
+        new Request(`${ISSUER}/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
+          body: new URLSearchParams({ interaction }),
+          redirect: "manual",
+        }),
+      );
+    const location = new URL((await get(send, authorizationUrl())).headers.get("location") ?? "");
+    const interaction = location.searchParams.get("interaction") ?? "";
+
+    expect((await post("unknown")).status).toBe(400);
+    expect(redirectParams(await post(interaction)).get("code")).not.toBeNull();
+    expect((await post(interaction)).status).toBe(400);
+    expect((await get(send, location.href)).status).toBe(400);
+  });
+});
+
 describe("client registration", () => {
   it("renders an error page, not a redirect, for an unregistered redirect URI", async () => {
     const response = await get(send, authorizationUrl({ redirect_uri: `${CALLBACK}/other` }));
@@ -205,7 +246,7 @@ describe("client registration", () => {
   });
 
   it("authenticates the post client with client_secret_post, and the others with client_secret_basic only", async () => {
-    const params = redirectParams(await get(send, authorizationUrl({ client_id: CLIENT_IDS.post })));
+    const params = redirectParams(await authorize(send, authorizationUrl({ client_id: CLIENT_IDS.post })));
     const form = { grant_type: "authorization_code", code: params.get("code") ?? "", redirect_uri: CALLBACK };
 
     const post = await send(tokenRequest(CLIENT_IDS.post, SECRETS.post, form, "post"));
