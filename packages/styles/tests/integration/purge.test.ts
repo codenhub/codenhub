@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { canMatch, classesOf, format, parse, purge, serialize } from "../../src/trim/purge";
+import { canMatch, classesOf, classSelector, format, parse, purge, serialize } from "../../src/trim/purge";
 
 const packageRoot = path.resolve(import.meta.dirname, "../..");
 const read = (file: string) => readFile(path.resolve(packageRoot, file), "utf8");
@@ -81,6 +81,23 @@ describe("purge", () => {
   it("reads an escape outside Unicode as U+FFFD rather than throwing", () => {
     expect(canMatch(String.raw`.\FFFFFF`, new Set(["�"]))).toBe(true);
     expect(canMatch(String.raw`.\0 x`, new Set(["�x"]))).toBe(true);
+  });
+});
+
+describe("classSelector", () => {
+  it("escapes a class as Lightning CSS writes it", () => {
+    expect(classSelector("mt-4")).toBe(".mt-4");
+    expect(classSelector("md:flex")).toBe(String.raw`.md\:flex`);
+    expect(classSelector("2xl:flex")).toBe(String.raw`.\32 xl\:flex`);
+    expect(classSelector("-mt-4")).toBe(".-mt-4");
+    expect(classSelector("-1")).toBe(String.raw`.-\31 `);
+    expect(classSelector("w-1/2")).toBe(String.raw`.w-1\/2`);
+  });
+
+  it("is the selector purge reads back as the class", () => {
+    for (const name of ["2xl:flex", "md:hover", "w-1/2"]) {
+      expect(classesOf(parse(`${classSelector(name)}{color:red}`))).toEqual(new Set([name]));
+    }
   });
 });
 

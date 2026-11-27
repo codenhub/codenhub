@@ -259,6 +259,7 @@ test(
       ...Object.values(manifest.bin ?? {}).map((target) => target.replace(/^\.\//, "")),
       "dist/purge/index.css",
       "dist/purge/classes.json",
+      "dist/utilities.json",
       "package.json",
       "NOTICE",
     ];
