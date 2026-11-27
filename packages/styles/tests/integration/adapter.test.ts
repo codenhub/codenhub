@@ -5,6 +5,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import postcss from "postcss";
 import { describe, expect, test } from "vitest";
 
+import { compile, optimize, POLYFILLS_NONE } from "./tailwind";
+
 /* `dist/` is compiled by the package's own build and `/tw` by the consumer's
    Tailwind, from the same `src/`. They must agree: a class a `/tw` consumer
    compiles is the class the compiled stylesheet ships, rule for rule and in the
@@ -25,24 +27,15 @@ import { describe, expect, test } from "vitest";
    On the catalog's Tailwind, the one `src/base/` is copied from, the rest is
    byte for byte. On another release, as the Tailwind workflow runs, Tailwind's
    own theme values and Preflight are that release's, so `theme` and `base` are
-   left out and the package's components and utilities compared alone. */
+   left out and the package's components and utilities compared alone, and the
+   Lightning CSS that release runs may spell a value another way. The compiler
+   is the consumer's, loaded through `@tailwindcss/cli` (`./tailwind.ts`). */
 
-// As in `size.test.ts`: `@tailwindcss/node` publishes declarations TypeScript cannot resolve.
-type TailwindNode = {
-  compile(
-    css: string,
-    options: { base: string; from: string; polyfills: number; onDependency(path: string): void },
-  ): Promise<{ build(candidates: string[]): string }>;
-  optimize(css: string, options: { minify: boolean }): { code: string };
-};
 type Entry = {
   output: string;
   omit?: (utility: { name: string; file: string }) => boolean;
   tw: string[] | null;
 };
-const tailwindNodeSpecifier = "@tailwindcss/node";
-const { compile, optimize } = (await import(tailwindNodeSpecifier)) as TailwindNode;
-const POLYFILLS_NONE = 0; // `Polyfills.None` in `@tailwindcss/node`
 
 // The build's own modules, untyped JavaScript.
 const entriesSpecifier = "../../scripts/lib/entries.mjs";
@@ -126,7 +119,12 @@ const separate = (css: string) => {
         node.remove();
       }
     });
-    rules = root.toString();
+    /* Tailwind's `rounded-full` is `calc(infinity * 1px)`, which Lightning CSS
+       writes as the largest number it keeps: 1.33, which the build and
+       Tailwind 4.3.4 run, as `2147483647px`, and 1.32, which Tailwind 4.3.2
+       and 4.3.3 run, as `3.40282e38px`. Both are a full round in every
+       browser, so the older spelling is read as the newer. */
+    rules = root.toString().replaceAll("3.40282e38px", "2147483647px");
   }
 
   return { rules, registrations: new Set(css.match(REGISTRATION)) };
