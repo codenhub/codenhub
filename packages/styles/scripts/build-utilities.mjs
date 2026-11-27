@@ -38,9 +38,10 @@ const packageRoot = fileURLToPath(new URL("..", import.meta.url));
    so moving to another one is a change that copies `src/base/` again and
    takes the new values on purpose (generator.md, "Tailwind changing a
    value"). */
-const installed = createRequire(createRequire(import.meta.url).resolve("@tailwindcss/node"))(
+const tailwindManifest = createRequire(createRequire(import.meta.url).resolve("@tailwindcss/node")).resolve(
   "tailwindcss/package.json",
-).version;
+);
+const installed = JSON.parse(readFileSync(tailwindManifest, "utf8")).version;
 
 if (installed !== TAILWIND_VERSION) {
   throw new Error(
@@ -180,11 +181,22 @@ design.candidatesToCss(droppable).forEach((css, index) => {
 
 /* A rule Tailwind writes with no class named is no class's, even where a
    class writes the same selector too, as `input-group` does. */
+/* `@import "tailwindcss"` in `tw/` resolves from this package, which the
+   Tailwind workflow moves to the consumer's release; the theme values are read
+   from the release checked above instead, the one `src/base/` is copied from. */
+const tailwindRoot = path.dirname(tailwindManifest);
 const compiler = await compile(source, {
   base: packageRoot,
   from: path.join(packageRoot, "utilities.css"),
   polyfills: Polyfills.None,
   onDependency() {},
+  customCssResolver: async (id) => {
+    if (id === "tailwindcss") {
+      return path.join(tailwindRoot, "index.css");
+    }
+
+    return id.startsWith("tailwindcss/") ? path.join(tailwindRoot, id.slice("tailwindcss/".length)) : undefined;
+  },
 });
 
 const findUtilities = (css) =>
